@@ -56,9 +56,14 @@ export default function Dashboard() {
   }, []);
 
   const createSampleData = async () => {
+    // Get the first company to associate sample data with
+    const companies = await db.getAllCompanies();
+    const companyId = companies[0]?.id || 'default';
+    
     // Sample seafarers
     const seafarers = [
       {
+        companyId,
         personalInfo: {
           firstName: 'John',
           lastName: 'Smith',
@@ -86,6 +91,7 @@ export default function Dashboard() {
         },
       },
       {
+        companyId,
         personalInfo: {
           firstName: 'Maria',
           lastName: 'Garcia',
@@ -110,6 +116,7 @@ export default function Dashboard() {
         },
       },
       {
+        companyId,
         personalInfo: {
           firstName: 'Chen',
           lastName: 'Wei',
@@ -141,6 +148,7 @@ export default function Dashboard() {
     // Sample vessels
     const vessels = [
       {
+        companyId,
         name: 'MV Ocean Pride',
         type: 'Container Ship',
         flag: 'Liberia',
@@ -150,6 +158,7 @@ export default function Dashboard() {
         ],
       },
       {
+        companyId,
         name: 'MV Baltic Star',
         type: 'Bulk Carrier',
         flag: 'Marshall Islands',
@@ -171,6 +180,7 @@ export default function Dashboard() {
 
     // Sample payroll records
     await db.createPayrollRecord({
+      companyId,
       seafarerId: '1',
       period: {
         start: '2024-03-01',

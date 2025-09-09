@@ -1,7 +1,8 @@
-import { Bell, Search, User, Menu } from 'lucide-react';
+import { Bell, Search, User, Menu, Building2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { useCompany } from '@/context/CompanyContext';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +17,8 @@ interface HeaderProps {
 }
 
 export function Header({ onMenuClick }: HeaderProps) {
+  const { selectedCompany, companies, setSelectedCompany } = useCompany();
+
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="flex items-center justify-between h-full px-6">
@@ -29,6 +32,35 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <Menu className="w-5 h-5" />
           </Button>
+          
+          {/* Company Selector */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="flex items-center space-x-2 min-w-[200px] justify-between">
+                <div className="flex items-center space-x-2">
+                  <Building2 className="w-4 h-4 text-primary" />
+                  <span className="font-medium">{selectedCompany?.name || 'Select Company'}</span>
+                </div>
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[250px]">
+              <DropdownMenuLabel>Switch Company</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {companies.map((company) => (
+                <DropdownMenuItem
+                  key={company.id}
+                  onClick={() => setSelectedCompany(company)}
+                  className={selectedCompany?.id === company.id ? 'bg-muted' : ''}
+                >
+                  <div className="flex flex-col">
+                    <span className="font-medium">{company.name}</span>
+                    <span className="text-xs text-muted-foreground">{company.code}</span>
+                  </div>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
           
           <div className="relative w-96">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />

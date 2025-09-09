@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LoginForm } from "@/components/auth/LoginForm";
+import { CompanyProvider } from "@/context/CompanyContext";
 import Index from "./pages/Index";
 import Personnel from "./pages/Personnel";
 import Fleet from "./pages/Fleet";
@@ -41,10 +42,11 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
+        <CompanyProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/personnel" element={<Personnel />} />
             <Route path="/fleet" element={<Fleet />} />
@@ -57,6 +59,7 @@ const App = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </CompanyProvider>
       </TooltipProvider>
     </QueryClientProvider>
   );

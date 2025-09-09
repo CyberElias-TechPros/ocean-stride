@@ -1,7 +1,32 @@
-// IndexedDB Database Layer for Seafarer Management System
+// IndexedDB Database Layer for Multi-Tenant Seafarer Management System
+
+export interface Company {
+  id: string;
+  name: string;
+  code: string;
+  address: {
+    street: string;
+    city: string;
+    country: string;
+    postalCode: string;
+  };
+  contact: {
+    email: string;
+    phone: string;
+    website?: string;
+  };
+  settings: {
+    currency: string;
+    timezone: string;
+    fiscalYearStart: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface Seafarer {
   id: string;
+  companyId: string;
   personalInfo: {
     firstName: string;
     lastName: string;
@@ -66,6 +91,7 @@ export interface Allotment {
 
 export interface Vessel {
   id: string;
+  companyId: string;
   name: string;
   type: string;
   flag: string;
@@ -81,6 +107,7 @@ export interface Vessel {
 
 export interface Roster {
   id: string;
+  companyId: string;
   vesselId: string;
   startDate: string;
   endDate: string;
@@ -95,6 +122,7 @@ export interface Roster {
 
 export interface PayrollRecord {
   id: string;
+  companyId: string;
   seafarerId: string;
   period: {
     start: string;
@@ -135,6 +163,13 @@ class SeafarerDatabase {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
+
+        // Companies store
+        if (!db.objectStoreNames.contains('companies')) {
+          const companiesStore = db.createObjectStore('companies', { keyPath: 'id' });
+          companiesStore.createIndex('name', 'name');
+          companiesStore.createIndex('code', 'code', { unique: true });
+        }
 
         // Seafarers store
         if (!db.objectStoreNames.contains('seafarers')) {
@@ -273,6 +308,22 @@ class SeafarerDatabase {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+  }
+
+  // Company management methods
+  async createCompany(company: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<Company> {
+    const now = new Date().toISOString();
+    const newCompany: Company = {
+      ...company,
+      id: crypto.randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    return this.create('companies', newCompany);
+  }
+
+  async getAllCompanies(): Promise<Company[]> {
+    return this.getAll('companies');
   }
 
   // Specialized methods for seafarers
