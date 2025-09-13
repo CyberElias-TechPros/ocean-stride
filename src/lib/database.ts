@@ -346,6 +346,55 @@ class SeafarerDatabase {
     return this.getByIndex('seafarers', 'rank', rank);
   }
 
+  async getSeafarersByCompany(companyId: string): Promise<Seafarer[]> {
+    const allSeafarers = await this.getAll<Seafarer>('seafarers');
+    return allSeafarers.filter(s => s.companyId === companyId);
+  }
+
+  async getVesselsByCompany(companyId: string): Promise<Vessel[]> {
+    const allVessels = await this.getAll<Vessel>('vessels');
+    return allVessels.filter(v => v.companyId === companyId);
+  }
+
+  async updateSeafarer(id: string, updates: Partial<Seafarer>): Promise<Seafarer> {
+    const transaction = this.db!.transaction(['seafarers'], 'readwrite');
+    const store = transaction.objectStore('seafarers');
+    
+    // Get existing seafarer
+    const existing = await new Promise<Seafarer>((resolve, reject) => {
+      const request = store.get(id);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    
+    if (!existing) {
+      throw new Error('Seafarer not found');
+    }
+    
+    // Merge updates
+    const updated = { ...existing, ...updates };
+    
+    // Save updated seafarer
+    await new Promise<void>((resolve, reject) => {
+      const request = store.put(updated);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+    
+    return updated;
+  }
+
+  async deleteSeafarer(id: string): Promise<void> {
+    const transaction = this.db!.transaction(['seafarers'], 'readwrite');
+    const store = transaction.objectStore('seafarers');
+    
+    await new Promise<void>((resolve, reject) => {
+      const request = store.delete(id);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
   // Specialized methods for vessels
   async createVessel(vessel: Omit<Vessel, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vessel> {
     const now = new Date().toISOString();

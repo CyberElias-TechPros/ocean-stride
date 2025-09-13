@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { VesselDetailsDialog } from '@/components/fleet/VesselDetailsDialog';
 import { 
   Ship, 
   Plus, 
@@ -15,6 +16,7 @@ import {
   Clock
 } from 'lucide-react';
 import { db, type Vessel, type Seafarer } from '@/lib/database';
+import { useCompany } from '@/context/CompanyContext';
 
 interface VesselWithDetails extends Vessel {
   crewDetails: {
@@ -28,13 +30,18 @@ interface VesselWithDetails extends Vessel {
 export default function Fleet() {
   const [vessels, setVessels] = useState<VesselWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVessel, setSelectedVessel] = useState<VesselWithDetails | null>(null);
+  const [showVesselDialog, setShowVesselDialog] = useState(false);
+  const { selectedCompany } = useCompany();
 
   useEffect(() => {
     const loadFleetData = async () => {
+      if (!selectedCompany) return;
+      
       try {
         await db.init();
-        const allVessels = await db.getAll<Vessel>('vessels');
-        const allSeafarers = await db.getAll<Seafarer>('seafarers');
+        const allVessels = await db.getVesselsByCompany(selectedCompany.id);
+        const allSeafarers = await db.getSeafarersByCompany(selectedCompany.id);
         
         // Enhance vessels with crew details
         const vesselsWithDetails: VesselWithDetails[] = allVessels.map(vessel => {
@@ -61,7 +68,7 @@ export default function Fleet() {
     };
 
     loadFleetData();
-  }, []);
+  }, [selectedCompany]);
 
   const getRequiredCrewByType = (type: string): number => {
     switch (type.toLowerCase()) {
@@ -206,7 +213,14 @@ export default function Fleet() {
             const daysToCrewChange = getDaysUntilCrewChange(vessel.crewDetails.nextCrewChange);
             
             return (
-              <Card key={vessel.id} className="transition-smooth hover:shadow-lg">
+              <Card 
+                key={vessel.id} 
+                className="transition-smooth hover:shadow-lg cursor-pointer"
+                onClick={() => {
+                  setSelectedVessel(vessel);
+                  setShowVesselDialog(true);
+                }}
+              >
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-3">
@@ -267,11 +281,27 @@ export default function Fleet() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Handle view crew
+                      }}
+                    >
                       <Users className="w-4 h-4 mr-2" />
                       View Crew
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Handle plan roster
+                      }}
+                    >
                       <Calendar className="w-4 h-4 mr-2" />
                       Plan Roster
                     </Button>
@@ -297,6 +327,13 @@ export default function Fleet() {
             </CardContent>
           </Card>
         )}
+
+        {/* Vessel Details Dialog */}
+        <VesselDetailsDialog
+          vessel={selectedVessel}
+          open={showVesselDialog}
+          onOpenChange={setShowVesselDialog}
+        />
       </div>
     </AppLayout>
   );

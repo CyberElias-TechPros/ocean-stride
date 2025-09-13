@@ -125,6 +125,27 @@ export default function Compliance() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
 
+  const handleRenewCertificate = (certId: string) => {
+    // Simulate certificate renewal
+    setCertificates(prev => prev.map(cert => 
+      cert.id === certId 
+        ? { 
+            ...cert, 
+            status: 'valid' as const,
+            expiryDate: new Date(Date.now() + 5 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 5 years from now
+            daysUntilExpiry: 5 * 365
+          }
+        : cert
+    ));
+  };
+
+  const handleGenerateAlert = (certId: string) => {
+    const cert = certificates.find(c => c.id === certId);
+    if (cert) {
+      alert(`Alert: ${cert.type} for ${cert.seafarerName} expires in ${cert.daysUntilExpiry} days`);
+    }
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'valid': return <CheckCircle className="w-4 h-4 text-success" />;
@@ -408,9 +429,24 @@ export default function Compliance() {
                               View
                             </Button>
                             {cert.status === 'expiring' && (
-                              <Button variant="outline" size="sm" className="ocean-gradient">
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="ocean-gradient"
+                                onClick={() => handleRenewCertificate(cert.id)}
+                              >
                                 <RefreshCw className="w-4 h-4 mr-1" />
                                 Renew
+                              </Button>
+                            )}
+                            {(cert.status === 'expiring' || cert.status === 'expired') && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                onClick={() => handleGenerateAlert(cert.id)}
+                              >
+                                <Bell className="w-4 h-4 mr-1" />
+                                Alert
                               </Button>
                             )}
                           </div>

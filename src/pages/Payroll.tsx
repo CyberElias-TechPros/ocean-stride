@@ -107,6 +107,22 @@ export default function Payroll() {
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null);
 
+  const handleProcessPayroll = (recordId: string) => {
+    setPayrollRecords(prev => prev.map(record => 
+      record.id === recordId 
+        ? { ...record, status: 'processed' as const }
+        : record
+    ));
+  };
+
+  const handlePayRecord = (recordId: string) => {
+    setPayrollRecords(prev => prev.map(record => 
+      record.id === recordId 
+        ? { ...record, status: 'paid' as const }
+        : record
+    ));
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'paid': return <CheckCircle className="w-4 h-4 text-success" />;
@@ -373,9 +389,25 @@ export default function Payroll() {
                                 Details
                               </Button>
                               {record.status === 'draft' && (
-                                <Button variant="outline" size="sm" className="ocean-gradient">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="ocean-gradient"
+                                  onClick={() => handleProcessPayroll(record.id)}
+                                >
                                   <Calculator className="w-4 h-4 mr-1" />
                                   Process
+                                </Button>
+                              )}
+                              {record.status === 'processed' && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  className="ocean-gradient"
+                                  onClick={() => handlePayRecord(record.id)}
+                                >
+                                  <CreditCard className="w-4 h-4 mr-1" />
+                                  Pay Now
                                 </Button>
                               )}
                             </div>

@@ -137,6 +137,26 @@ export default function Recruitment() {
   const [positionFilter, setPositionFilter] = useState<string>('all');
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
 
+  const handleStatusChange = (applicantId: string, newStatus: Applicant['application']['status']) => {
+    setApplicants(prev => prev.map(app => 
+      app.id === applicantId 
+        ? { ...app, application: { ...app.application, status: newStatus } }
+        : app
+    ));
+  };
+
+  const handleApproveApplicant = (applicantId: string) => {
+    handleStatusChange(applicantId, 'approved');
+  };
+
+  const handleRejectApplicant = (applicantId: string) => {
+    handleStatusChange(applicantId, 'rejected');
+  };
+
+  const handleScheduleInterview = (applicantId: string) => {
+    handleStatusChange(applicantId, 'interview');
+  };
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'approved': return <CheckCircle className="w-4 h-4 text-success" />;
@@ -401,6 +421,35 @@ export default function Recruitment() {
                               <Mail className="w-4 h-4 mr-1" />
                               Contact
                             </Button>
+                            {applicant.application.status === 'reviewing' && (
+                              <>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleScheduleInterview(applicant.id)}
+                                >
+                                  Interview
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="ocean-gradient"
+                                  onClick={() => handleApproveApplicant(applicant.id)}
+                                >
+                                  Approve
+                                </Button>
+                              </>
+                            )}
+                            {applicant.application.status === 'interview' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm"
+                                className="ocean-gradient"
+                                onClick={() => handleApproveApplicant(applicant.id)}
+                              >
+                                Hire
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>

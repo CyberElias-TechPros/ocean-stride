@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { AnalyticsCharts } from '@/components/analytics/AnalyticsCharts';
 import { 
   TrendingUp, 
   TrendingDown,
@@ -231,120 +232,7 @@ export default function Analytics() {
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Fleet Performance */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Ship className="w-5 h-5" />
-                    Fleet Performance Trends
-                  </CardTitle>
-                  <CardDescription>Key performance indicators over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    <BarChart3 className="w-8 h-8 mr-2" />
-                    Fleet performance chart would be displayed here
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Crew Distribution */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Users className="w-5 h-5" />
-                    Crew Distribution by Rank
-                  </CardTitle>
-                  <CardDescription>Current crew composition across the fleet</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { rank: 'Officers', count: 45, percentage: 28 },
-                      { rank: 'Engineers', count: 52, percentage: 32 },
-                      { rank: 'Ratings', count: 48, percentage: 30 },
-                      { rank: 'Catering', count: 16, percentage: 10 }
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{item.rank}</div>
-                          <div className="text-sm text-muted-foreground">{item.count} seafarers</div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <Progress value={item.percentage} className="w-24" />
-                          <span className="text-sm font-medium w-8">{item.percentage}%</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Cost Analysis */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5" />
-                    Cost Breakdown
-                  </CardTitle>
-                  <CardDescription>Monthly crew-related expenses</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { category: 'Wages & Salaries', amount: '$485,000', percentage: 65 },
-                      { category: 'Travel & Repatriation', amount: '$78,000', percentage: 10 },
-                      { category: 'Training & Certification', amount: '$52,000', percentage: 7 },
-                      { category: 'Insurance & Benefits', amount: '$89,000', percentage: 12 },
-                      { category: 'Recruitment', amount: '$45,000', percentage: 6 }
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between">
-                        <div>
-                          <div className="font-medium">{item.category}</div>
-                          <div className="text-sm text-muted-foreground">{item.percentage}% of total</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-medium">{item.amount}</div>
-                          <Progress value={item.percentage} className="w-20 mt-1" />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Compliance Dashboard */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
-                    Compliance Dashboard
-                  </CardTitle>
-                  <CardDescription>Real-time compliance monitoring</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="text-center p-4 bg-success/10 rounded-lg">
-                      <div className="text-2xl font-bold text-success">96%</div>
-                      <div className="text-sm text-muted-foreground">Overall Compliance</div>
-                    </div>
-                    <div className="text-center p-4 bg-warning/10 rounded-lg">
-                      <div className="text-2xl font-bold text-warning">23</div>
-                      <div className="text-sm text-muted-foreground">Expiring Soon</div>
-                    </div>
-                    <div className="text-center p-4 bg-info/10 rounded-lg">
-                      <div className="text-2xl font-bold text-info">158</div>
-                      <div className="text-sm text-muted-foreground">Valid Certificates</div>
-                    </div>
-                    <div className="text-center p-4 bg-destructive/10 rounded-lg">
-                      <div className="text-2xl font-bold text-destructive">2</div>
-                      <div className="text-sm text-muted-foreground">Violations</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <AnalyticsCharts />
           </TabsContent>
 
           <TabsContent value="crew" className="space-y-6">
