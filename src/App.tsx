@@ -1,67 +1,229 @@
-import { useState } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { LoginForm } from "@/components/auth/LoginForm";
-import { CompanyProvider } from "@/context/CompanyContext";
-import Index from "./pages/Index";
-import Personnel from "./pages/Personnel";
-import Fleet from "./pages/Fleet";
-import Recruitment from "./pages/Recruitment";
-import Payroll from "./pages/Payroll";
-import Compliance from "./pages/Compliance";
-import Analytics from "./pages/Analytics";
-import Settings from "./pages/Settings";
-import NotFound from "./pages/NotFound";
+import React, { useState, useEffect, Suspense } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { TooltipProvider } from './components/ui/tooltip';
+import { Toaster } from './components/ui/toaster';
+import { Toaster as Sonner } from './components/ui/sonner';
+import { ErrorBoundary } from './components/error-boundary';
+import { DatabaseProvider } from './contexts/DatabaseContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { I18nProvider } from './i18n/I18nProvider';
+import { logger } from './lib/logger';
+import { LoadingSpinner } from './components/ui/loading-spinner';
+import { ThemeProvider } from './components/theme-provider';
 
-const queryClient = new QueryClient();
+// Lazy load pages for better performance
+const LoginPage = React.lazy(() => import('./pages/Login'));
+const IndexPage = React.lazy(() => import('./pages/Index'));
+const PersonnelPage = React.lazy(() => import('./pages/Personnel'));
+const FleetPage = React.lazy(() => import('./pages/Fleet'));
+const RecruitmentPage = React.lazy(() => import('./pages/Recruitment'));
+const PayrollPage = React.lazy(() => import('./pages/Payroll'));
+const CompliancePage = React.lazy(() => import('./pages/Compliance'));
+const AnalyticsPage = React.lazy(() => import('./pages/Analytics'));
+const SettingsPage = React.lazy(() => import('./pages/Settings'));
+const NotFoundPage = React.lazy(() => import('./pages/NotFound'));
 
-const App = () => {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userType, setUserType] = useState<'admin' | 'manager' | 'seafarer'>('admin');
+// Configure React Query
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
-  const handleLogin = (credentials: { userType: 'admin' | 'manager' | 'seafarer' }) => {
-    setUserType(credentials.userType);
-    setIsAuthenticated(true);
-  };
+// Loading component for Suspense fallback
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <LoadingSpinner className="h-12 w-12" />
+  </div>
+);
 
-  if (!isAuthenticated) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <LoginForm onLogin={handleLogin} />
-        </TooltipProvider>
-      </QueryClientProvider>
-    );
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth();
+  const location = useNavigate();
+  const currentLocation = useLocation();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      // Store the current location to redirect back after login
+      sessionStorage.setItem('redirectPath', currentLocation.pathname);
+      location('/login');
+    }
+  }, [isAuthenticated, isLoading, location, currentLocation]);
+
+  if (isLoading) {
+    return <LoadingFallback />;
   }
 
+  return isAuthenticated ? <>{children}</> : null;
+};
+
+// Main app routes
+const AppRoutes = () => {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
+
+  // Log page views
+  useEffect(() => {
+    logger.info(`Navigated to: ${location.pathname}`, {
+      pathname: location.pathname,
+      search: location.search,
+      hash: location.hash,
+    });
+  }, [location]);
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <CompanyProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/personnel" element={<Personnel />} />
-            <Route path="/fleet" element={<Fleet />} />
-            <Route path="/recruitment" element={<Recruitment />} />
-            <Route path="/payroll" element={<Payroll />} />
-            <Route path="/compliance" element={<Compliance />} />
-            <Route path="/analytics" element={<Analytics />} />
-            <Route path="/settings" element={<Settings />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-        </CompanyProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <Routes>
+      {/* Public routes */}
+      <Route
+        path="/login"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <LoginPage />
+          </Suspense>
+        }
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <IndexPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/personnel"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <PersonnelPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/fleet"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <FleetPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/recruitment"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <RecruitmentPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payroll"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <PayrollPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/compliance"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <CompliancePage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <AnalyticsPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <Suspense fallback={<LoadingFallback />}>
+              <SettingsPage />
+            </Suspense>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* 404 - Not Found */}
+      <Route
+        path="*"
+        element={
+          <Suspense fallback={<LoadingFallback />}>
+            <NotFoundPage />
+          </Suspense>
+        }
+      />
+    </Routes>
+  );
+};
+
+const App = () => {
+  // Initialize logger on app load
+  useEffect(() => {
+    logger.info('Application initialized', { environment: process.env.NODE_ENV });
+    
+    // Log any unhandled promise rejections
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      logger.error('Unhandled promise rejection', { 
+        reason: event.reason,
+        stack: event.reason?.stack,
+      });
+    };
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection);
+    
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
+    };
+  }, []);
+
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <DatabaseProvider>
+            <AuthProvider>
+              <ThemeProvider defaultTheme="system" storageKey="ocean-stride-theme">
+                <TooltipProvider delayDuration={300}>
+                  <BrowserRouter>
+                    <AppRoutes />
+                  </BrowserRouter>
+                  <Toaster />
+                  <Sonner position="top-right" />
+                </TooltipProvider>
+              </ThemeProvider>
+            </AuthProvider>
+          </DatabaseProvider>
+        </I18nProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };
 

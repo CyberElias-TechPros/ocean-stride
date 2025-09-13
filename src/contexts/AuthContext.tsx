@@ -1,0 +1,122 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { logger } from '@/lib/logger';
+
+type User = {
+  id: string;
+  email: string;
+  role: 'admin' | 'manager' | 'seafarer';
+  name: string;
+};
+
+type AuthContextType = {
+  user: User | null;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  updateUser: (userData: Partial<User>) => void;
+};
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const navigate = useNavigate();
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        // TODO: Replace with actual session check
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          setUser(JSON.parse(storedUser));
+        }
+      } catch (error) {
+        logger.error('Auth check failed', { error });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    try {
+      setIsLoading(true);
+      // Mock API call - replace with actual API call
+      return new Promise<void>((resolve, reject) => {
+        setTimeout(() => {
+          if (email && password) {
+            const mockUser: User = {
+              id: '1',
+              email,
+              role: 'admin',
+              name: email.split('@')[0],
+            };
+            setUser(mockUser);
+            localStorage.setItem('user', JSON.stringify(mockUser));
+            resolve();
+          } else {
+            reject(new Error('Invalid credentials'));
+          }
+        }, 1000);
+      });
+      logger.info('User logged in', { email });
+      
+      // Redirect to dashboard or intended path
+      const redirectPath = sessionStorage.getItem('redirectPath') || '/';
+      navigate(redirectPath);
+      sessionStorage.removeItem('redirectPath');
+    } catch (error) {
+      logger.error('Login failed', { error, email });
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    logger.info('User logged out');
+    navigate('/login');
+  };
+
+  const updateUser = (userData: Partial<User>) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, ...userData };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    logger.info('User updated', { userId: user.id, updates: userData });
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isLoading,
+        login,
+        logout,
+        updateUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export default AuthContext;
