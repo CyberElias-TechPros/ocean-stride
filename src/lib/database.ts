@@ -11,12 +11,19 @@ import type {
   PersonalInfo,
   Certificate,
   Employment,
-  Financial,
-  Allotment,
-  MedicalCertificate
+  Financial
 } from './schemas';
 
 type IDBValidKey = string | number | Date | ArrayBuffer | ArrayBufferView | IDBKeyRange;
+
+interface MedicalCertificate {
+  id: string;
+  type: string;
+  issueDate: string;
+  expiryDate: string;
+  doctor: string;
+  status: 'valid' | 'expiring' | 'expired';
+}
 
 interface Roster {
   id: string;
@@ -33,10 +40,21 @@ interface Roster {
   updatedAt: string;
 }
 
-export class SeafarerDatabase {
+interface Allotment {
+  id: string;
+  beneficiaryName: string;
+  accountNumber: string;
+  bankName: string;
+  amount: number;
+  currency: string;
+  startDate: string;
+  endDate?: string;
+  status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+}
 
-// Database class implementation
-class SeafarerDatabase {
+export class SeafarerDatabase {
   private db: IDBDatabase | null = null;
   private readonly dbName = 'SeafarerManagementDB';
   private readonly dbVersion = 1;
@@ -94,8 +112,12 @@ class SeafarerDatabase {
       payrollStore.createIndex('companyId', 'companyId', { unique: false });
     }
   }
+
   // Generic CRUD operations
-  async create<T extends { id: string }>(storeName: string, data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
+  async create<T extends { id: string }>(
+    storeName: string, 
+    data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<T> {
     if (!this.db) {
       throw new Error('Database not initialized');
     }
@@ -110,12 +132,12 @@ class SeafarerDatabase {
         id: crypto.randomUUID(),
         createdAt: now,
         updatedAt: now,
-      };
+      } as T;
 
       const request = store.add(newItem);
 
       request.onsuccess = () => {
-        resolve(newItem as T);
+        resolve(newItem);
       };
 
       request.onerror = () => {
@@ -234,296 +256,49 @@ class SeafarerDatabase {
       };
     });
   }
-    status: 'active' | 'available' | 'onboard' | 'leave' | 'inactive';
-    currentVessel?: string;
-    signOnDate?: string;
-    signOffDate?: string;
-    contractEnd?: string;
-  };
-  qualifications: {
-    rank: string;
-    certificates: Certificate[];
-  };
-  medicalCertificates: MedicalCertificate[];
-  allotments: Allotment[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-class SeafarerDatabase {
-  private db: IDBDatabase | null = null;
-  private readonly dbName = 'SeafarerManagementDB';
-  private readonly dbVersion = 1;
-
-  async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(this.dbName, this.dbVersion);
-
-      request.onerror = () => reject(request.error);
-      request.onsuccess = () => {
-        this.db = request.result;
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-
-        // Companies store
-        if (!db.objectStoreNames.contains('companies')) {
-          const companiesStore = db.createObjectStore('companies', { keyPath: 'id' });
-          companiesStore.createIndex('name', 'name');
-          companiesStore.createIndex('code', 'code', { unique: true });
-        }
-
-        // Seafarers store
-        if (!db.objectStoreNames.contains('seafarers')) {
-          const seafarersStore = db.createObjectStore('seafarers', { keyPath: 'id' });
-          seafarersStore.createIndex('email', 'personalInfo.email', { unique: true });
-          seafarersStore.createIndex('status', 'employment.status');
-          seafarersStore.createIndex('rank', 'qualifications.rank');
-        }
-
-        // Vessels store
-        if (!db.objectStoreNames.contains('vessels')) {
-          const vesselsStore = db.createObjectStore('vessels', { keyPath: 'id' });
-          vesselsStore.createIndex('name', 'name');
-          vesselsStore.createIndex('type', 'type');
-        }
-
-        // Rosters store
-        if (!db.objectStoreNames.contains('rosters')) {
-          const rostersStore = db.createObjectStore('rosters', { keyPath: 'id' });
-          rostersStore.createIndex('vesselId', 'vesselId');
-          rostersStore.createIndex('startDate', 'startDate');
-        }
-
-        // Payroll store
-        if (!db.objectStoreNames.contains('payroll')) {
-          const payrollStore = db.createObjectStore('payroll', { keyPath: 'id' });
-          payrollStore.createIndex('seafarerId', 'seafarerId');
-          payrollStore.createIndex('period', 'period.start');
-          payrollStore.createIndex('status', 'status');
-        }
-
-        // Certificates store
-        if (!db.objectStoreNames.contains('certificates')) {
-          const certificatesStore = db.createObjectStore('certificates', { keyPath: 'id' });
-          certificatesStore.createIndex('seafarerId', 'seafarerId');
-          certificatesStore.createIndex('expiryDate', 'expiryDate');
-          certificatesStore.createIndex('status', 'status');
-        }
-      };
-    });
-  }
-
-  // Generic CRUD operations
-  async create<T>(storeName: string, data: T): Promise<T> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      const transaction = this.db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      const request = store.add(data);
-
-      request.onsuccess = () => resolve(data);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async read<T>(storeName: string, id: string): Promise<T | null> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      const transaction = this.db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const request = store.get(id);
-
-      request.onsuccess = () => resolve(request.result || null);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async update<T>(storeName: string, data: T): Promise<T> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      const transaction = this.db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      const request = store.put(data);
-
-      request.onsuccess = () => resolve(data);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async delete(storeName: string, id: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      const transaction = this.db.transaction([storeName], 'readwrite');
-      const store = transaction.objectStore(storeName);
-      const request = store.delete(id);
-
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async getAll<T>(storeName: string): Promise<T[]> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      const transaction = this.db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const request = store.getAll();
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  async getByIndex<T>(storeName: string, indexName: string, value: any): Promise<T[]> {
-    return new Promise((resolve, reject) => {
-      if (!this.db) {
-        reject(new Error('Database not initialized'));
-        return;
-      }
-
-      const transaction = this.db.transaction([storeName], 'readonly');
-      const store = transaction.objectStore(storeName);
-      const index = store.index(indexName);
-      const request = index.getAll(value);
-
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-  }
 
   // Company management methods
   async createCompany(company: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<Company> {
-    const now = new Date().toISOString();
-    const newCompany: Company = {
-      ...company,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    return this.create('companies', newCompany);
+    return this.create<Company>('companies', company);
   }
 
   async getAllCompanies(): Promise<Company[]> {
-    return this.getAll('companies');
+    return this.getAll<Company>('companies');
   }
 
-  // Specialized methods for seafarers
+  // Seafarer management methods
   async createSeafarer(seafarer: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Seafarer> {
-    const now = new Date().toISOString();
-    const newSeafarer: Seafarer = {
-      ...seafarer,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    return this.create('seafarers', newSeafarer);
+    return this.create<Seafarer>('seafarers', seafarer);
   }
 
   async getSeafarersByStatus(status: Seafarer['employment']['status']): Promise<Seafarer[]> {
-    return this.getByIndex('seafarers', 'status', status);
+    return this.getByIndex<Seafarer>('seafarers', 'employment.status', status);
   }
 
   async getSeafarersByRank(rank: string): Promise<Seafarer[]> {
-    return this.getByIndex('seafarers', 'rank', rank);
+    return this.getByIndex<Seafarer>('seafarers', 'qualifications.rank', rank);
   }
 
   async getSeafarersByCompany(companyId: string): Promise<Seafarer[]> {
-    const allSeafarers = await this.getAll<Seafarer>('seafarers');
-    return allSeafarers.filter(s => s.companyId === companyId);
+    return this.getByIndex<Seafarer>('seafarers', 'companyId', companyId);
   }
 
+  // Vessel management methods
   async getVesselsByCompany(companyId: string): Promise<Vessel[]> {
-    const allVessels = await this.getAll<Vessel>('vessels');
-    return allVessels.filter(v => v.companyId === companyId);
+    return this.getByIndex<Vessel>('vessels', 'companyId', companyId);
   }
 
-  async updateSeafarer(id: string, updates: Partial<Seafarer>): Promise<Seafarer> {
-    const transaction = this.db!.transaction(['seafarers'], 'readwrite');
-    const store = transaction.objectStore('seafarers');
-    
-    // Get existing seafarer
-    const existing = await new Promise<Seafarer>((resolve, reject) => {
-      const request = store.get(id);
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    
-    if (!existing) {
-      throw new Error('Seafarer not found');
-    }
-    
-    // Merge updates
-    const updated = { ...existing, ...updates };
-    
-    // Save updated seafarer
-    await new Promise<void>((resolve, reject) => {
-      const request = store.put(updated);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-    
-    return updated;
-  }
-
-  async deleteSeafarer(id: string): Promise<void> {
-    const transaction = this.db!.transaction(['seafarers'], 'readwrite');
-    const store = transaction.objectStore('seafarers');
-    
-    await new Promise<void>((resolve, reject) => {
-      const request = store.delete(id);
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
-  }
-
-  // Specialized methods for vessels
   async createVessel(vessel: Omit<Vessel, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vessel> {
-    const now = new Date().toISOString();
-    const newVessel: Vessel = {
-      ...vessel,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    return this.create('vessels', newVessel);
+    return this.create<Vessel>('vessels', vessel);
   }
 
-  // Specialized methods for payroll
+  // Payroll management methods
   async createPayrollRecord(payroll: Omit<PayrollRecord, 'id' | 'createdAt'>): Promise<PayrollRecord> {
-    const now = new Date().toISOString();
-    const newPayroll: PayrollRecord = {
-      ...payroll,
-      id: crypto.randomUUID(),
-      createdAt: now,
-    };
-    return this.create('payroll', newPayroll);
+    return this.create<PayrollRecord>('payroll', payroll);
   }
 
   async getPayrollBySeafarer(seafarerId: string): Promise<PayrollRecord[]> {
-    return this.getByIndex('payroll', 'seafarerId', seafarerId);
+    return this.getByIndex<PayrollRecord>('payroll', 'seafarerId', seafarerId);
   }
 
   // Dashboard analytics
@@ -532,32 +307,38 @@ class SeafarerDatabase {
     const vessels = await this.getAll<Vessel>('vessels');
     const payroll = await this.getAll<PayrollRecord>('payroll');
 
-    const activeSeafarers = seafarers.filter(s => s.employment.status === 'active').length;
-    const onboardSeafarers = seafarers.filter(s => s.employment.status === 'onboard').length;
-    const availableSeafarers = seafarers.filter(s => s.employment.status === 'available').length;
-    
+    // Calculate statistics
+    const totalSeafarers = seafarers.length;
+    const activeSeafarers = seafarers.filter(s => 
+      s.employment?.status === 'active' || s.employment?.status === 'onboard'
+    ).length;
+    const availableSeafarers = seafarers.filter(s => 
+      s.employment?.status === 'available'
+    ).length;
+
     const totalVessels = vessels.length;
-    const fullyMannedVessels = vessels.filter(v => v.crew.length >= 12).length; // Assuming 12 is minimum crew
-    
-    const monthlyPayroll = payroll
-      .filter(p => new Date(p.period.start).getMonth() === new Date().getMonth())
-      .reduce((sum, p) => sum + p.netPay, 0);
+    const fullyMannedVessels = 0; // This would need to be calculated based on crew assignments
 
     return {
       seafarers: {
-        total: seafarers.length,
+        total: totalSeafarers,
         active: activeSeafarers,
-        onboard: onboardSeafarers,
         available: availableSeafarers,
       },
       vessels: {
         total: totalVessels,
         fullyManned: fullyMannedVessels,
-        needCrew: 0, // This will be calculated based on actual data
+        needCrew: 0, // This would need to be calculated based on crew requirements
       },
       payroll: {
-        monthlyTotal: 0, // This will be calculated based on actual data
-        recordsCount: 0, // This will be calculated based on actual data
+        monthlyTotal: payroll.reduce((sum, record) => sum + (record.netSalary || 0), 0),
+        recordsCount: payroll.length,
+      },
+    };
+  }
+}
+
+// Export a singleton instance of the database
 export const db = new SeafarerDatabase();
 
 // Initialize the database when this module is loaded
