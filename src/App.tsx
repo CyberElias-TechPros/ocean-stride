@@ -8,7 +8,7 @@ import { ErrorBoundary } from './components/error-boundary';
 import { DatabaseProvider } from './contexts/DatabaseContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { I18nProvider } from './i18n/I18nProvider';
-import { logger } from './lib/logger';
+// Logger functionality removed for simplicity
 import { LoadingSpinner } from './components/ui/loading-spinner';
 import { ThemeProvider } from './components/theme-provider';
 
@@ -68,13 +68,9 @@ const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
   const location = useLocation();
 
-  // Log page views
+  // Log page views - simplified
   useEffect(() => {
-    logger.info(`Navigated to: ${location.pathname}`, {
-      pathname: location.pathname,
-      search: location.search,
-      hash: location.hash,
-    });
+    console.log(`Navigated to: ${location.pathname}`);
   }, [location]);
 
   return (
@@ -185,23 +181,9 @@ const AppRoutes = () => {
 };
 
 const App = () => {
-  // Initialize logger on app load
+  // Initialize app
   useEffect(() => {
-    logger.info('Application initialized', { environment: process.env.NODE_ENV });
-    
-    // Log any unhandled promise rejections
-    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
-      logger.error('Unhandled promise rejection', { 
-        reason: event.reason,
-        stack: event.reason?.stack,
-      });
-    };
-
-    window.addEventListener('unhandledrejection', handleUnhandledRejection);
-    
-    return () => {
-      window.removeEventListener('unhandledrejection', handleUnhandledRejection);
-    };
+    console.log('Ocean Stride application initialized');
   }, []);
 
   return (

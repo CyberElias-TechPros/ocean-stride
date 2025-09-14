@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { logger } from '@/lib/logger';
+// Logger removed for simplicity
 
 type User = {
   id: string;
@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setUser(JSON.parse(storedUser));
         }
       } catch (error) {
-        logger.error('Auth check failed', { error });
+        console.error('Auth check failed', error);
       } finally {
         setIsLoading(false);
       }
@@ -65,14 +65,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
         }, 1000);
       });
-      logger.info('User logged in', { email });
+      console.log('User logged in:', email);
       
       // Redirect to dashboard or intended path
       const redirectPath = sessionStorage.getItem('redirectPath') || '/';
       navigate(redirectPath);
       sessionStorage.removeItem('redirectPath');
     } catch (error) {
-      logger.error('Login failed', { error, email });
+      console.error('Login failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -82,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    logger.info('User logged out');
+    console.log('User logged out');
     navigate('/login');
   };
 
@@ -92,7 +92,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updatedUser = { ...user, ...userData };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    logger.info('User updated', { userId: user.id, updates: userData });
+    console.log('User updated:', user.id);
   };
 
   return (
