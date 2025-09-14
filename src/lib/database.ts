@@ -114,7 +114,7 @@ export class SeafarerDatabase {
   }
 
   // Generic CRUD operations
-  async create<T extends { id: string }>(
+  async create<T extends { id: string; createdAt: string; updatedAt: string }>(
     storeName: string, 
     data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<T> {
@@ -122,18 +122,17 @@ export class SeafarerDatabase {
       throw new Error('Database not initialized');
     }
 
+    const now = new Date().toISOString();
+    const newItem = {
+      ...data,
+      id: crypto.randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    } as T;
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([storeName], 'readwrite');
       const store = transaction.objectStore(storeName);
-      
-      const now = new Date().toISOString();
-      const newItem = {
-        ...data,
-        id: crypto.randomUUID(),
-        createdAt: now,
-        updatedAt: now,
-      } as T;
-
       const request = store.add(newItem);
 
       request.onsuccess = () => {
@@ -141,7 +140,7 @@ export class SeafarerDatabase {
       };
 
       request.onerror = () => {
-        reject(new Error(`Failed to create ${storeName}`));
+        reject(new Error(`Failed to create item in ${storeName}`));
       };
     });
   }
@@ -166,28 +165,37 @@ export class SeafarerDatabase {
     });
   }
 
-  async update<T extends { id: string }>(storeName: string, data: T): Promise<T> {
+  async update<T extends { id: string; updatedAt: string; createdAt: string }>(
+    storeName: string,
+    data: T & { id: string }
+  ): Promise<T> {
     if (!this.db) {
       throw new Error('Database not initialized');
     }
 
+    // First, get the existing item to preserve the createdAt field
+    const existingItem = await this.read<T>(storeName, data.id);
+    if (!existingItem) {
+      throw new Error(`Item with id ${data.id} not found in ${storeName}`);
+    }
+
+    const updatedItem = {
+      ...data,
+      createdAt: existingItem.createdAt, // Preserve original creation date
+      updatedAt: new Date().toISOString(),
+    } as T;
+
     return new Promise((resolve, reject) => {
       const transaction = this.db!.transaction([storeName], 'readwrite');
       const store = transaction.objectStore(storeName);
-      
-      const updatedItem = {
-        ...data,
-        updatedAt: new Date().toISOString(),
-      };
-
       const request = store.put(updatedItem);
 
       request.onsuccess = () => {
-        resolve(updatedItem as T);
+        resolve(updatedItem);
       };
 
       request.onerror = () => {
-        reject(new Error(`Failed to update ${storeName} with id ${data.id}`));
+        reject(new Error(`Failed to update item in ${storeName}`));
       };
     });
   }
@@ -258,7 +266,28 @@ export class SeafarerDatabase {
   }
 
   // Company management methods
-  async createCompany(company: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<Company> {
+  async createCompany(companyData: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<Company> {
+    // Ensure required fields are present with proper types
+    const company: Omit<Company, 'id' | 'createdAt' | 'updatedAt'> = {
+      name: companyData.name || '',
+      code: companyData.code || '',
+      address: {
+        street: companyData.address?.street || '',
+        city: companyData.address?.city || '',
+        country: companyData.address?.country || '',
+        postalCode: companyData.address?.postalCode || ''
+      },
+      contact: {
+        email: companyData.contact?.email || '',
+        phone: companyData.contact?.phone || ''
+      },
+      settings: {
+        currency: companyData.settings?.currency || 'USD',
+        timezone: companyData.settings?.timezone || 'UTC',
+        fiscalYearStart: companyData.settings?.fiscalYearStart || '01-01'
+      },
+      ...companyData
+    };
     return this.create<Company>('companies', company);
   }
 
@@ -267,7 +296,23 @@ export class SeafarerDatabase {
   }
 
   // Seafarer management methods
-  async createSeafarer(seafarer: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Seafarer> {
+  async createSeafarer(seafarerData: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Seafarer> {
+    // Ensure required fields are present with proper types
+    const seafarer: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'> = {
+      companyId: seafarerData.companyId || '',
+      personalInfo: {
+        firstName: seafarerData.personalInfo?.firstName || '',
+        lastName: seafarerData.personalInfo?.lastName || '',
+        dateOfBirth: seafarerData.personalInfo?.dateOfBirth || '',
+        nationality: seafarerData.personalInfo?.nationality || '',
+        ...seafarerData.personalInfo
+      },
+      employment: {
+        status: 'available',
+        ...seafarerData.employment
+      },
+      ...seafarerData
+    };
     return this.create<Seafarer>('seafarers', seafarer);
   }
 
@@ -280,20 +325,57 @@ export class SeafarerDatabase {
   }
 
   async getSeafarersByCompany(companyId: string): Promise<Seafarer[]> {
-    return this.getByIndex<Seafarer>('seafarers', 'companyId', companyId);
-  }
 
   // Vessel management methods
   async getVesselsByCompany(companyId: string): Promise<Vessel[]> {
     return this.getByIndex<Vessel>('vessels', 'companyId', companyId);
   }
 
-  async createVessel(vessel: Omit<Vessel, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vessel> {
+  async createVessel(vesselData: Omit<Vessel, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vessel> {
+    // Ensure required fields are present with proper types
+    const vessel: Omit<Vessel, 'id' | 'createdAt' | 'updatedAt'> = {
+      name: vesselData.name || '',
+      type: vesselData.type || 'cargo',
+      companyId: vesselData.companyId || '',
+      imoNumber: vesselData.imoNumber || '',
+      flag: vesselData.flag || '',
+      documents: vesselData.documents || [],
+      ...vesselData
+    };
     return this.create<Vessel>('vessels', vessel);
   }
 
   // Payroll management methods
-  async createPayrollRecord(payroll: Omit<PayrollRecord, 'id' | 'createdAt'>): Promise<PayrollRecord> {
+  async createPayrollRecord(payrollData: Omit<PayrollRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<PayrollRecord> {
+    // Ensure required fields are present with proper types
+    const payroll: Omit<PayrollRecord, 'id' | 'createdAt' | 'updatedAt'> = {
+      companyId: payrollData.companyId || '',
+      seafarerId: payrollData.seafarerId || '',
+      status: payrollData.status || 'draft',
+      currency: payrollData.currency || 'USD',
+      period: {
+        start: payrollData.period?.start || new Date().toISOString().split('T')[0],
+        end: payrollData.period?.end || new Date().toISOString().split('T')[0]
+      },
+      earnings: {
+        basic: payrollData.earnings?.basic || 0,
+        overtime: payrollData.earnings?.overtime || 0,
+        bonus: payrollData.earnings?.bonus || 0,
+        allowances: payrollData.earnings?.allowances || {},
+        other: payrollData.earnings?.other || 0,
+        total: payrollData.earnings?.total || 0
+      },
+      deductions: {
+        tax: payrollData.deductions?.tax || 0,
+        socialSecurity: payrollData.deductions?.socialSecurity || 0,
+        insurance: payrollData.deductions?.insurance || 0,
+        unionDues: payrollData.deductions?.unionDues || 0,
+        other: payrollData.deductions?.other || 0,
+        total: payrollData.deductions?.total || 0
+      },
+      netPay: payrollData.netPay || 0,
+      ...payrollData
+    };
     return this.create<PayrollRecord>('payroll', payroll);
   }
 
