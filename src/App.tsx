@@ -7,6 +7,7 @@ import { Toaster as Sonner } from './components/ui/sonner';
 import { ErrorBoundary } from './components/error-boundary';
 import { DatabaseProvider } from './contexts/DatabaseContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CompanyProvider } from './context/CompanyContext';
 import { I18nProvider } from './i18n/I18nProvider';
 // Logger functionality removed for simplicity
 import { LoadingSpinner } from './components/ui/loading-spinner';
@@ -195,7 +196,9 @@ const App = () => {
               <TooltipProvider delayDuration={300}>
                 <BrowserRouter>
                   <AuthProvider>
-                    <AppRoutes />
+                    <CompanyProvider>
+                      <AppRoutes />
+                    </CompanyProvider>
                   </AuthProvider>
                 </BrowserRouter>
                 <Toaster />
