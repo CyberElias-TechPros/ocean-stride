@@ -191,17 +191,17 @@ const App = () => {
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
           <DatabaseProvider>
-            <AuthProvider>
-              <ThemeProvider defaultTheme="system" storageKey="ocean-stride-theme">
-                <TooltipProvider delayDuration={300}>
-                  <BrowserRouter>
+            <ThemeProvider defaultTheme="system" storageKey="ocean-stride-theme">
+              <TooltipProvider delayDuration={300}>
+                <BrowserRouter>
+                  <AuthProvider>
                     <AppRoutes />
-                  </BrowserRouter>
-                  <Toaster />
-                  <Sonner position="top-right" />
-                </TooltipProvider>
-              </ThemeProvider>
-            </AuthProvider>
+                  </AuthProvider>
+                </BrowserRouter>
+                <Toaster />
+                <Sonner position="top-right" />
+              </TooltipProvider>
+            </ThemeProvider>
           </DatabaseProvider>
         </I18nProvider>
       </QueryClientProvider>
