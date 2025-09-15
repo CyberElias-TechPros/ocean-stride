@@ -32,13 +32,18 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
     employment: {
       status: 'available' as const,
       currentVessel: '',
-      signOnDate: '',
+      position: '',
+      contractStart: '',
       contractEnd: '',
     },
     financial: {
-      basicWage: 0,
+      bankName: '',
+      accountNumber: '',
+      iban: '',
+      swiftCode: '',
       currency: 'USD',
-      allotments: [],
+      basicWage: 0,
+      overtimeRate: 0,
     }
   });
 
@@ -76,13 +81,18 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
       employment: {
         status: 'available' as const,
         currentVessel: '',
-        signOnDate: '',
+        position: '',
+        contractStart: '',
         contractEnd: '',
       },
       financial: {
-        basicWage: 0,
+        bankName: '',
+        accountNumber: '',
+        iban: '',
+        swiftCode: '',
         currency: 'USD',
-        allotments: [],
+        basicWage: 0,
+        overtimeRate: 0,
       }
     });
   };
@@ -260,10 +270,9 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="onboard">Onboard</SelectItem>
                     <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="leave">On Leave</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="on-leave">On Leave</SelectItem>
+                    <SelectItem value="retired">Retired</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

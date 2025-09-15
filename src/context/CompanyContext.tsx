@@ -30,7 +30,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loadCompanies = async () => {
     try {
       await db.init();
-      const companiesData = await db.getAllCompanies();
+      const companiesData = await db.getAll<Company>('companies');
       
       if (companiesData.length === 0) {
         // Create sample companies
@@ -101,7 +101,7 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
           await db.createCompany(company);
         }
         
-        const newCompanies = await db.getAllCompanies();
+        const newCompanies = await db.getAll<Company>('companies');
         setCompanies(newCompanies);
         
         // Auto-select first company

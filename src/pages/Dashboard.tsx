@@ -33,16 +33,14 @@ export default function Dashboard() {
     const initializeDatabase = async () => {
       try {
         await db.init();
-        
-        // Check if we have sample data, if not create some
-        const stats = await db.getDashboardStats();
-        
-        if (stats.seafarers.total === 0) {
-          // Create sample data
-          await createSampleData();
-          const newStats = await db.getDashboardStats();
-          setDashboardData(newStats);
-        } else {
+        const companies = (await db.getAll('companies')) as any[];
+        if (!companies.length) {
+          await db.generateSampleData();
+        }
+        const companiesAfter = (await db.getAll('companies')) as any[];
+        const companyId = companiesAfter[0]?.id;
+        if (companyId) {
+          const stats = await computeStats(companyId);
           setDashboardData(stats);
         }
       } catch (error) {
@@ -55,154 +53,31 @@ export default function Dashboard() {
     initializeDatabase();
   }, []);
 
-  const createSampleData = async () => {
-    // Get the first company to associate sample data with
-    const companies = await db.getAllCompanies();
-    const companyId = companies[0]?.id || 'default';
-    
-    // Sample seafarers
-    const seafarers = [
-      {
-        companyId,
-        personalInfo: {
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john.smith@email.com',
-          phone: '+1-555-0123',
-          nationality: 'USA',
-          dateOfBirth: '1985-03-15',
-          passportNumber: 'P1234567',
-          seamanBook: 'SB001234',
-        },
-        qualifications: {
-          rank: 'Captain',
-          certificates: [],
-        },
-        employment: {
-          status: 'onboard' as const,
-          currentVessel: 'MV Ocean Pride',
-          signOnDate: '2024-01-15',
-          contractEnd: '2024-07-15',
-        },
-        financial: {
-          basicWage: 8500,
-          currency: 'USD',
-          allotments: [],
-        },
-      },
-      {
-        companyId,
-        personalInfo: {
-          firstName: 'Maria',
-          lastName: 'Garcia',
-          email: 'maria.garcia@email.com',
-          phone: '+34-555-0124',
-          nationality: 'Spain',
-          dateOfBirth: '1990-07-22',
-          passportNumber: 'P2345678',
-          seamanBook: 'SB002345',
-        },
-        qualifications: {
-          rank: 'Chief Engineer',
-          certificates: [],
-        },
-        employment: {
-          status: 'available' as const,
-        },
-        financial: {
-          basicWage: 7200,
-          currency: 'USD',
-          allotments: [],
-        },
-      },
-      {
-        companyId,
-        personalInfo: {
-          firstName: 'Chen',
-          lastName: 'Wei',
-          email: 'chen.wei@email.com',
-          phone: '+86-555-0125',
-          nationality: 'China',
-          dateOfBirth: '1988-11-08',
-          passportNumber: 'P3456789',
-          seamanBook: 'SB003456',
-        },
-        qualifications: {
-          rank: 'Second Officer',
-          certificates: [],
-        },
-        employment: {
-          status: 'active' as const,
-          currentVessel: 'MV Baltic Star',
-          signOnDate: '2024-02-01',
-          contractEnd: '2024-08-01',
-        },
-        financial: {
-          basicWage: 5800,
-          currency: 'USD',
-          allotments: [],
-        },
-      },
-    ];
+  const computeStats = async (companyId: string): Promise<DashboardData> => {
+    const seafarers = await db.getSeafarersByCompany(companyId);
+    const vessels = await db.getVesselsByCompany(companyId);
+    const payroll = await db.getPayrollByCompany(companyId);
 
-    // Sample vessels
-    const vessels = [
-      {
-        companyId,
-        name: 'MV Ocean Pride',
-        type: 'Container Ship',
-        flag: 'Liberia',
-        imo: 'IMO1234567',
-        crew: [
-          { seafarerId: '1', rank: 'Captain', joinDate: '2024-01-15' },
-        ],
-      },
-      {
-        companyId,
-        name: 'MV Baltic Star',
-        type: 'Bulk Carrier',
-        flag: 'Marshall Islands',
-        imo: 'IMO2345678',
-        crew: [
-          { seafarerId: '3', rank: 'Second Officer', joinDate: '2024-02-01' },
-        ],
-      },
-    ];
+    const total = seafarers.length;
+    const active = seafarers.filter(s => s.employment.status === 'active').length;
+    const available = seafarers.filter(s => s.employment.status === 'available').length;
+    const onboard = seafarers.filter(s => s.employment.currentVessel).length;
 
-    // Create sample data
-    for (const seafarer of seafarers) {
-      await db.createSeafarer(seafarer);
-    }
+    const fullyManned = vessels.filter(v => seafarers.some(s => s.employment.currentVessel === v.name)).length;
+    const needCrew = vessels.length - fullyManned;
 
-    for (const vessel of vessels) {
-      await db.createVessel(vessel);
-    }
+    const now = new Date();
+    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const monthlyRecords = payroll.filter(p => p.period.start.startsWith(ym));
+    const monthlyTotal = monthlyRecords.reduce((sum, p) => sum + (p.netSalary || 0), 0);
 
-    // Sample payroll records
-    await db.createPayrollRecord({
-      companyId,
-      seafarerId: '1',
-      period: {
-        start: '2024-03-01',
-        end: '2024-03-31',
-      },
-      earnings: {
-        basicWage: 8500,
-        overtime: 1200,
-        allowances: 800,
-        bonuses: 500,
-      },
-      deductions: {
-        taxes: 2100,
-        insurance: 300,
-        allotments: 3000,
-        other: 100,
-      },
-      netPay: 6500,
-      currency: 'USD',
-      status: 'processed',
-    });
+    return {
+      seafarers: { total, active, onboard, available },
+      vessels: { total: vessels.length, fullyManned, needCrew },
+      payroll: { monthlyTotal, recordsCount: monthlyRecords.length },
+    };
   };
+
 
   if (loading) {
     return (

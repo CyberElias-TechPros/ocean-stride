@@ -114,7 +114,7 @@ export default function Personnel() {
 
   const handleDeleteSeafarer = async (seafarerId: string) => {
     try {
-      await db.deleteSeafarer(seafarerId);
+      await db.delete('seafarers', seafarerId);
       setSeafarers(prev => prev.filter(s => s.id !== seafarerId));
       toast({
         title: "Success",
@@ -135,7 +135,7 @@ export default function Personnel() {
         employment: {
           ...seafarers.find(s => s.id === seafarerId)?.employment,
           currentVessel: vesselName,
-          status: 'onboard'
+          status: 'active'
         }
       });
       
@@ -171,10 +171,9 @@ export default function Personnel() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'bg-primary text-primary-foreground';
-      case 'onboard': return 'bg-success text-success-foreground';
       case 'available': return 'bg-accent text-accent-foreground';
-      case 'leave': return 'bg-warning text-warning-foreground';
-      case 'inactive': return 'bg-muted text-muted-foreground';
+      case 'on-leave': return 'bg-warning text-warning-foreground';
+      case 'retired': return 'bg-muted text-muted-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -182,10 +181,9 @@ export default function Personnel() {
   const statusCounts = {
     all: seafarers.length,
     active: seafarers.filter(s => s.employment.status === 'active').length,
-    onboard: seafarers.filter(s => s.employment.status === 'onboard').length,
     available: seafarers.filter(s => s.employment.status === 'available').length,
-    leave: seafarers.filter(s => s.employment.status === 'leave').length,
-    inactive: seafarers.filter(s => s.employment.status === 'inactive').length,
+    'on-leave': seafarers.filter(s => s.employment.status === 'on-leave').length,
+    retired: seafarers.filter(s => s.employment.status === 'retired').length,
   };
 
   if (loading) {
@@ -436,15 +434,20 @@ function SeafarerForm({
       certificates: initialData?.qualifications.certificates || [],
     },
     employment: {
-      status: initialData?.employment.status || 'available' as const,
+      status: (initialData?.employment.status as any) || ('available' as const),
       currentVessel: initialData?.employment.currentVessel || '',
-      signOnDate: initialData?.employment.signOnDate || '',
+      position: (initialData as any)?.employment?.position || '',
+      contractStart: (initialData as any)?.employment?.contractStart || '',
       contractEnd: initialData?.employment.contractEnd || '',
     },
     financial: {
-      basicWage: initialData?.financial.basicWage || 0,
+      bankName: (initialData as any)?.financial?.bankName || '',
+      accountNumber: (initialData as any)?.financial?.accountNumber || '',
+      iban: (initialData as any)?.financial?.iban || '',
+      swiftCode: (initialData as any)?.financial?.swiftCode || '',
       currency: initialData?.financial.currency || 'USD',
-      allotments: initialData?.financial.allotments || [],
+      basicWage: initialData?.financial.basicWage || 0,
+      overtimeRate: (initialData as any)?.financial?.overtimeRate || 0,
     }
   });
 
@@ -549,10 +552,9 @@ function SeafarerForm({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="onboard">Onboard</SelectItem>
               <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="leave">On Leave</SelectItem>
-              <SelectItem value="inactive">Inactive</SelectItem>
+              <SelectItem value="on-leave">On Leave</SelectItem>
+              <SelectItem value="retired">Retired</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -250,7 +250,7 @@ export default function Fleet() {
                     <Progress value={crewPercentage} className="h-2" />
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Status: {crewingStatus.status}</span>
-                      <span>IMO: {vessel.imo}</span>
+                      <span>IMO: {vessel.imoNumber}</span>
                     </div>
                   </div>
 
