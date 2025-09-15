@@ -285,10 +285,10 @@ export default function Fleet() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Handle view crew
-                      }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         window.location.href = `/personnel?vessel=${encodeURIComponent(vessel.name)}`;
+                       }}
                     >
                       <Users className="w-4 h-4 mr-2" />
                       View Crew
@@ -297,10 +297,11 @@ export default function Fleet() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Handle plan roster
-                      }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setSelectedVessel(vessel);
+                         setShowVesselDialog(true);
+                       }}
                     >
                       <Calendar className="w-4 h-4 mr-2" />
                       Plan Roster

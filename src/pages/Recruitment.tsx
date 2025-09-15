@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCompany } from '@/context/CompanyContext';
+import { db } from '@/lib/database';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -52,90 +55,197 @@ interface Applicant {
   };
 }
 
-const mockApplicants: Applicant[] = [
-  {
-    id: '1',
-    personalInfo: {
-      firstName: 'John',
-      lastName: 'Smith',
-      email: 'john.smith@email.com',
-      phone: '+1-555-0101',
-      nationality: 'USA',
-      dateOfBirth: '1985-03-15'
-    },
-    application: {
-      position: 'Chief Engineer',
-      experience: 12,
-      status: 'interview',
-      appliedDate: '2024-01-15',
-      priority: 'high'
-    },
-    qualifications: {
-      rank: 'Chief Engineer',
-      certificates: ['STCW', 'Engineering Watch', 'Engine Management'],
-      lastVessel: 'MV Atlantic Star'
-    }
-  },
-  {
-    id: '2',
-    personalInfo: {
-      firstName: 'Maria',
-      lastName: 'Rodriguez',
-      email: 'maria.rodriguez@email.com',
-      phone: '+34-666-123456',
-      nationality: 'Spain',
-      dateOfBirth: '1990-07-22'
-    },
-    application: {
-      position: 'Second Officer',
-      experience: 6,
-      status: 'reviewing',
-      appliedDate: '2024-01-18',
-      priority: 'medium'
-    },
-    qualifications: {
-      rank: 'Second Officer',
-      certificates: ['STCW', 'Navigation', 'GMDSS'],
-      lastVessel: 'MV Mediterranean'
-    }
-  },
-  {
-    id: '3',
-    personalInfo: {
-      firstName: 'Erik',
-      lastName: 'Olsen',
-      email: 'erik.olsen@email.com',
-      phone: '+47-98765432',
-      nationality: 'Norway',
-      dateOfBirth: '1988-11-08'
-    },
-    application: {
-      position: 'Able Seaman',
-      experience: 8,
-      status: 'approved',
-      appliedDate: '2024-01-10',
-      priority: 'high'
-    },
-    qualifications: {
-      rank: 'Able Seaman',
-      certificates: ['STCW', 'Personal Safety'],
-      lastVessel: 'MV Arctic Explorer'
-    }
-  }
-];
-
-const positions = [
-  'Captain', 'Chief Officer', 'Second Officer', 'Third Officer',
-  'Chief Engineer', 'Second Engineer', 'Third Engineer', 'Fourth Engineer',
-  'Bosun', 'Able Seaman', 'Ordinary Seaman', 'Cook', 'Steward'
-];
-
 export default function Recruitment() {
-  const [applicants, setApplicants] = useState<Applicant[]>(mockApplicants);
+  const [applicants, setApplicants] = useState<Applicant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { selectedCompany } = useCompany();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const loadRecruitmentData = async () => {
+      if (!selectedCompany) return;
+      
+      try {
+        await db.init();
+        
+        // Generate sample applicants for demonstration
+        const sampleApplicants: Applicant[] = [
+          {
+            id: '1',
+            personalInfo: {
+              firstName: 'John',
+              lastName: 'Smith',
+              email: 'john.smith@email.com',
+              phone: '+1-555-0101',
+              nationality: 'United States',
+              dateOfBirth: '1985-03-15'
+            },
+            application: {
+              position: 'Chief Engineer',
+              experience: 8,
+              status: 'reviewing',
+              appliedDate: '2024-01-15',
+              priority: 'high'
+            },
+            qualifications: {
+              rank: 'Chief Engineer',
+              certificates: ['STCW III/1', 'Engine Room Resource Management'],
+              lastVessel: 'MV Atlantic Star'
+            }
+          },
+          {
+            id: '2',
+            personalInfo: {
+              firstName: 'Maria',
+              lastName: 'Garcia',
+              email: 'maria.garcia@email.com',
+              phone: '+34-666-123456',
+              nationality: 'Spain',
+              dateOfBirth: '1990-07-22'
+            },
+            application: {
+              position: 'Second Officer',
+              experience: 4,
+              status: 'interview',
+              appliedDate: '2024-01-18',
+              priority: 'medium'
+            },
+            qualifications: {
+              rank: 'Second Officer',
+              certificates: ['STCW II/1', 'Bridge Resource Management'],
+              lastVessel: 'MV Mediterranean'
+            }
+          },
+          {
+            id: '3',
+            personalInfo: {
+              firstName: 'Erik',
+              lastName: 'Hansen',
+              email: 'erik.hansen@email.com',
+              phone: '+47-999-88776',
+              nationality: 'Norway',
+              dateOfBirth: '1982-11-08'
+            },
+            application: {
+              position: 'Chief Cook',
+              experience: 12,
+              status: 'approved',
+              appliedDate: '2024-01-10',
+              priority: 'high'
+            },
+            qualifications: {
+              rank: 'Chief Cook',
+              certificates: ['Food Safety', 'Ship Cook Certificate'],
+              lastVessel: 'MV Baltic Star'
+            }
+          }
+        ];
+        
+        setApplicants(sampleApplicants);
+      } catch (error) {
+        console.error('Failed to load recruitment data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load recruitment data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadRecruitmentData();
+  }, [selectedCompany, toast]);
+
+  const updateApplicantStatus = async (applicantId: string, newStatus: Applicant['application']['status']) => {
+    try {
+      setApplicants(prev => prev.map(applicant => 
+        applicant.id === applicantId 
+          ? { ...applicant, application: { ...applicant.application, status: newStatus }}
+          : applicant
+      ));
+      
+      const applicant = applicants.find(a => a.id === applicantId);
+      toast({
+        title: "Status Updated",
+        description: `${applicant?.personalInfo.firstName} ${applicant?.personalInfo.lastName}'s status changed to ${newStatus}`
+      });
+    } catch (error) {
+      toast({
+        title: "Error", 
+        description: "Failed to update status",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleHireApplicant = async (applicantId: string) => {
+    try {
+      const applicant = applicants.find(a => a.id === applicantId);
+      if (!applicant) return;
+
+      // Convert applicant to seafarer
+      const seafarerData = {
+        companyId: selectedCompany?.id || '',
+        personalInfo: {
+          ...applicant.personalInfo,
+          passportNumber: `P${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+          seamanBook: `SB${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+        },
+        qualifications: {
+          rank: applicant.qualifications.rank,
+          certificates: applicant.qualifications.certificates.map(cert => ({
+            id: `cert-${Math.random().toString(36).substring(2, 8)}`,
+            name: cert,
+            number: `CERT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+            issuingAuthority: 'Maritime Authority',
+            issuedDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+            expiryDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          }))
+        },
+        employment: {
+          status: 'available' as const,
+          position: applicant.application.position,
+          currentVessel: '',
+          contractStart: new Date().toISOString().split('T')[0],
+          contractEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        },
+        financial: {
+          bankName: 'International Bank',
+          accountNumber: `****${Math.floor(Math.random() * 9999)}`,
+          currency: 'USD',
+          basicWage: Math.floor(Math.random() * 3000) + 2000,
+          overtimeRate: 25
+        }
+      };
+
+      await db.createSeafarer(seafarerData);
+      
+      // Update applicant status to approved
+      setApplicants(prev => prev.map(a => 
+        a.id === applicantId 
+          ? { ...a, application: { ...a.application, status: 'approved' }}
+          : a
+      ));
+
+      toast({
+        title: "Applicant Hired",
+        description: `${applicant.personalInfo.firstName} ${applicant.personalInfo.lastName} has been hired and added to personnel`
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to hire applicant",
+        variant: "destructive"
+      });
+    }
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
   const [selectedApplicant, setSelectedApplicant] = useState<Applicant | null>(null);
+  
+  const positions = ['Captain', 'Chief Engineer', 'Second Officer', 'Third Officer', 'Cook', 'AB Seaman', 'Oiler'];
 
   const handleStatusChange = (applicantId: string, newStatus: Applicant['application']['status']) => {
     setApplicants(prev => prev.map(app => 
