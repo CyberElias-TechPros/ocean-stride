@@ -17,16 +17,29 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email || !password) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter both email and password',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
       await login(email, password);
-      navigate('/');
+      // Get the redirect path from session storage or default to '/'
+      const redirectPath = sessionStorage.getItem('redirectPath') || '/';
+      sessionStorage.removeItem('redirectPath');
+      navigate(redirectPath);
     } catch (error) {
       console.error('Login failed:', error);
       toast({
         title: 'Login Failed',
         description: error instanceof Error ? error.message : 'An error occurred during login',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);

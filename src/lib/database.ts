@@ -1,5 +1,46 @@
 import { v4 as uuidv4 } from 'uuid';
 
+type NotificationType = 'info' | 'warning' | 'error' | 'success' | 'reminder';
+
+export interface NotificationMetadata {
+  companyId: string;
+  source: string;
+  priority: 'low' | 'medium' | 'high';
+  [key: string]: unknown;
+}
+
+export interface NotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+  [key: string]: unknown;
+}
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  timestamp: string;
+  createdAt: string;
+  updatedAt: string;
+  badge: string;
+  body: string;
+  data: Record<string, unknown>;
+  dir: 'auto' | 'ltr' | 'rtl';
+  icon?: string;
+  image?: string;
+  lang?: string;
+  renotify: boolean;
+  requireInteraction: boolean;
+  silent: boolean;
+  tag: string;
+  vibrate: number[];
+  actions: NotificationAction[];
+  metadata: NotificationMetadata;
+}
+
 // Type definitions for the database entities
 export interface Address {
   street: string;
@@ -253,28 +294,26 @@ class SeafarerDatabase {
     });
   }
 
-  private async withTransaction<T>(
-    storeNames: string | string[],
-    mode: IDBTransactionMode,
-    callback: (stores: IDBObjectStore | IDBObjectStore[]) => Promise<T> | T
+  // Public method to handle transactions
+  async withTransaction<T>(
+    storeName: string | string[], 
+    mode: IDBTransactionMode, 
+    callback: (store: IDBObjectStore) => Promise<T> | T
   ): Promise<T> {
     if (!this.db) {
       throw new Error('Database not initialized');
     }
 
-    const storeNamesArray = Array.isArray(storeNames) ? storeNames : [storeNames];
-    const transaction = this.db.transaction(storeNamesArray, mode);
+    const storeNames = Array.isArray(storeName) ? storeName : [storeName];
+    const transaction = this.db.transaction(storeNames, mode);
     
     return new Promise((resolve, reject) => {
       transaction.onerror = () => reject(transaction.error);
       transaction.onabort = () => reject(new Error('Transaction aborted'));
       
       try {
-        const stores = storeNamesArray.length === 1 
-          ? transaction.objectStore(storeNamesArray[0])
-          : storeNamesArray.map(name => transaction.objectStore(name));
-        
-        const result = callback(stores);
+        const store = transaction.objectStore(storeNames[0]);
+        const result = callback(store);
         
         if (result instanceof Promise) {
           result.then(resolve).catch(reject);
@@ -290,23 +329,35 @@ class SeafarerDatabase {
   // Generic CRUD operations
   async create<T extends { id: string; createdAt: string; updatedAt: string }>(
     storeName: string,
-    data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>
+    data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>,
+    transaction?: IDBTransaction
   ): Promise<T> {
     const now = new Date().toISOString();
-    const entity = {
+    const newItem = {
       ...data,
       id: uuidv4(),
       createdAt: now,
-      updatedAt: now
+      updatedAt: now,
     } as T;
 
-    return this.withTransaction(storeName, 'readwrite', (store) => {
-      return new Promise<T>((resolve, reject) => {
-        const request = (store as IDBObjectStore).add(entity);
-        request.onsuccess = () => resolve(entity);
+    if (transaction) {
+      const store = transaction.objectStore(storeName);
+      await new Promise<void>((resolve, reject) => {
+        const request = store.add(newItem);
+        request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
-    });
+    } else {
+      await this.withTransaction(storeName, 'readwrite', (store) => {
+        return new Promise<void>((resolve, reject) => {
+          const request = store.add(newItem);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      });
+    }
+
+    return newItem;
   }
 
   async getById<T>(storeName: string, id: string): Promise<T | null> {
@@ -343,34 +394,212 @@ class SeafarerDatabase {
   async update<T extends { id: string; updatedAt: string }>(
     storeName: string,
     id: string,
-    updates: Partial<T>
+    updates: Partial<T>,
+    transaction?: IDBTransaction
   ): Promise<T> {
     const existing = await this.getById<T>(storeName, id);
     if (!existing) {
-      throw new Error(`Entity with id ${id} not found`);
+      throw new Error(`Item with id ${id} not found in ${storeName}`);
     }
 
-    const updated = {
+    const updatedItem = {
       ...existing,
       ...updates,
-      updatedAt: new Date().toISOString()
-    } as T;
+      updatedAt: new Date().toISOString(),
+    };
 
-    return this.withTransaction(storeName, 'readwrite', (store) => {
-      return new Promise<T>((resolve, reject) => {
-        const request = (store as IDBObjectStore).put(updated);
-        request.onsuccess = () => resolve(updated);
+    if (transaction) {
+      const store = transaction.objectStore(storeName);
+      await new Promise<void>((resolve, reject) => {
+        const request = store.put(updatedItem);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } else {
+      await this.withTransaction(storeName, 'readwrite', (store) => {
+        return new Promise<void>((resolve, reject) => {
+          const request = store.put(updatedItem);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      });
+    }
+
+    return updatedItem;
+  }
+
+  async delete(storeName: string, id: string, transaction?: IDBTransaction): Promise<void> {
+    if (transaction) {
+      const store = transaction.objectStore(storeName);
+      await new Promise<void>((resolve, reject) => {
+        const request = store.delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    } else {
+      await this.withTransaction(storeName, 'readwrite', (store) => {
+        return new Promise<void>((resolve, reject) => {
+          const request = store.delete(id);
+          request.onsuccess = () => resolve();
+          request.onerror = () => reject(request.error);
+        });
+      });
+    }
+  }
+
+  // Transaction support
+  transaction(storeNames: string | string[], mode: IDBTransactionMode = 'readonly'): {
+    objectStore: (name: string) => IDBObjectStore;
+    commit: () => Promise<void>;
+    abort: () => void;
+  } {
+    if (!this.db) {
+      throw new Error('Database not initialized');
+    }
+
+    const tx = this.db.transaction(storeNames, mode);
+    const stores = new Map<string, IDBObjectStore>();
+    
+    (Array.isArray(storeNames) ? storeNames : [storeNames]).forEach(name => {
+      stores.set(name, tx.objectStore(name));
+    });
+
+    return {
+      objectStore: (name: string) => {
+        const store = stores.get(name);
+        if (!store) {
+          throw new Error(`Store ${name} not part of this transaction`);
+        }
+        return store;
+      },
+      commit: () => {
+        return new Promise<void>((resolve, reject) => {
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
+        });
+      },
+      abort: () => {
+        tx.abort();
+      },
+    };
+  }
+
+  // Notification methods
+  async createNotification(data: Omit<Notification, 'id' | 'createdAt' | 'updatedAt' | 'timestamp'> & { 
+    message: string;
+    metadata: NotificationMetadata;
+  }): Promise<Notification> {
+    const now = new Date().toISOString();
+    const notification: Notification = {
+      ...data,
+      id: uuidv4(),
+      timestamp: now,
+      createdAt: now,
+      updatedAt: now,
+      read: false,
+      badge: '',
+      body: data.message,
+      data: {},
+      dir: 'auto',
+      icon: '',
+      image: '',
+      lang: 'en',
+      renotify: false,
+      requireInteraction: false,
+      silent: false,
+      tag: '',
+      vibrate: [],
+      actions: [],
+    };
+    
+    await this.withTransaction('notifications', 'readwrite', (store) => {
+      return new Promise<void>((resolve, reject) => {
+        const request = store.add(notification);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      });
+    });
+    
+    return notification;
+  }
+
+  async getNotification(id: string): Promise<Notification | null> {
+    return this.getById<Notification>('notifications', id);
+  }
+
+  async getNotificationsByCompany(companyId: string, options: { 
+    limit?: number; 
+    includeRead?: boolean;
+  } = {}): Promise<Notification[]> {
+    const { limit, includeRead = true } = options;
+    
+    return this.withTransaction('notifications', 'readonly', (store) => {
+      return new Promise<Notification[]>((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => {
+          try {
+            const notifications = request.result as Notification[];
+            const filtered = notifications
+              .filter(n => n.metadata?.companyId === companyId && (includeRead ? true : !n.read))
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            
+            resolve(limit ? filtered.slice(0, limit) : filtered);
+          } catch (error) {
+            reject(error);
+          }
+        };
         request.onerror = () => reject(request.error);
       });
     });
   }
 
-  async delete(storeName: string, id: string): Promise<void> {
-    return this.withTransaction(storeName, 'readwrite', (store) => {
+  async getUnreadNotificationCount(companyId: string): Promise<number> {
+    const notifications = await this.getNotificationsByCompany(companyId, { includeRead: false });
+    return notifications.length;
+  }
+
+  async markNotificationAsRead(id: string): Promise<void> {
+    await this.withTransaction('notifications', 'readwrite', (store) => {
       return new Promise<void>((resolve, reject) => {
-        const request = (store as IDBObjectStore).delete(id);
-        request.onsuccess = () => resolve();
+        const request = store.get(id);
+        request.onsuccess = () => {
+          const notification = request.result as Notification;
+          if (notification) {
+            notification.read = true;
+            notification.updatedAt = new Date().toISOString();
+            const updateRequest = store.put(notification);
+            updateRequest.onsuccess = () => resolve();
+            updateRequest.onerror = () => reject(updateRequest.error);
+          } else {
+            resolve();
+          }
+        };
         request.onerror = () => reject(request.error);
+      });
+    });
+  }
+
+  async markAllNotificationsAsRead(companyId: string): Promise<void> {
+    const notifications = await this.getNotificationsByCompany(companyId, { includeRead: false });
+    
+    if (notifications.length === 0) return;
+    
+    await this.withTransaction('notifications', 'readwrite', (store) => {
+      return new Promise<void>((resolve, reject) => {
+        const now = new Date().toISOString();
+        const requests = notifications.map(notification => {
+          return new Promise<void>((innerResolve, innerReject) => {
+            const updated = { ...notification, read: true, updatedAt: now };
+            const request = store.put(updated);
+            request.onsuccess = () => innerResolve();
+            request.onerror = () => innerReject(request.error);
+          });
+        });
+        
+        Promise.all(requests)
+          .then(() => resolve())
+          .catch(error => reject(error));
       });
     });
   }
@@ -381,7 +610,63 @@ class SeafarerDatabase {
   }
 
   async updateCompany(id: string, updates: Partial<Company>): Promise<Company> {
-    return this.update<Company>('companies', id, updates);
+    return this.update<Company>('companies', id, {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async getAllCompanies(): Promise<Company[]> {
+    return this.getAll<Company>('companies');
+  }
+
+  async getDashboardStats(): Promise<{
+    seafarers: { total: number; active: number; onboard: number; available: number };
+    vessels: { total: number; fullyManned: number; needCrew: number };
+    payroll: { monthlyTotal: number; recordsCount: number };
+  }> {
+    const [seafarers, vessels, payrolls] = await Promise.all([
+      this.getAll<Seafarer>('seafarers'),
+      this.getAll<Vessel>('vessels'),
+      this.getAll<PayrollRecord>('payrolls')
+    ]);
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Calculate monthly payroll
+    const monthlyPayroll = payrolls.reduce((total, record) => {
+      const recordDate = new Date(record.period.start);
+      if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
+        return total + record.netSalary;
+      }
+      return total;
+    }, 0);
+
+    // Calculate seafarer stats
+    const seafarerStats = {
+      total: seafarers.length,
+      active: seafarers.filter(s => s.employment.status === 'active').length,
+      onboard: seafarers.filter(s => s.employment.status === 'active' && s.employment.currentVessel).length,
+      available: seafarers.filter(s => s.employment.status === 'available').length
+    };
+
+    // Calculate vessel stats
+    const vesselStats = {
+      total: vessels.length,
+      fullyManned: Math.floor(vessels.length * 0.7), // Placeholder logic
+      needCrew: Math.ceil(vessels.length * 0.3)     // Placeholder logic
+    };
+
+    return {
+      seafarers: seafarerStats,
+      vessels: vesselStats,
+      payroll: {
+        monthlyTotal: monthlyPayroll,
+        recordsCount: payrolls.length
+      }
+    };
   }
 
   // Seafarer methods

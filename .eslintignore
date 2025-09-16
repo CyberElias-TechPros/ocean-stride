@@ -1,0 +1,113 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+.next/
+out/
+
+# Cache
+.cache/
+.turbo/
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Production build files
+*.map
+*.min.*
+
+# Local development
+.local/
+
+# Misc
+*.log
+*.pem
+*.p12
+*.crt
+*.key
+*.cer
+
+# Storybook
+.storybook/
+storybook-static/
+
+# Playwright
+playwright-report/
+test-results/
+
+# Vercel
+.vercel/
+
+# Public assets
+public/
+!public/robots.txt
+!public/sitemap.xml
+!public/*.ico
+!public/*.png
+!public/*.svg
+!public/*.json
+
+# Prisma
+prisma/migrations
+prisma/*.db
+prisma/*.db-journal
+
+# TypeScript declaration files
+**/*.d.ts
+!src/types/*.d.ts
+
+# Ignore all markdown files in node_modules
+**/node_modules/**/*.md
+
+# Ignore all test snapshots
+**/__snapshots__/*
+
+# Ignore auto-generated files
+**/generated/*
+
+# Ignore build output
+.next/
+out/
+build/
+dist/
+
+# Ignore IDE specific files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

@@ -1,8 +1,12 @@
-import { Bell, Search, User, Menu, Building2, ChevronDown } from 'lucide-react';
+import { Bell, Search, User, Menu, Building2, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useCompany } from '@/context/CompanyContext';
+import useNotificationStore from '@/stores/notificationStore';
+import { NotificationPanel } from '@/components/notifications/NotificationPanel';
+import { useEffect } from 'react';
+import { useCrewStatus } from '@/hooks/useCrewStatus';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +22,23 @@ interface HeaderProps {
 
 export function Header({ onMenuClick }: HeaderProps) {
   const { selectedCompany, companies, setSelectedCompany } = useCompany();
+  const {
+    notifications,
+    unreadCount,
+    isOpen: isNotificationPanelOpen,
+    togglePanel: toggleNotificationPanel,
+    closePanel: closeNotificationPanel,
+    fetchNotifications,
+  } = useNotificationStore();
+  
+  const { onboard, expiringCertificates, loading: crewLoading } = useCrewStatus();
+
+  // Fetch notifications when company changes
+  useEffect(() => {
+    if (selectedCompany?.id) {
+      fetchNotifications(selectedCompany.id);
+    }
+  }, [selectedCompany?.id, fetchNotifications]);
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm">
@@ -75,21 +96,41 @@ export function Header({ onMenuClick }: HeaderProps) {
         <div className="flex items-center space-x-4">
           {/* Quick Actions */}
           <div className="hidden md:flex items-center space-x-2">
-            <Badge variant="outline" className="text-warning">
-              3 Certificates Expiring
+            <Badge variant="outline" className={`text-warning ${crewLoading ? 'opacity-70' : ''}`}>
+              {crewLoading ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <>{expiringCertificates} Certificates Expiring</>
+              )}
             </Badge>
-            <Badge variant="outline" className="text-success">
-              12 Crew Onboard
+            <Badge variant="outline" className={`text-success ${crewLoading ? 'opacity-70' : ''}`}>
+              {crewLoading ? (
+                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+              ) : (
+                <>{onboard} Crew Onboard</>
+              )}
             </Badge>
           </div>
 
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="relative">
-            <Bell className="w-5 h-5" />
-            <Badge className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive">
-              3
-            </Badge>
-          </Button>
+          <div className="relative">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="relative"
+              onClick={toggleNotificationPanel}
+            >
+              <Bell className="w-5 h-5" />
+              {unreadCount > 0 && (
+                <Badge 
+                  className="absolute -top-1 -right-1 w-5 h-5 p-0 flex items-center justify-center text-xs bg-destructive animate-pulse"
+                >
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
+            </Button>
+            {isNotificationPanelOpen && <NotificationPanel />}
+          </div>
 
           {/* User menu */}
           <DropdownMenu>

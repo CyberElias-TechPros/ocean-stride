@@ -1,211 +1,129 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { TooltipProvider } from './components/ui/tooltip';
-import { Toaster } from './components/ui/toaster';
-import { Toaster as Sonner } from './components/ui/sonner';
-import { ErrorBoundary } from './components/error-boundary';
-import { DatabaseProvider } from './contexts/DatabaseContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { I18nProvider } from './i18n/I18nProvider';
-// Logger functionality removed for simplicity
-import { LoadingSpinner } from './components/ui/loading-spinner';
-import { ThemeProvider } from './components/theme-provider';
+import { QueryErrorResetBoundary } from '@tanstack/react-query';
+import { BrowserRouter, useRoutes, Navigate } from 'react-router-dom';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/toaster';
+import { Toaster as Sonner } from '@/components/ui/sonner';
+import { ThemeProvider } from '@/components/theme-provider';
+import { routes as appRoutes, ROUTES } from '@/config/routes';
+import ErrorBoundary from '@/contexts/ErrorBoundary';
+import { errorBoundaryHandler } from '@/lib/error-handler';
+import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
+import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { CompanyProvider } from './context/CompanyContext';
 
-// Lazy load pages for better performance
-const LoginPage = React.lazy(() => import('./pages/Login'));
-const IndexPage = React.lazy(() => import('./pages/Index'));
-const PersonnelPage = React.lazy(() => import('./pages/Personnel'));
-const FleetPage = React.lazy(() => import('./pages/Fleet'));
-const RecruitmentPage = React.lazy(() => import('./pages/Recruitment'));
-const PayrollPage = React.lazy(() => import('./pages/Payroll'));
-const CompliancePage = React.lazy(() => import('./pages/Compliance'));
-const AnalyticsPage = React.lazy(() => import('./pages/Analytics'));
-const SettingsPage = React.lazy(() => import('./pages/Settings'));
-const NotFoundPage = React.lazy(() => import('./pages/NotFound'));
+// Lazy load pages
+const LoginPage = lazy(() => import('@/pages/Login'));
+const DashboardPage = lazy(() => import('@/pages/Index'));
 
-// Configure React Query
+// Create query client with default error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      refetchOnWindowFocus: false,
       retry: 1,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
     },
   },
 });
 
-// Loading component for Suspense fallback
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-screen">
-    <LoadingSpinner className="h-12 w-12" />
-  </div>
+// Loading boundary component
+const RouteLoadingBoundary: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <ErrorBoundary onError={errorBoundaryHandler}>
+    <Suspense fallback={
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900" />
+      </div>
+    }>
+      {children}
+    </Suspense>
+  </ErrorBoundary>
 );
 
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-  const location = useNavigate();
-  const currentLocation = useLocation();
+/**
+ * Main application routes with proper nested routing and authentication flow
+ */
+const AppRoutes = () => {
+  const { isLoading } = useAuth();
+  const element = useRoutes([
+    // Public routes
+    {
+      path: ROUTES.LOGIN,
+      element: (
+        <RouteLoadingBoundary>
+          <LoginPage />
+        </RouteLoadingBoundary>
+      ),
+    },
+    
+    // Protected routes
+    {
+      element: (
+        <ProtectedRoute>
+          <DashboardPage />
+        </ProtectedRoute>
+      ),
+      children: [
+        {
+          index: true,
+          element: <Navigate to={ROUTES.DASHBOARD} replace />,
+        },
+        ...appRoutes
+          .filter(route => route.path !== ROUTES.LOGIN && route.path !== ROUTES.NOT_FOUND)
+          .map(route => ({
+            path: route.path === ROUTES.DASHBOARD ? 'dashboard' : route.path?.substring(1),
+            element: (
+              <RouteLoadingBoundary>
+                {route.element}
+              </RouteLoadingBoundary>
+            ),
+          })),
+      ],
+    },
+    // 404 - Not Found route
+    {
+      path: '*',
+      element: <Navigate to="/" replace />,
+    },
+  ]);
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      // Store the current location to redirect back after login
-      sessionStorage.setItem('redirectPath', currentLocation.pathname);
-      location('/login');
-    }
-  }, [isAuthenticated, isLoading, location, currentLocation]);
-
+  // Show loading state while checking auth status
   if (isLoading) {
-    return <LoadingFallback />;
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900" />
+      </div>
+    );
   }
 
-  return isAuthenticated ? <>{children}</> : null;
+  return element;
 };
 
-// Main app routes
-const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
-  const location = useLocation();
-
-  // Log page views - simplified
-  useEffect(() => {
-    console.log(`Navigated to: ${location.pathname}`);
-  }, [location]);
-
-  return (
-    <Routes>
-      {/* Public routes */}
-      <Route
-        path="/login"
-        element={
-          <Suspense fallback={<LoadingFallback />}>
-            <LoginPage />
-          </Suspense>
-        }
-      />
-
-      {/* Protected routes */}
-      <Route
-        path="/"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <IndexPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/personnel"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <PersonnelPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/fleet"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <FleetPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/recruitment"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <RecruitmentPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/payroll"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <PayrollPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/compliance"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <CompliancePage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/analytics"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <AnalyticsPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/settings"
-        element={
-          <ProtectedRoute>
-            <Suspense fallback={<LoadingFallback />}>
-              <SettingsPage />
-            </Suspense>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* 404 - Not Found */}
-      <Route
-        path="*"
-        element={
-          <Suspense fallback={<LoadingFallback />}>
-            <NotFoundPage />
-          </Suspense>
-        }
-      />
-    </Routes>
-  );
-};
-
+// Main App component with all providers
 const App = () => {
-  // Initialize app
-  useEffect(() => {
-    console.log('Ocean Stride application initialized');
-  }, []);
-
   return (
-    <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <I18nProvider>
-          <DatabaseProvider>
-            <AuthProvider>
-              <ThemeProvider defaultTheme="system" storageKey="ocean-stride-theme">
-                <TooltipProvider delayDuration={300}>
-                  <BrowserRouter>
-                    <AppRoutes />
-                  </BrowserRouter>
-                  <Toaster />
-                  <Sonner position="top-right" />
-                </TooltipProvider>
-              </ThemeProvider>
-            </AuthProvider>
-          </DatabaseProvider>
-        </I18nProvider>
-      </QueryClientProvider>
-    </ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+        <TooltipProvider>
+          <AuthProvider>
+            <CompanyProvider>
+              <BrowserRouter>
+                <QueryErrorResetBoundary>
+                  {() => (
+                    <RouteLoadingBoundary>
+                      <AppRoutes />
+                    </RouteLoadingBoundary>
+                  )}
+                </QueryErrorResetBoundary>
+                <Toaster />
+                <Sonner position="top-right" />
+              </BrowserRouter>
+            </CompanyProvider>
+          </AuthProvider>
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 

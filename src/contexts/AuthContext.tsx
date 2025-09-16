@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
-// Logger removed for simplicity
+// Removed useNavigate from here as it should be used in components
 
 type User = {
   id: string;
@@ -23,7 +22,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const navigate = useNavigate();
+  // Removed direct useNavigate from here
 
   // Check for existing session on mount
   useEffect(() => {
@@ -59,6 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             };
             setUser(mockUser);
             localStorage.setItem('user', JSON.stringify(mockUser));
+            console.log('User logged in:', email);
             resolve();
           } else {
             reject(new Error('Invalid credentials'));
@@ -67,10 +67,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       console.log('User logged in:', email);
       
-      // Redirect to dashboard or intended path
-      const redirectPath = sessionStorage.getItem('redirectPath') || '/';
-      navigate(redirectPath);
-      sessionStorage.removeItem('redirectPath');
+      // Navigation is handled by the ProtectedRoute component
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
@@ -83,7 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
     localStorage.removeItem('user');
     console.log('User logged out');
-    navigate('/login');
+    // The actual navigation will be handled by the ProtectedRoute component
   };
 
   const updateUser = (userData: Partial<User>) => {
