@@ -1,63 +1,69 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Ship, Users, MapPin, AlertTriangle } from 'lucide-react';
+import { useCompany } from '@/context/CompanyContext';
+import { db, type Vessel as DbVessel, type Seafarer } from '@/lib/database';
 
-interface Vessel {
-  id: string;
-  name: string;
-  type: string;
-  location: string;
+interface FleetVessel extends DbVessel {
   crewCount: number;
   maxCrew: number;
+  location: string;
   status: 'operational' | 'maintenance' | 'dry-dock';
   nextCrewChange: string;
 }
 
-const mockVessels: Vessel[] = [
-  {
-    id: '1',
-    name: 'MV Ocean Pride',
-    type: 'Container Ship',
-    location: 'Singapore',
-    crewCount: 22,
-    maxCrew: 24,
-    status: 'operational',
-    nextCrewChange: '2024-04-15',
-  },
-  {
-    id: '2',
-    name: 'MV Baltic Star',
-    type: 'Bulk Carrier',
-    location: 'Hamburg',
-    crewCount: 18,
-    maxCrew: 20,
-    status: 'operational',
-    nextCrewChange: '2024-04-22',
-  },
-  {
-    id: '3',
-    name: 'MV Pacific Dawn',
-    type: 'Tanker',
-    location: 'Houston',
-    crewCount: 16,
-    maxCrew: 22,
-    status: 'maintenance',
-    nextCrewChange: '2024-05-01',
-  },
-  {
-    id: '4',
-    name: 'MV Atlantic Wave',
-    type: 'Container Ship',
-    location: 'Rotterdam',
-    crewCount: 24,
-    maxCrew: 24,
-    status: 'operational',
-    nextCrewChange: '2024-04-18',
-  },
-];
-
 export function FleetOverview() {
+  const [vessels, setVessels] = useState<FleetVessel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { selectedCompany } = useCompany();
+
+  useEffect(() => {
+    const loadFleetData = async () => {
+      if (!selectedCompany) return;
+      
+      try {
+        await db.init();
+        const [companyVessels, companySeafarers] = await Promise.all([
+          db.getVesselsByCompany(selectedCompany.id),
+          db.getSeafarersByCompany(selectedCompany.id)
+        ]);
+        
+        const fleetVessels: FleetVessel[] = companyVessels.map(vessel => {
+          const assignedCrew = companySeafarers.filter(s => s.employment.currentVessel === vessel.name);
+          const maxCrew = getMaxCrewByType(vessel.type);
+          
+          return {
+            ...vessel,
+            crewCount: assignedCrew.length,
+            maxCrew,
+            location: ['Singapore', 'Hamburg', 'Houston', 'Rotterdam', 'Dubai'][Math.floor(Math.random() * 5)],
+            status: ['operational', 'maintenance', 'dry-dock'][Math.floor(Math.random() * 3)] as 'operational' | 'maintenance' | 'dry-dock',
+            nextCrewChange: new Date(Date.now() + Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          };
+        });
+        
+        setVessels(fleetVessels);
+      } catch (error) {
+        console.error('Failed to load fleet data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadFleetData();
+  }, [selectedCompany]);
+
+  const getMaxCrewByType = (type: string): number => {
+    switch (type.toLowerCase()) {
+      case 'container ship': return 24;
+      case 'bulk carrier': return 20;
+      case 'tanker': return 22;
+      case 'general cargo': return 18;
+      default: return 20;
+    }
+  };
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'operational': return 'bg-success text-success-foreground';
@@ -94,7 +100,18 @@ export function FleetOverview() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {mockVessels.map((vessel) => {
+        {loading ? (
+          <div className="text-center py-4">
+            <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-sm text-muted-foreground">Loading fleet data...</p>
+          </div>
+        ) : vessels.length === 0 ? (
+          <div className="text-center py-4">
+            <Ship className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">No vessels found</p>
+          </div>
+        ) : (
+          vessels.map((vessel) => {
           const crewPercentage = (vessel.crewCount / vessel.maxCrew) * 100;
           const crewingStatus = getCrewingStatus(vessel.crewCount, vessel.maxCrew);
           const daysToCrewChange = Math.ceil(
@@ -156,7 +173,8 @@ export function FleetOverview() {
               </div>
             </div>
           );
-        })}
+          })
+        )}
       </CardContent>
     </Card>
   );

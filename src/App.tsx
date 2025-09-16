@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+<<<<<<< HEAD
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
 import { BrowserRouter, useRoutes, Navigate } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -12,6 +13,20 @@ import { errorBoundaryHandler } from '@/lib/error-handler';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CompanyProvider } from './context/CompanyContext';
+=======
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { TooltipProvider } from './components/ui/tooltip';
+import { Toaster } from './components/ui/toaster';
+import { Toaster as Sonner } from './components/ui/sonner';
+import { ErrorBoundary } from './components/error-boundary';
+import { DatabaseProvider } from './contexts/DatabaseContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CompanyProvider } from './context/CompanyContext';
+import { I18nProvider } from './i18n/I18nProvider';
+// Logger functionality removed for simplicity
+import { LoadingSpinner } from './components/ui/loading-spinner';
+import { ThemeProvider } from './components/theme-provider';
+>>>>>>> d263e89e3bc7fb1fcd9185e29da52bf37490792c
 
 // Lazy load pages
 const LoginPage = lazy(() => import('@/pages/Login'));
@@ -103,6 +118,7 @@ const AppRoutes = () => {
 // Main App component with all providers
 const App = () => {
   return (
+<<<<<<< HEAD
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
         <TooltipProvider>
@@ -124,6 +140,29 @@ const App = () => {
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
+=======
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <I18nProvider>
+          <DatabaseProvider>
+            <ThemeProvider defaultTheme="system" storageKey="ocean-stride-theme">
+              <TooltipProvider delayDuration={300}>
+                <BrowserRouter>
+                  <AuthProvider>
+                    <CompanyProvider>
+                      <AppRoutes />
+                    </CompanyProvider>
+                  </AuthProvider>
+                </BrowserRouter>
+                <Toaster />
+                <Sonner position="top-right" />
+              </TooltipProvider>
+            </ThemeProvider>
+          </DatabaseProvider>
+        </I18nProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
+>>>>>>> d263e89e3bc7fb1fcd9185e29da52bf37490792c
   );
 };
 

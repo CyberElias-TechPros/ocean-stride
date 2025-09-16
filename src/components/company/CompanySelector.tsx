@@ -118,7 +118,7 @@ function CompanyCard({ company, isSelected, onSelect }: CompanyCardProps) {
             className="p-1 h-6 w-6"
             onClick={(e) => {
               e.stopPropagation();
-              // Handle settings click
+              window.location.href = '/settings';
             }}
           >
             <Settings className="w-3 h-3" />

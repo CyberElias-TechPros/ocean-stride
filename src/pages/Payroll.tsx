@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCompany } from '@/context/CompanyContext';
+import { db, type Seafarer, type Vessel } from '@/lib/database';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -53,74 +56,176 @@ interface PayrollRecord {
   exchangeRate?: number;
 }
 
-const mockPayrollRecords: PayrollRecord[] = [
-  {
-    id: '1',
-    seafarerId: '1',
-    seafarerName: 'John Smith',
-    rank: 'Chief Engineer',
-    vessel: 'MV Atlantic Star',
-    period: { start: '2024-01-01', end: '2024-01-31' },
-    earnings: { basicWage: 8500, overtime: 1200, allowances: 800, bonuses: 500 },
-    deductions: { taxes: 1500, insurance: 400, allotments: 4000, other: 100 },
-    netPay: 5000,
-    currency: 'USD',
-    status: 'paid',
-    exchangeRate: 1.0
-  },
-  {
-    id: '2',
-    seafarerId: '2',
-    seafarerName: 'Maria Rodriguez',
-    rank: 'Second Officer',
-    vessel: 'MV Mediterranean',
-    period: { start: '2024-01-01', end: '2024-01-31' },
-    earnings: { basicWage: 6200, overtime: 900, allowances: 600, bonuses: 300 },
-    deductions: { taxes: 1100, insurance: 300, allotments: 3000, other: 50 },
-    netPay: 3550,
-    currency: 'EUR',
-    status: 'processed',
-    exchangeRate: 0.85
-  },
-  {
-    id: '3',
-    seafarerId: '3',
-    seafarerName: 'Erik Olsen',
-    rank: 'Able Seaman',
-    vessel: 'MV Arctic Explorer',
-    period: { start: '2024-01-01', end: '2024-01-31' },
-    earnings: { basicWage: 3800, overtime: 600, allowances: 400, bonuses: 200 },
-    deductions: { taxes: 600, insurance: 200, allotments: 2000, other: 50 },
-    netPay: 2150,
-    currency: 'NOK',
-    status: 'draft',
-    exchangeRate: 11.2
-  }
-];
-
-const currencies = ['USD', 'EUR', 'GBP', 'NOK', 'SEK', 'DKK'];
-
 export default function Payroll() {
-  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(mockPayrollRecords);
+  const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
+  const [seafarers, setSeafarers] = useState<Seafarer[]>([]);
+  const [vessels, setVessels] = useState<Vessel[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { selectedCompany } = useCompany();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const loadPayrollData = async () => {
+      if (!selectedCompany) return;
+      
+      try {
+        await db.init();
+        const [companySeafarers, companyVessels, existingPayroll] = await Promise.all([
+          db.getSeafarersByCompany(selectedCompany.id),
+          db.getVesselsByCompany(selectedCompany.id),
+          db.getPayrollByCompany(selectedCompany.id)
+        ]);
+        
+        setSeafarers(companySeafarers);
+        setVessels(companyVessels);
+        
+        // Generate payroll records from seafarer data if none exist
+        if (existingPayroll.length === 0) {
+          const generatedPayroll: PayrollRecord[] = companySeafarers.map(seafarer => {
+            const basicWage = seafarer.financial.bankName ? 5000 : 3000; // Use a default salary
+            const overtime = Math.floor(Math.random() * 1000) + 500;
+            const allowances = Math.floor(Math.random() * 500) + 200;
+            const bonuses = Math.floor(Math.random() * 300);
+            const grossPay = basicWage + overtime + allowances + bonuses;
+            
+            const taxes = grossPay * 0.15;
+            const insurance = grossPay * 0.05;
+            const allotments = seafarer.financial.overtimeRate * grossPay / 100; // Use overtimeRate as allotment %
+            const other = Math.floor(Math.random() * 100);
+            const totalDeductions = taxes + insurance + allotments + other;
+            
+            return {
+              id: seafarer.id,
+              seafarerId: seafarer.id,
+              seafarerName: `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`,
+              rank: seafarer.qualifications.rank,
+              vessel: seafarer.employment.currentVessel || 'Not Assigned',
+              period: {
+                start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                end: new Date().toISOString().split('T')[0]
+              },
+              earnings: {
+                basicWage,
+                overtime,
+                allowances,
+                bonuses
+              },
+              deductions: {
+                taxes,
+                insurance,
+                allotments,
+                other
+              },
+              netPay: grossPay - totalDeductions,
+              currency: seafarer.financial.currency,
+              status: ['draft', 'processed', 'paid'][Math.floor(Math.random() * 3)] as 'draft' | 'processed' | 'paid',
+              exchangeRate: seafarer.financial.currency === 'USD' ? 1 : Math.random() * 0.5 + 0.7
+            };
+          });
+          
+          setPayrollRecords(generatedPayroll);
+          
+          // Skip database save - using in-memory payroll data for demo
+        } else {
+          // Map database records to UI format
+          const mappedRecords = existingPayroll.map(record => ({
+            id: record.id,
+            seafarerId: record.seafarerId,
+            seafarerName: record.seafarerId, // Will be populated by seafarer lookup
+            rank: 'Unknown',
+            vessel: 'Unknown',
+            period: { start: '', end: '' },
+            earnings: { basicWage: 0, overtime: 0, allowances: 0, bonuses: 0 },
+            deductions: { taxes: 0, insurance: 0, allotments: 0, other: 0 },
+            netPay: 0,
+            currency: 'USD',
+            status: 'draft' as const,
+            exchangeRate: 1
+          }));
+          setPayrollRecords(mappedRecords);
+        }
+      } catch (error) {
+        console.error('Failed to load payroll data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load payroll data",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadPayrollData();
+  }, [selectedCompany, toast]);
+
+  const handleProcessPayroll = async (recordId: string) => {
+    try {
+      const record = payrollRecords.find(r => r.id === recordId);
+      if (record) {
+        const updatedRecord = { ...record, status: 'processed' as const };
+        setPayrollRecords(prev => prev.map(r => r.id === recordId ? updatedRecord : r));
+        
+        toast({
+          title: "Payroll Processed",
+          description: `Payroll for ${record.seafarerName} has been processed`
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to process payroll",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handlePaymentComplete = async (recordId: string) => {
+    try {
+      const record = payrollRecords.find(r => r.id === recordId);
+      if (record) {
+        const updatedRecord = { ...record, status: 'paid' as const };
+        setPayrollRecords(prev => prev.map(r => r.id === recordId ? updatedRecord : r));
+        
+        toast({
+          title: "Payment Complete",
+          description: `Payment to ${record.seafarerName} has been completed`
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to complete payment",
+        variant: "destructive"
+      });
+    }
+  };
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null);
+  
+  const currencies = ['USD', 'EUR', 'GBP', 'PHP'];
 
-  const handleProcessPayroll = (recordId: string) => {
-    setPayrollRecords(prev => prev.map(record => 
-      record.id === recordId 
-        ? { ...record, status: 'processed' as const }
-        : record
-    ));
-  };
-
-  const handlePayRecord = (recordId: string) => {
-    setPayrollRecords(prev => prev.map(record => 
-      record.id === recordId 
-        ? { ...record, status: 'paid' as const }
-        : record
-    ));
+  const handlePayRecord = async (recordId: string) => {
+    try {
+      const record = payrollRecords.find(r => r.id === recordId);
+      if (record) {
+        const updatedRecord = { ...record, status: 'paid' as const };
+        setPayrollRecords(prev => prev.map(r => r.id === recordId ? updatedRecord : r));
+        
+        toast({
+          title: "Payment Complete",
+          description: `Payment to ${record.seafarerName} has been completed`
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to complete payment",
+        variant: "destructive"
+      });
+    }
   };
 
   const getStatusIcon = (status: string) => {

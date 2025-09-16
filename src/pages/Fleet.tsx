@@ -250,7 +250,7 @@ export default function Fleet() {
                     <Progress value={crewPercentage} className="h-2" />
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
                       <span>Status: {crewingStatus.status}</span>
-                      <span>IMO: {vessel.imo}</span>
+                      <span>IMO: {vessel.imoNumber}</span>
                     </div>
                   </div>
 
@@ -285,10 +285,10 @@ export default function Fleet() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Handle view crew
-                      }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         window.location.href = `/personnel?vessel=${encodeURIComponent(vessel.name)}`;
+                       }}
                     >
                       <Users className="w-4 h-4 mr-2" />
                       View Crew
@@ -297,10 +297,11 @@ export default function Fleet() {
                       variant="outline" 
                       size="sm" 
                       className="flex-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Handle plan roster
-                      }}
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         setSelectedVessel(vessel);
+                         setShowVesselDialog(true);
+                       }}
                     >
                       <Calendar className="w-4 h-4 mr-2" />
                       Plan Roster
