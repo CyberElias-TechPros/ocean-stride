@@ -5,7 +5,7 @@ import { db } from "./lib/database2";
 import { runMigrationIfNeeded } from "./lib/migrate";
 import App from "./App.tsx";
 import "./index.css";
-import { LoadingSpinner } from "./components/ui/loading-spinner";
+// Using branded loader (logo + title) instead of generic spinner
 
 // Track initialization state to prevent multiple initializations
 let isInitializing = false;
@@ -105,29 +105,15 @@ function Root() {
   // Loading state
   if (!isReady && !error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-background p-6 text-center">
-        <div className="w-full max-w-md space-y-6">
-          <div className="space-y-2">
-            <div className="flex justify-center">
-              <LoadingSpinner className="h-12 w-12 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold tracking-tight">Ocean Stride</h1>
-            <p className="text-muted-foreground">{initializationStatus}</p>
-          </div>
-          
-          <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
-            <div 
-              className="bg-primary h-full transition-all duration-500 ease-in-out"
-              style={{
-                width: initializationStatus.includes('database') ? '30%' : 
-                       initializationStatus.includes('Loading') ? '70%' : '90%'
-              }}
-            />
-          </div>
-          
-          <p className="text-sm text-muted-foreground">
-            This may take a few moments...
-          </p>
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <img
+            src="/cea.png"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
+            alt="Seafarer Management System"
+            className="w-64 h-64 rounded-md shadow"
+          />
+          <h1 className="text-xl font-bold">Seafarer Management System</h1>
         </div>
       </div>
     );
@@ -234,9 +220,14 @@ function Root() {
       <Suspense
         fallback={
           <div className="flex items-center justify-center min-h-screen bg-background">
-            <div className="flex flex-col items-center space-y-4">
-              <LoadingSpinner className="h-12 w-12 text-primary" />
-              <p className="text-muted-foreground">Loading application...</p>
+            <div className="flex flex-col items-center gap-4 text-center">
+              <img
+                src="/cea.png"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
+                alt="Seafarer Management System"
+                className="w-64 h-64 rounded-md shadow"
+              />
+              <h1 className="text-xl font-bold">Seafarer Management System</h1>
             </div>
           </div>
         }

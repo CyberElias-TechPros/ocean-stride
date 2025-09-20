@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,15 +9,10 @@ import { AnalyticsCharts } from '@/components/analytics/AnalyticsCharts';
 import { 
   TrendingUp, 
   TrendingDown,
-  BarChart3, 
   PieChart,
-  Users,
-  Ship,
-  DollarSign,
   AlertTriangle,
   Calendar,
   Download,
-  Filter,
   Brain,
   Target,
   Activity,
@@ -126,7 +120,7 @@ const predictiveInsights: PredictiveInsight[] = [
 
 export default function Analytics() {
   const [timeframe, setTimeframe] = useState('last-month');
-  const [selectedMetric, setSelectedMetric] = useState('all');
+  // const [selectedMetric, setSelectedMetric] = useState('all');
 
   const getTrendIcon = (trend: string) => {
     switch (trend) {
@@ -163,250 +157,180 @@ export default function Analytics() {
   };
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Analytics & Insights</h1>
-            <p className="text-muted-foreground">Data-driven insights and predictive analytics for crew management</p>
-          </div>
-          
-          <div className="flex gap-3">
-            <Select value={timeframe} onValueChange={setTimeframe}>
-              <SelectTrigger className="w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="last-week">Last Week</SelectItem>
-                <SelectItem value="last-month">Last Month</SelectItem>
-                <SelectItem value="last-quarter">Last Quarter</SelectItem>
-                <SelectItem value="last-year">Last Year</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline">
-              <Download className="w-4 h-4 mr-2" />
-              Export Report
-            </Button>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Analytics & Insights</h1>
+          <p className="text-muted-foreground">Data-driven insights and predictive analytics for crew management</p>
         </div>
+        
+        <div className="flex gap-3">
+          <Select value={timeframe} onValueChange={setTimeframe}>
+            <SelectTrigger className="w-48">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="last-week">Last Week</SelectItem>
+              <SelectItem value="last-month">Last Month</SelectItem>
+              <SelectItem value="last-quarter">Last Quarter</SelectItem>
+              <SelectItem value="last-year">Last Year</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline">
+            <Download className="w-4 h-4 mr-2" />
+            Export Report
+          </Button>
+        </div>
+      </div>
 
-        {/* KPI Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {kpis.map((kpi, idx) => (
-            <Card key={idx}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{kpi.title}</CardTitle>
-                {getTrendIcon(kpi.trend)}
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{kpi.value}</div>
-                <div className="flex items-center justify-between mt-2">
-                  <span className={`text-xs ${getTrendColor(kpi.trend)}`}>
-                    {kpi.change} from last period
-                  </span>
-                  {kpi.target && (
-                    <Badge variant="outline" className="text-xs">
-                      Target: {kpi.target}
-                    </Badge>
-                  )}
-                </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {kpis.map((kpi, idx) => (
+          <Card key={idx}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">{kpi.title}</CardTitle>
+              {getTrendIcon(kpi.trend)}
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{kpi.value}</div>
+              <div className="flex items-center justify-between mt-2">
+                <span className={`text-xs ${getTrendColor(kpi.trend)}`}>
+                  {kpi.change} from last period
+                </span>
                 {kpi.target && (
-                  <Progress 
-                    value={parseInt(kpi.value)} 
-                    className="mt-2" 
-                  />
+                  <Badge variant="outline" className="text-xs">
+                    Target: {kpi.target}
+                  </Badge>
                 )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              </div>
+              {kpi.target && (
+                <Progress 
+                  value={parseInt(kpi.value)} 
+                  className="mt-2" 
+                />
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-        {/* Main Analytics */}
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="crew">Crew Analytics</TabsTrigger>
-            <TabsTrigger value="financial">Financial</TabsTrigger>
-            <TabsTrigger value="predictive">Predictive AI</TabsTrigger>
-          </TabsList>
+      {/* Main Analytics */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="crew">Crew Analytics</TabsTrigger>
+          <TabsTrigger value="financial">Financial</TabsTrigger>
+          <TabsTrigger value="predictive">Predictive AI</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="overview" className="space-y-6">
-            <AnalyticsCharts />
-          </TabsContent>
+        <TabsContent value="overview" className="space-y-6">
+          <AnalyticsCharts />
+        </TabsContent>
 
-          <TabsContent value="crew" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Crew Performance Metrics</CardTitle>
-                  <CardDescription>Individual and team performance indicators</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { metric: 'Average Performance Score', value: '4.2/5', trend: 'up' },
-                      { metric: 'Contract Completion Rate', value: '94%', trend: 'up' },
-                      { metric: 'Training Compliance', value: '89%', trend: 'down' },
-                      { metric: 'Safety Incidents', value: '0.3/month', trend: 'up' }
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div>
-                          <div className="font-medium">{item.metric}</div>
-                          <div className="text-2xl font-bold">{item.value}</div>
-                        </div>
-                        {getTrendIcon(item.trend)}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Crew Satisfaction</CardTitle>
-                  <CardDescription>Feedback and satisfaction scores</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <div className="text-4xl font-bold text-success">8.4</div>
-                      <div className="text-sm text-muted-foreground">Overall Satisfaction Score</div>
-                    </div>
-                    <div className="space-y-3">
-                      {[
-                        { category: 'Work Environment', score: 8.6 },
-                        { category: 'Management', score: 8.2 },
-                        { category: 'Compensation', score: 8.0 },
-                        { category: 'Career Development', score: 8.8 }
-                      ].map((item, idx) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <span className="text-sm">{item.category}</span>
-                          <div className="flex items-center gap-2">
-                            <Progress value={item.score * 10} className="w-20" />
-                            <span className="text-sm font-medium w-8">{item.score}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="financial" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Financial Performance</CardTitle>
-                  <CardDescription>Revenue and cost analysis</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-64 flex items-center justify-center text-muted-foreground">
-                    <PieChart className="w-8 h-8 mr-2" />
-                    Financial performance charts would be displayed here
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Cost Optimization Opportunities</CardTitle>
-                  <CardDescription>Identified areas for cost reduction</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { opportunity: 'Optimize crew rotation schedules', savings: '$45,000/year', impact: 'Medium' },
-                      { opportunity: 'Bulk training program discounts', savings: '$18,000/year', impact: 'Low' },
-                      { opportunity: 'Improve recruitment efficiency', savings: '$32,000/year', impact: 'High' },
-                      { opportunity: 'Reduce travel costs', savings: '$28,000/year', impact: 'Medium' }
-                    ].map((item, idx) => (
-                      <Card key={idx}>
-                        <CardContent className="pt-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="font-medium">{item.opportunity}</div>
-                              <div className="text-sm text-muted-foreground mt-1">
-                                Potential savings: {item.savings}
-                              </div>
-                            </div>
-                            <Badge 
-                              variant={item.impact === 'High' ? 'default' : 'outline'}
-                              className={item.impact === 'High' ? 'bg-success/20 text-success-foreground' : ''}
-                            >
-                              {item.impact} Impact
-                            </Badge>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="predictive" className="space-y-6">
+        <TabsContent value="crew" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Brain className="w-6 h-6" />
-                  AI-Powered Predictive Insights
-                </CardTitle>
-                <CardDescription>
-                  Machine learning insights and recommendations based on historical data and patterns
-                </CardDescription>
+                <CardTitle>Crew Performance Metrics</CardTitle>
+                <CardDescription>Individual and team performance indicators</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {predictiveInsights.map((insight) => (
-                    <Card key={insight.id} className="border-l-4 border-l-primary">
-                      <CardContent className="pt-6">
-                        <div className="flex items-start gap-4">
-                          <div className="flex-shrink-0">
-                            {getInsightIcon(insight.type)}
-                          </div>
-                          
+                  {[
+                    { metric: 'Average Performance Score', value: '4.2/5', trend: 'up' },
+                    { metric: 'Contract Completion Rate', value: '94%', trend: 'up' },
+                    { metric: 'Training Compliance', value: '89%', trend: 'down' },
+                    { metric: 'Safety Incidents', value: '0.3/month', trend: 'up' }
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div>
+                        <div className="font-medium">{item.metric}</div>
+                        <div className="text-2xl font-bold">{item.value}</div>
+                      </div>
+                      {getTrendIcon(item.trend)}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Crew Satisfaction</CardTitle>
+                <CardDescription>Feedback and satisfaction scores</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-success">8.4</div>
+                    <div className="text-sm text-muted-foreground">Overall Satisfaction Score</div>
+                  </div>
+                  <div className="space-y-3">
+                    {[
+                      { category: 'Work Environment', score: 8.6 },
+                      { category: 'Management', score: 8.2 },
+                      { category: 'Compensation', score: 8.0 },
+                      { category: 'Career Development', score: 8.8 }
+                    ].map((item, idx) => (
+                      <div key={idx} className="flex items-center justify-between">
+                        <span className="text-sm">{item.category}</span>
+                        <div className="flex items-center gap-2">
+                          <Progress value={item.score * 10} className="w-20" />
+                          <span className="text-sm font-medium w-8">{item.score}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="financial" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Financial Performance</CardTitle>
+                <CardDescription>Revenue and cost analysis</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="h-64 flex items-center justify-center text-muted-foreground">
+                  <PieChart className="w-8 h-8 mr-2" />
+                  Financial performance charts would be displayed here
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Cost Optimization Opportunities</CardTitle>
+                <CardDescription>Identified areas for cost reduction</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {[
+                    { opportunity: 'Optimize crew rotation schedules', savings: '$45,000/year', impact: 'Medium' },
+                    { opportunity: 'Bulk training program discounts', savings: '$18,000/year', impact: 'Low' },
+                    { opportunity: 'Improve recruitment efficiency', savings: '$32,000/year', impact: 'High' },
+                    { opportunity: 'Reduce travel costs', savings: '$28,000/year', impact: 'Medium' }
+                  ].map((item, idx) => (
+                    <Card key={idx}>
+                      <CardContent className="pt-4">
+                        <div className="flex justify-between items-start">
                           <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-2">
-                              <h4 className="font-medium">{insight.title}</h4>
-                              <Badge 
-                                variant={insight.type === 'risk' ? 'destructive' : insight.type === 'opportunity' ? 'default' : 'secondary'}
-                                className={insight.type === 'opportunity' ? 'bg-success/20 text-success-foreground' : ''}
-                              >
-                                {insight.type.charAt(0).toUpperCase() + insight.type.slice(1)}
-                              </Badge>
-                            </div>
-                            
-                            <p className="text-sm text-muted-foreground mb-3">
-                              {insight.description}
-                            </p>
-                            
-                            <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                              <div className="flex items-center gap-1">
-                                <Zap className="w-3 h-3" />
-                                Confidence: {insight.confidence}%
-                              </div>
-                              <div className={`flex items-center gap-1 ${getImpactColor(insight.impact)}`}>
-                                <Target className="w-3 h-3" />
-                                {insight.impact.charAt(0).toUpperCase() + insight.impact.slice(1)} Impact
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {insight.timeframe}
-                              </div>
-                            </div>
-                            
-                            <div className="mt-3">
-                              <Progress value={insight.confidence} className="h-1" />
+                            <div className="font-medium">{item.opportunity}</div>
+                            <div className="text-sm text-muted-foreground mt-1">
+                              Potential savings: {item.savings}
                             </div>
                           </div>
-                          
-                          <Button variant="outline" size="sm">
-                            View Details
-                          </Button>
+                          <Badge 
+                            variant={item.impact === 'High' ? 'default' : 'outline'}
+                            className={item.impact === 'High' ? 'bg-success/20 text-success-foreground' : ''}
+                          >
+                            {item.impact} Impact
+                          </Badge>
                         </div>
                       </CardContent>
                     </Card>
@@ -414,72 +338,140 @@ export default function Analytics() {
                 </div>
               </CardContent>
             </Card>
+          </div>
+        </TabsContent>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Risk Prediction Model</CardTitle>
-                  <CardDescription>AI-powered risk assessment and early warning system</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center p-3 bg-destructive/10 rounded-lg">
-                      <div>
-                        <div className="font-medium text-destructive">High Risk</div>
-                        <div className="text-sm text-muted-foreground">Certificate Expiry</div>
-                      </div>
-                      <div className="text-2xl font-bold text-destructive">15</div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center p-3 bg-warning/10 rounded-lg">
-                      <div>
-                        <div className="font-medium text-warning">Medium Risk</div>
-                        <div className="text-sm text-muted-foreground">Crew Fatigue</div>
-                      </div>
-                      <div className="text-2xl font-bold text-warning">8</div>
-                    </div>
-                    
-                    <div className="flex justify-between items-center p-3 bg-success/10 rounded-lg">
-                      <div>
-                        <div className="font-medium text-success">Low Risk</div>
-                        <div className="text-sm text-muted-foreground">Overall Fleet</div>
-                      </div>
-                      <div className="text-2xl font-bold text-success">92%</div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Performance Forecasting</CardTitle>
-                  <CardDescription>Predicted trends for next quarter</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {[
-                      { metric: 'Crew Utilization', current: '87%', predicted: '91%', trend: 'up' },
-                      { metric: 'Training Completion', current: '89%', predicted: '94%', trend: 'up' },
-                      { metric: 'Compliance Score', current: '96%', predicted: '94%', trend: 'down' },
-                      { metric: 'Retention Rate', current: '94%', predicted: '96%', trend: 'up' }
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
-                        <div>
-                          <div className="font-medium">{item.metric}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Current: {item.current} → Forecast: {item.predicted}
+        <TabsContent value="predictive" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Brain className="w-6 h-6" />
+                AI-Powered Predictive Insights
+              </CardTitle>
+              <CardDescription>
+                Machine learning insights and recommendations based on historical data and patterns
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {predictiveInsights.map((insight) => (
+                  <Card key={insight.id} className="border-l-4 border-l-primary">
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <div className="flex-shrink-0">
+                          {getInsightIcon(insight.type)}
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium">{insight.title}</h4>
+                            <Badge 
+                              variant={insight.type === 'risk' ? 'destructive' : insight.type === 'opportunity' ? 'default' : 'secondary'}
+                              className={insight.type === 'opportunity' ? 'bg-success/20 text-success-foreground' : ''}
+                            >
+                              {insight.type.charAt(0).toUpperCase() + insight.type.slice(1)}
+                            </Badge>
+                          </div>
+                          
+                          <p className="text-sm text-muted-foreground mb-3">
+                            {insight.description}
+                          </p>
+                          
+                          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1">
+                              <Zap className="w-3 h-3" />
+                              Confidence: {insight.confidence}%
+                            </div>
+                            <div className={`flex items-center gap-1 ${getImpactColor(insight.impact)}`}>
+                              <Target className="w-3 h-3" />
+                              {insight.impact.charAt(0).toUpperCase() + insight.impact.slice(1)} Impact
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Calendar className="w-3 h-3" />
+                              {insight.timeframe}
+                            </div>
+                          </div>
+                          
+                          <div className="mt-3">
+                            <Progress value={insight.confidence} className="h-1" />
                           </div>
                         </div>
-                        {getTrendIcon(item.trend)}
+                        
+                        <Button variant="outline" size="sm">
+                          View Details
+                        </Button>
                       </div>
-                    ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Risk Prediction Model</CardTitle>
+                <CardDescription>AI-powered risk assessment and early warning system</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center p-3 bg-destructive/10 rounded-lg">
+                    <div>
+                      <div className="font-medium text-destructive">High Risk</div>
+                      <div className="text-sm text-muted-foreground">Certificate Expiry</div>
+                    </div>
+                    <div className="text-2xl font-bold text-destructive">15</div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </AppLayout>
+                  
+                  <div className="flex justify-between items-center p-3 bg-warning/10 rounded-lg">
+                    <div>
+                      <div className="font-medium text-warning">Medium Risk</div>
+                      <div className="text-sm text-muted-foreground">Crew Fatigue</div>
+                    </div>
+                    <div className="text-2xl font-bold text-warning">8</div>
+                  </div>
+                  
+                  <div className="flex justify-between items-center p-3 bg-success/10 rounded-lg">
+                    <div>
+                      <div className="font-medium text-success">Low Risk</div>
+                      <div className="text-sm text-muted-foreground">Overall Fleet</div>
+                    </div>
+                    <div className="text-2xl font-bold text-success">92%</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Performance Forecasting</CardTitle>
+                <CardDescription>Predicted trends for next quarter</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {[
+                    { metric: 'Crew Utilization', current: '87%', predicted: '91%', trend: 'up' },
+                    { metric: 'Training Completion', current: '89%', predicted: '94%', trend: 'up' },
+                    { metric: 'Compliance Score', current: '96%', predicted: '94%', trend: 'down' },
+                    { metric: 'Retention Rate', current: '94%', predicted: '96%', trend: 'up' }
+                  ].map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
+                      <div>
+                        <div className="font-medium">{item.metric}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Current: {item.current} → Forecast: {item.predicted}
+                        </div>
+                      </div>
+                      {getTrendIcon(item.trend)}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }

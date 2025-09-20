@@ -36,7 +36,15 @@ const RouteLoadingBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
   <ErrorBoundary onError={errorBoundaryHandler}>
     <Suspense fallback={
       <div className="flex h-screen w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900" />
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="/cea.png"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
+            alt="Seafarer Management System"
+            className="w-64 h-64 rounded-md shadow"
+          />
+          <h1 className="text-xl font-bold">Seafarer Management System</h1>
+        </div>
       </div>
     }>
       {children}
@@ -103,7 +111,15 @@ const AppRoutes = () => {
   if (isLoading) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-gray-900" />
+        <div className="flex flex-col items-center gap-4">
+          <img
+            src="/cea.png"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
+            alt="Seafarer Management System"
+            className="w-64 h-64 rounded-md shadow"
+          />
+          <h1 className="text-xl font-bold">Seafarer Management System</h1>
+        </div>
       </div>
     );
   }

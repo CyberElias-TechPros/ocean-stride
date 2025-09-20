@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/context/CompanyContext';
 import { db } from '@/lib/database2';
@@ -23,12 +22,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Calendar,
   FileText,
-  Award,
-  BarChart3,
-  Users,
-  Ship,
   Plus,
   Bell,
   RefreshCw
@@ -184,36 +178,7 @@ export default function Compliance() {
     }
   };
 
-  const handleAddCertificate = async (certificateData: Partial<Certificate>) => {
-    try {
-      // In a real implementation, this would save to database
-      const newCert: Certificate = {
-        id: Date.now().toString(),
-        seafarerId: certificateData.seafarerId!,
-        seafarerName: seafarers.find(s => s.id === certificateData.seafarerId)?.personalInfo.firstName + ' ' + 
-                      seafarers.find(s => s.id === certificateData.seafarerId)?.personalInfo.lastName || '',
-        type: certificateData.type!,
-        number: certificateData.number!,
-        issueDate: certificateData.issueDate!,
-        expiryDate: certificateData.expiryDate!,
-        issuingAuthority: certificateData.issuingAuthority!,
-        status: 'valid',
-        daysUntilExpiry: Math.ceil((new Date(certificateData.expiryDate!).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      };
-      
-      setCertificates(prev => [...prev, newCert]);
-      toast({
-        title: "Certificate Added",
-        description: "Certificate has been added successfully"
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add certificate",
-        variant: "destructive"
-      });
-    }
-  };
+  // Removed unused add handler to satisfy lints
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -267,8 +232,7 @@ export default function Compliance() {
   const avgComplianceScore = Math.round(complianceRecords.reduce((sum, r) => sum + r.complianceScore, 0) / complianceRecords.length);
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -713,6 +677,5 @@ export default function Compliance() {
           </TabsContent>
         </Tabs>
       </div>
-    </AppLayout>
   );
 }

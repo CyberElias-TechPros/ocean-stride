@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/context/CompanyContext';
 import { db } from '@/lib/database2';
@@ -21,16 +20,13 @@ import {
   UserPlus, 
   Download, 
   Mail, 
-  Phone, 
   FileText, 
-  Calendar,
   Users,
   Briefcase,
   CheckCircle,
   XCircle,
   Clock,
   Star,
-  Filter
 } from 'lucide-react';
 
 export default function Recruitment() {
@@ -62,87 +58,7 @@ export default function Recruitment() {
     loadRecruitmentData();
   }, [selectedCompany, toast]);
 
-  const updateApplicantStatus = async (applicantId: string, newStatus: Applicant['application']['status']) => {
-    try {
-      const existing = applicants.find(a => a.id === applicantId);
-      if (!existing) return;
-      const mergedApp = { ...existing.application, status: newStatus } as Applicant['application'];
-      const updated = await db.updateApplicant(applicantId, { application: mergedApp });
-      setApplicants(prev => prev.map(applicant => applicant.id === applicantId ? updated : applicant));
-      
-      const applicant = applicants.find(a => a.id === applicantId);
-      toast({
-        title: "Status Updated",
-        description: `${applicant?.personalInfo.firstName} ${applicant?.personalInfo.lastName}'s status changed to ${newStatus}`
-      });
-    } catch (error) {
-      toast({
-        title: "Error", 
-        description: "Failed to update status",
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleHireApplicant = async (applicantId: string) => {
-    try {
-      const applicant = applicants.find(a => a.id === applicantId);
-      if (!applicant) return;
-
-      // Convert applicant to Seafarer (new schema) deterministically without placeholders
-      const seafarerData: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'> = {
-        companyId: selectedCompany?.id || '',
-        personalInfo: {
-          firstName: applicant.personalInfo.firstName,
-          lastName: applicant.personalInfo.lastName,
-          dateOfBirth: applicant.personalInfo.dateOfBirth,
-          placeOfBirth: '',
-          nationality: applicant.personalInfo.nationality,
-          maritalStatus: 'single',
-          address: { street: '', city: '', state: '', postalCode: '', country: applicant.personalInfo.nationality },
-          contact: { email: applicant.personalInfo.email, phone: applicant.personalInfo.phone, emergencyContact: { name: '', relationship: '', phone: '' } },
-        },
-        documents: [],
-        trainings: [],
-        medicals: [],
-        skills: [],
-        languages: [],
-        employment: {
-          rank: applicant.qualifications.rank,
-          department: 'deck',
-          status: 'on_leave',
-          currentVesselId: undefined,
-          currentVesselName: undefined,
-          baseWage: 0,
-          wageCurrency: 'USD',
-          workHoursPerWeek: 48,
-          leaveDaysPerYear: 30,
-          employmentType: 'permanent',
-          employmentStatus: 'active',
-          joinedDate: new Date().toISOString(),
-        },
-        notes: undefined,
-      };
-
-      await db.createSeafarer(seafarerData);
-      
-      // Update applicant status to approved
-      const mergedApp = { ...applicant.application, status: 'approved' } as Applicant['application'];
-      const updated = await db.updateApplicant(applicantId, { application: mergedApp });
-      setApplicants(prev => prev.map(a => a.id === applicantId ? updated : a));
-
-      toast({
-        title: "Applicant Hired",
-        description: `${applicant.personalInfo.firstName} ${applicant.personalInfo.lastName} has been hired and added to personnel`
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to hire applicant",
-        variant: "destructive"
-      });
-    }
-  };
+  // Removed unused functions to satisfy lints and avoid dead code
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [positionFilter, setPositionFilter] = useState<string>('all');
@@ -162,9 +78,7 @@ export default function Recruitment() {
     handleStatusChange(applicantId, 'approved');
   };
 
-  const handleRejectApplicant = (applicantId: string) => {
-    handleStatusChange(applicantId, 'rejected');
-  };
+  // Reject handler can be added when wired to the UI
 
   const handleScheduleInterview = (applicantId: string) => {
     handleStatusChange(applicantId, 'interview');
@@ -217,8 +131,7 @@ export default function Recruitment() {
   });
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -595,6 +508,5 @@ export default function Recruitment() {
           </Dialog>
         )}
       </div>
-    </AppLayout>
   );
 }

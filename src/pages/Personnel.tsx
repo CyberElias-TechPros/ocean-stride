@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,6 @@ import {
   Search, 
   Plus, 
   Users, 
-  Filter,
   MoreHorizontal,
   User,
   Mail,
@@ -191,8 +189,8 @@ export default function Personnel() {
     const matchesSearch = 
       seafarer.personalInfo.firstName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       seafarer.personalInfo.lastName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seafarer.personalInfo.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      seafarer.qualifications.rank.toLowerCase().includes(searchQuery.toLowerCase());
+      (seafarer.personalInfo as any).contact?.email?.toLowerCase?.().includes(searchQuery.toLowerCase()) ||
+      seafarer.employment.rank.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || seafarer.employment.status === statusFilter;
     
@@ -215,20 +213,17 @@ export default function Personnel() {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-96">
-          <div className="text-center">
-            <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading personnel...</p>
-          </div>
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading personnel...</p>
         </div>
-      </AppLayout>
+      </div>
     );
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -315,7 +310,7 @@ export default function Personnel() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => {
                         setSelectedSeafarer(seafarer);
-                        // Could open a detailed profile view
+                        /* Could open a detailed profile view */
                       }}>
                         <FileText className="w-4 h-4 mr-2" />
                         View Profile
@@ -328,7 +323,7 @@ export default function Personnel() {
                         Edit Details
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => {
-                        // Open vessel selection dialog
+                        /* Open vessel selection dialog */
                         handleAssignToVessel(seafarer.id!, 'MV Example Vessel');
                       }}>
                         <Ship className="w-4 h-4 mr-2" />
@@ -433,9 +428,8 @@ export default function Personnel() {
           </DialogContent>
         </Dialog>
       </div>
-    </AppLayout>
-  );
-}
+    );
+  }
 
 // Seafarer Form Component
 function SeafarerForm({ 
@@ -445,27 +439,27 @@ function SeafarerForm({
   initialData?: Seafarer; 
   onSubmit: (data: Partial<Seafarer>) => void;
 }) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<any>({
     personalInfo: {
       firstName: initialData?.personalInfo.firstName || '',
       lastName: initialData?.personalInfo.lastName || '',
-      email: initialData?.personalInfo.email || '',
-      phone: initialData?.personalInfo.phone || '',
+      email: (initialData as any)?.personalInfo?.contact?.email || '',
+      phone: (initialData as any)?.personalInfo?.contact?.phone || '',
       nationality: initialData?.personalInfo.nationality || '',
       dateOfBirth: initialData?.personalInfo.dateOfBirth || '',
-      passportNumber: initialData?.personalInfo.passportNumber || '',
-      seamanBook: initialData?.personalInfo.seamanBook || '',
+      passportNumber: (initialData as any)?.personalInfo?.passportNumber || '',
+      seamanBook: (initialData as any)?.personalInfo?.seamanBook || '',
     },
     qualifications: {
-      rank: initialData?.qualifications.rank || '',
-      certificates: initialData?.qualifications.certificates || [],
+      rank: (initialData as any)?.employment?.rank || '',
+      certificates: (initialData as any)?.qualifications?.certificates || [],
     },
     employment: {
       status: (initialData?.employment.status as any) || ('on_leave' as const),
       currentVessel: (initialData as any)?.employment?.currentVesselName || '',
       position: (initialData as any)?.employment?.position || '',
       contractStart: (initialData as any)?.employment?.contractStart || '',
-      contractEnd: initialData?.employment.contractEnd || '',
+      contractEnd: (initialData as any)?.employment?.contractEndDate || '',
     },
     financial: {
       bankName: (initialData as any)?.financial?.bankName || '',
@@ -512,7 +506,7 @@ function SeafarerForm({
           <Input
             id="firstName"
             value={formData.personalInfo.firstName}
-            onChange={(e) => setFormData(prev => ({
+            onChange={(e) => setFormData((prev: { personalInfo: any; }) => ({
               ...prev,
               personalInfo: { ...prev.personalInfo, firstName: e.target.value }
             }))}
@@ -524,7 +518,7 @@ function SeafarerForm({
           <Input
             id="lastName"
             value={formData.personalInfo.lastName}
-            onChange={(e) => setFormData(prev => ({
+            onChange={(e) => setFormData((prev: { personalInfo: any; }) => ({
               ...prev,
               personalInfo: { ...prev.personalInfo, lastName: e.target.value }
             }))}
@@ -540,7 +534,7 @@ function SeafarerForm({
             id="email"
             type="email"
             value={formData.personalInfo.email}
-            onChange={(e) => setFormData(prev => ({
+            onChange={(e) => setFormData((prev: { personalInfo: any; }) => ({
               ...prev,
               personalInfo: { ...prev.personalInfo, email: e.target.value }
             }))}
@@ -552,7 +546,7 @@ function SeafarerForm({
           <Input
             id="phone"
             value={formData.personalInfo.phone}
-            onChange={(e) => setFormData(prev => ({
+            onChange={(e) => setFormData((prev: { personalInfo: any; }) => ({
               ...prev,
               personalInfo: { ...prev.personalInfo, phone: e.target.value }
             }))}
@@ -565,7 +559,7 @@ function SeafarerForm({
           <Label htmlFor="rank">Rank</Label>
           <Select
             value={formData.qualifications.rank}
-            onValueChange={(value) => setFormData(prev => ({
+            onValueChange={(value) => setFormData((prev: { qualifications: any; }) => ({
               ...prev,
               qualifications: { ...prev.qualifications, rank: value }
             }))}
@@ -584,7 +578,7 @@ function SeafarerForm({
           <Label htmlFor="status">Status</Label>
           <Select
             value={formData.employment.status}
-            onValueChange={(value) => setFormData(prev => ({
+            onValueChange={(value) => setFormData((prev: { employment: any; }) => ({
               ...prev,
               employment: { ...prev.employment, status: value as any }
             }))}

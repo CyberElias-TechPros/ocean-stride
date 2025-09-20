@@ -3,7 +3,7 @@ import { Suspense, useEffect } from 'react';
 import { useCompany } from '@/hooks/use-company';
 import { useAuth } from '@/hooks/use-auth';
 import { db } from '@/lib/database2';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
+// Removed LoadingSpinner in favor of branded loader matching App.tsx
 import { AppLayout } from '@/components/layout/app-layout';
 import { Company } from '@/lib/schemas';
 
@@ -58,8 +58,13 @@ const Index = () => {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <LoadingSpinner className="h-12 w-12" />
-          <p className="text-muted-foreground">Loading company data...</p>
+          <img
+            src="/cea.png"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
+            alt="Seafarer Management System"
+            className="w-64 h-64 rounded-md shadow"
+          />
+          <h1 className="text-xl font-bold">Seafarer Management System</h1>
         </div>
       </div>
     );
@@ -70,7 +75,15 @@ const Index = () => {
       <Suspense 
         fallback={
           <div className="flex h-full w-full items-center justify-center">
-            <LoadingSpinner className="h-12 w-12" />
+            <div className="flex flex-col items-center gap-4">
+              <img
+                src="/cea.png"
+                onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
+                alt="Seafarer Management System"
+                className="w-64 h-64 rounded-md shadow"
+              />
+              <h1 className="text-xl font-bold">Seafarer Management System</h1>
+            </div>
           </div>
         }
       >

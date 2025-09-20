@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/context/CompanyContext';
 import { db } from '@/lib/database2';
-import type { Seafarer, Vessel, Payroll } from '@/lib/schemas';
+import type { Payroll } from '@/lib/schemas';
 import { INDEX_NAMES, STORE_NAMES } from '@/lib/schemas';
 
 import { useToast } from '@/hooks/use-toast';
@@ -26,7 +25,6 @@ import {
   CheckCircle,
   Clock,
   Plus,
-  Calendar,
   Users,
   Globe
 } from 'lucide-react';
@@ -61,8 +59,6 @@ interface PayrollRecord {
 
 export default function Payroll() {
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>([]);
-  const [seafarers, setSeafarers] = useState<Seafarer[]>([]);
-  const [vessels, setVessels] = useState<Vessel[]>([]);
   const [loading, setLoading] = useState(true);
   const { selectedCompany } = useCompany();
   const { toast } = useToast();
@@ -77,8 +73,7 @@ export default function Payroll() {
           db.getSeafarersByCompany(selectedCompany.id),
           db.getVesselsByCompany(selectedCompany.id)
         ]);
-        setSeafarers(companySeafarers);
-        setVessels(companyVessels);
+        // No need to persist seafarers/vessels in state; we use locals only
 
         // Fetch payrolls for all seafarers of this company
         const payrolls: Payroll[] = (
@@ -162,26 +157,7 @@ export default function Payroll() {
     }
   };
 
-  const handlePaymentComplete = async (recordId: string) => {
-    try {
-      const record = payrollRecords.find(r => r.id === recordId);
-      if (record) {
-        const updatedRecord = { ...record, status: 'paid' as const };
-        setPayrollRecords(prev => prev.map(r => r.id === recordId ? updatedRecord : r));
-        
-        toast({
-          title: "Payment Complete",
-          description: `Payment to ${record.seafarerName} has been completed`
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to complete payment",
-        variant: "destructive"
-      });
-    }
-  };
+  // Removed unused payment completion handler
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currencyFilter, setCurrencyFilter] = useState<string>('all');
@@ -255,8 +231,7 @@ export default function Payroll() {
   const pendingPayments = payrollRecords.filter(r => r.status !== 'paid').length;
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
@@ -714,6 +689,5 @@ export default function Payroll() {
           </Dialog>
         )}
       </div>
-    </AppLayout>
   );
 }
