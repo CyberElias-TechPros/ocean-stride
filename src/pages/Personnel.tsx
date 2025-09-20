@@ -30,7 +30,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { db, type Seafarer } from '@/lib/database';
+import { db } from '@/lib/database2';
+import type { Seafarer } from '@/lib/schemas';
+import { STORE_NAMES } from '@/lib/schemas';
 import { useCompany } from '@/context/CompanyContext';
 
 export default function Personnel() {
@@ -71,10 +73,38 @@ export default function Personnel() {
     if (!selectedCompany) return;
     
     try {
-      const newSeafarer = await db.createSeafarer({
-        ...seafarerData,
-        companyId: selectedCompany.id
-      } as Seafarer);
+      // Map minimal fields from form-style data to new schema
+      const mapped: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'> = {
+        companyId: selectedCompany.id,
+        personalInfo: {
+          firstName: (seafarerData as any)?.personalInfo?.firstName || '',
+          lastName: (seafarerData as any)?.personalInfo?.lastName || '',
+          dateOfBirth: (seafarerData as any)?.personalInfo?.dateOfBirth || new Date().toISOString(),
+          placeOfBirth: '',
+          nationality: (seafarerData as any)?.personalInfo?.nationality || '',
+          maritalStatus: 'single',
+          address: { street: '', city: '', state: '', postalCode: '', country: (seafarerData as any)?.personalInfo?.nationality || '' },
+          contact: { email: (seafarerData as any)?.personalInfo?.email || '', phone: (seafarerData as any)?.personalInfo?.phone || '', emergencyContact: { name: '', relationship: '', phone: '' } },
+        },
+        documents: [], trainings: [], medicals: [], skills: [], languages: [],
+        employment: {
+          rank: (seafarerData as any)?.qualifications?.rank || '',
+          department: 'deck',
+          status: ((seafarerData as any)?.employment?.status === 'onboard') ? 'onboard' : 'on_leave',
+          currentVesselId: undefined,
+          currentVesselName: (seafarerData as any)?.employment?.currentVessel || undefined,
+          baseWage: Number((seafarerData as any)?.financial?.basicWage || 0),
+          wageCurrency: (seafarerData as any)?.financial?.currency || 'USD',
+          workHoursPerWeek: 48,
+          leaveDaysPerYear: 30,
+          employmentType: 'permanent',
+          employmentStatus: 'active',
+          joinedDate: new Date().toISOString(),
+        },
+        notes: undefined,
+      };
+
+      const newSeafarer = await db.createSeafarer(mapped);
       
       setSeafarers(prev => [...prev, newSeafarer]);
       setShowAddDialog(false);
@@ -95,7 +125,7 @@ export default function Personnel() {
     if (!selectedSeafarer) return;
     
     try {
-      const updatedSeafarer = await db.updateSeafarer(selectedSeafarer.id!, seafarerData);
+      const updatedSeafarer = await db.update<Seafarer>(STORE_NAMES.SEAFARERS, selectedSeafarer.id!, seafarerData as Partial<Seafarer>);
       setSeafarers(prev => prev.map(s => s.id === selectedSeafarer.id ? updatedSeafarer : s));
       setShowEditDialog(false);
       setSelectedSeafarer(null);
@@ -114,7 +144,7 @@ export default function Personnel() {
 
   const handleDeleteSeafarer = async (seafarerId: string) => {
     try {
-      await db.delete('seafarers', seafarerId);
+      await db.delete(STORE_NAMES.SEAFARERS, seafarerId);
       setSeafarers(prev => prev.filter(s => s.id !== seafarerId));
       toast({
         title: "Success",
@@ -131,13 +161,14 @@ export default function Personnel() {
 
   const handleAssignToVessel = async (seafarerId: string, vesselName: string) => {
     try {
-      await db.updateSeafarer(seafarerId, {
+      const existing = seafarers.find(s => s.id === seafarerId);
+      await db.update<Seafarer>(STORE_NAMES.SEAFARERS, seafarerId, {
         employment: {
-          ...seafarers.find(s => s.id === seafarerId)?.employment,
-          currentVessel: vesselName,
-          status: 'active'
+          ...(existing?.employment || {}),
+          currentVesselName: vesselName,
+          status: 'onboard'
         }
-      });
+      } as Partial<Seafarer>);
       
       // Reload seafarers
       const updatedSeafarers = await db.getSeafarersByCompany(selectedCompany!.id);
@@ -170,21 +201,17 @@ export default function Personnel() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-primary text-primary-foreground';
-      case 'available': return 'bg-accent text-accent-foreground';
-      case 'on-leave': return 'bg-warning text-warning-foreground';
-      case 'retired': return 'bg-muted text-muted-foreground';
+      case 'onboard': return 'bg-primary text-primary-foreground';
+      case 'on_leave': return 'bg-accent text-accent-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
 
   const statusCounts = {
     all: seafarers.length,
-    active: seafarers.filter(s => s.employment.status === 'active').length,
-    available: seafarers.filter(s => s.employment.status === 'available').length,
-    'on-leave': seafarers.filter(s => s.employment.status === 'on-leave').length,
-    retired: seafarers.filter(s => s.employment.status === 'retired').length,
-  };
+    onboard: seafarers.filter(s => s.employment.status === 'onboard').length,
+    on_leave: seafarers.filter(s => s.employment.status === 'on_leave').length,
+  } as const;
 
   if (loading) {
     return (
@@ -274,7 +301,7 @@ export default function Personnel() {
                         {seafarer.personalInfo.firstName} {seafarer.personalInfo.lastName}
                       </CardTitle>
                       <p className="text-sm text-muted-foreground">
-                        {seafarer.qualifications.rank}
+                        {seafarer.employment.rank}
                       </p>
                     </div>
                   </div>
@@ -336,16 +363,16 @@ export default function Personnel() {
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center space-x-2 text-muted-foreground">
                     <Mail className="w-4 h-4" />
-                    <span className="truncate">{seafarer.personalInfo.email}</span>
+                    <span className="truncate">{seafarer.personalInfo.contact.email}</span>
                   </div>
                   <div className="flex items-center space-x-2 text-muted-foreground">
                     <Phone className="w-4 h-4" />
-                    <span>{seafarer.personalInfo.phone}</span>
+                    <span>{seafarer.personalInfo.contact.phone}</span>
                   </div>
-                  {seafarer.employment.currentVessel && (
+                  {seafarer.employment.currentVesselName && (
                     <div className="flex items-center space-x-2 text-muted-foreground">
                       <MapPin className="w-4 h-4" />
-                      <span>{seafarer.employment.currentVessel}</span>
+                      <span>{seafarer.employment.currentVesselName}</span>
                     </div>
                   )}
                 </div>
@@ -353,12 +380,12 @@ export default function Personnel() {
                 <div className="pt-2 border-t border-border">
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>Basic Wage</span>
-                    <span>${seafarer.financial.basicWage.toLocaleString()} {seafarer.financial.currency}</span>
+                    <span>${seafarer.employment.baseWage.toLocaleString()} {seafarer.employment.wageCurrency}</span>
                   </div>
-                  {seafarer.employment.contractEnd && (
+                  {seafarer.employment.contractEndDate && (
                     <div className="flex justify-between text-xs text-muted-foreground mt-1">
                       <span>Contract Ends</span>
-                      <span>{new Date(seafarer.employment.contractEnd).toLocaleDateString()}</span>
+                      <span>{new Date(seafarer.employment.contractEndDate).toLocaleDateString()}</span>
                     </div>
                   )}
                 </div>
@@ -434,8 +461,8 @@ function SeafarerForm({
       certificates: initialData?.qualifications.certificates || [],
     },
     employment: {
-      status: (initialData?.employment.status as any) || ('available' as const),
-      currentVessel: initialData?.employment.currentVessel || '',
+      status: (initialData?.employment.status as any) || ('on_leave' as const),
+      currentVessel: (initialData as any)?.employment?.currentVesselName || '',
       position: (initialData as any)?.employment?.position || '',
       contractStart: (initialData as any)?.employment?.contractStart || '',
       contractEnd: initialData?.employment.contractEnd || '',
@@ -445,8 +472,8 @@ function SeafarerForm({
       accountNumber: (initialData as any)?.financial?.accountNumber || '',
       iban: (initialData as any)?.financial?.iban || '',
       swiftCode: (initialData as any)?.financial?.swiftCode || '',
-      currency: initialData?.financial.currency || 'USD',
-      basicWage: initialData?.financial.basicWage || 0,
+      currency: (initialData as any)?.financial?.wageCurrency || 'USD',
+      basicWage: (initialData as any)?.financial?.baseWage || 0,
       overtimeRate: (initialData as any)?.financial?.overtimeRate || 0,
     }
   });
@@ -459,7 +486,22 @@ function SeafarerForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    const updates: Partial<Seafarer> = {
+      personalInfo: {
+        contact: {
+          email: (formData as any).personalInfo.email,
+          phone: (formData as any).personalInfo.phone,
+          emergencyContact: { name: '', relationship: '', phone: '' },
+        },
+      } as any,
+      employment: {
+        status: (formData as any).employment.status,
+        currentVesselName: (formData as any).employment.currentVessel || undefined,
+        baseWage: (formData as any).financial.basicWage,
+        wageCurrency: (formData as any).financial.currency,
+      } as any,
+    };
+    onSubmit(updates);
   };
 
   return (
@@ -551,49 +593,14 @@ function SeafarerForm({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="available">Available</SelectItem>
-              <SelectItem value="on-leave">On Leave</SelectItem>
-              <SelectItem value="retired">Retired</SelectItem>
+              <SelectItem value="onboard">Onboard</SelectItem>
+              <SelectItem value="on_leave">On Leave</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <Label htmlFor="basicWage">Basic Wage</Label>
-          <Input
-            id="basicWage"
-            type="number"
-            value={formData.financial.basicWage}
-            onChange={(e) => setFormData(prev => ({
-              ...prev,
-              financial: { ...prev.financial, basicWage: Number(e.target.value) }
-            }))}
-          />
-        </div>
-        <div>
-          <Label htmlFor="currency">Currency</Label>
-          <Select
-            value={formData.financial.currency}
-            onValueChange={(value) => setFormData(prev => ({
-              ...prev,
-              financial: { ...prev.financial, currency: value }
-            }))}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="USD">USD</SelectItem>
-              <SelectItem value="EUR">EUR</SelectItem>
-              <SelectItem value="GBP">GBP</SelectItem>
-              <SelectItem value="NOK">NOK</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+      
 
       <div className="flex gap-2 pt-4">
         <Button type="button" variant="outline" className="flex-1">

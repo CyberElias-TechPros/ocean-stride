@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/context/CompanyContext';
-import { db, type Seafarer } from '@/lib/database';
+import { db } from '@/lib/database2';
+import type { Seafarer, Document } from '@/lib/schemas';
+import { INDEX_NAMES } from '@/lib/schemas';
+
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -75,51 +78,69 @@ export default function Compliance() {
         await db.init();
         const companySeafarers = await db.getSeafarersByCompany(selectedCompany.id);
         setSeafarers(companySeafarers);
-        
-        // Generate certificates from seafarer data
-        const allCertificates: Certificate[] = [];
-        const allComplianceRecords: ComplianceRecord[] = [];
-        
-        companySeafarers.forEach(seafarer => {
-          // Create certificates from seafarer qualifications
-          seafarer.qualifications.certificates.forEach((cert, index) => {
-            const issueDate = new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000);
-            const expiryDate = new Date(issueDate.getTime() + 2 * 365 * 24 * 60 * 60 * 1000);
-            const daysUntilExpiry = Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-            
-            allCertificates.push({
-              id: `${seafarer.id}-${index}`,
-              seafarerId: seafarer.id,
-              seafarerName: `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`,
-              type: cert.name || 'STCW Certificate',
-              number: cert.number || `CERT-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-              issueDate: issueDate.toISOString().split('T')[0],
-              expiryDate: expiryDate.toISOString().split('T')[0],
-              issuingAuthority: cert.issuingAuthority || 'Maritime Authority',
-              status: daysUntilExpiry < 30 ? 'expired' : daysUntilExpiry < 90 ? 'expiring' : 'valid',
-              daysUntilExpiry
+
+        // Build certificates from documents store deterministically
+        const certs: Certificate[] = [];
+        const records: ComplianceRecord[] = [];
+
+        for (const s of companySeafarers) {
+          // Fetch documents linked to this seafarer
+          const docs = await db.getByIndex<Document>(
+            'documents',
+            INDEX_NAMES.DOCUMENT_BY_ENTITY,
+            ['seafarer', s.id]
+          );
+
+          const seafarerCerts = (docs || [])
+            .filter(d => d.type === 'certificate')
+            .map((d, idx): Certificate => {
+              const issueDate = d.issueDate || '';
+              const expiryDate = d.expiryDate || '';
+              const daysUntilExpiry = expiryDate
+                ? Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                : 0;
+              const status: Certificate['status'] = expiryDate
+                ? (daysUntilExpiry < 0 ? 'expired' : daysUntilExpiry <= 60 ? 'expiring' : 'valid')
+                : 'valid';
+              return {
+                id: d.id || `${s.id}-doc-${idx}`,
+                seafarerId: s.id,
+                seafarerName: `${s.personalInfo.firstName} ${s.personalInfo.lastName}`,
+                type: d.name,
+                number: '-',
+                issueDate,
+                expiryDate,
+                issuingAuthority: d.description || '—',
+                status,
+                daysUntilExpiry,
+              };
             });
-          });
-          
-          // Create compliance record
-          allComplianceRecords.push({
-            id: seafarer.id,
-            seafarerId: seafarer.id,
-            seafarerName: `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`,
-            vessel: seafarer.employment.currentVessel || 'Not Assigned',
+
+          certs.push(...seafarerCerts);
+
+          // Compute basic compliance score based on certificates
+          const expiredCount = seafarerCerts.filter(c => c.status === 'expired').length;
+          const expiringCount = seafarerCerts.filter(c => c.status === 'expiring').length;
+          const score = Math.max(0, 100 - expiredCount * 20 - expiringCount * 5);
+
+          records.push({
+            id: s.id,
+            seafarerId: s.id,
+            seafarerName: `${s.personalInfo.firstName} ${s.personalInfo.lastName}`,
+            vessel: s.employment.currentVesselName || 'Not Assigned',
             workHours: {
-              thisWeek: Math.floor(Math.random() * 20) + 50,
-              thisMonth: Math.floor(Math.random() * 50) + 250,
-              restViolations: Math.floor(Math.random() * 3)
+              thisWeek: 0,
+              thisMonth: 0,
+              restViolations: 0,
             },
-            certificates: allCertificates.filter(c => c.seafarerId === seafarer.id),
-            complianceScore: Math.floor(Math.random() * 30) + 70,
-            lastAudit: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+            certificates: seafarerCerts,
+            complianceScore: score,
+            lastAudit: '-',
           });
-        });
-        
-        setCertificates(allCertificates);
-        setComplianceRecords(allComplianceRecords);
+        }
+
+        setCertificates(certs);
+        setComplianceRecords(records);
       } catch (error) {
         console.error('Failed to load compliance data:', error);
         toast({

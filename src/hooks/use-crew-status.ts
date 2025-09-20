@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { db } from '@/lib/database2';
+import { INDEX_NAMES } from '@/lib/schemas';
 
 export interface CrewStatus {
   onboard: number;
@@ -26,8 +27,8 @@ export function useCrewStatus(companyId?: string): CrewStatus {
     setError(null);
     
     try {
-      // Fetch crew members for the company
-      const crewMembers = await db.getByIndex('seafarers', 'companyId', companyId);
+      // Fetch crew members for the company using the correct index name
+      const crewMembers = await db.getByIndex('seafarers', INDEX_NAMES.SEAFARER_BY_COMPANY, companyId);
       
       // Calculate status counts
       const onboardCount = crewMembers.filter(
@@ -38,9 +39,8 @@ export function useCrewStatus(companyId?: string): CrewStatus {
         (member: any) => member.employment?.status === 'on_leave'
       ).length;
       
-      const availableCount = crewMembers.filter(
-        (member: any) => member.employment?.status === 'available'
-      ).length;
+      // In the new schema there is no 'available'; treat 'on_leave' as available for counting
+      const availableCount = onVacationCount;
       
       // Count expiring certificates (within 30 days)
       const thirtyDaysFromNow = new Date();

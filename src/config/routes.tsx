@@ -1,6 +1,6 @@
 import React from 'react';
 import { RouteObject } from 'react-router-dom';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 
 // Lazy load all page components
 const LoginPage = React.lazy(() => import('@/pages/auth/LoginPage'));
@@ -159,7 +159,6 @@ export const routes: RouteObject[] = [
       },
       {
         path: ROUTES.PAYROLL,
-        element: <PayrollPage />,
         element: (
           <React.Suspense fallback={null}>
             <PayrollPage />

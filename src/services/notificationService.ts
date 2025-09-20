@@ -1,34 +1,10 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database2';
+import { STORE_NAMES } from '@/lib/schemas';
+import type { Notification } from '@/lib/schemas';
 
 export type NotificationType = 'info' | 'warning' | 'error' | 'success' | 'system';
 
-export interface NotificationMetadata {
-  companyId: string;
-  source: string;
-  priority: 'low' | 'medium' | 'high';
-  [key: string]: unknown;
-}
-
-export interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  read: boolean;
-  timestamp: string;
-  createdAt: string;
-  updatedAt: string;
-  metadata: NotificationMetadata;
-}
-
-// Extend the global Window interface to include our database
-declare global {
-  interface Window {
-    db: any; // This should be properly typed with your database interface
-  }
-}
-
-const NOTIFICATION_STORE = 'notifications';
+// Using STORE_NAMES.NOTIFICATIONS from schemas
 
 export const notificationService = {
   // Get all notifications with pagination
@@ -39,46 +15,22 @@ export const notificationService = {
   } = {}) {
     const { page = 1, limit = 50, includeRead = true } = options;
     
-    return db.withTransaction(NOTIFICATION_STORE, 'readonly', async (store) => {
-      return new Promise<{ 
-        items: Notification[]; 
-        total: number; 
-        page: number; 
-        totalPages: number; 
-        hasMore: boolean;
-      }>((resolve, reject) => {
-        const request = store.getAll();
-        
-        request.onsuccess = () => {
-          let notifications = request.result as Notification[];
-          
-          // Filter by company and read status
-          notifications = notifications.filter(n => 
-            n.metadata?.companyId === companyId && 
-            (includeRead ? true : !n.read)
-          );
-
-          // Sort by createdAt (newest first)
-          notifications.sort((a, b) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-          );
-
-          // Apply pagination
-          const start = (page - 1) * limit;
-          const paginated = notifications.slice(start, start + limit);
-
-          resolve({
-            items: paginated,
-            total: notifications.length,
-            page,
-            totalPages: Math.ceil(notifications.length / limit),
-            hasMore: start + limit < notifications.length
-          });
-        };
-        
-        request.onerror = () => reject(request.error);
-      });
+    const all = await db.getAll<Notification>(STORE_NAMES.NOTIFICATIONS);
+    const filtered = all.filter((n: any) => {
+      const nCompanyId = n.companyId ?? n.metadata?.companyId;
+      const readOk = includeRead ? true : !n.read;
+      return nCompanyId === companyId && readOk;
     });
+    filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const start = (page - 1) * limit;
+    const paginated = filtered.slice(start, start + limit);
+    return {
+      items: paginated,
+      total: filtered.length,
+      page,
+      totalPages: Math.ceil(filtered.length / limit),
+      hasMore: start + limit < filtered.length,
+    };
   },
 
   // Get unread notification count
@@ -92,29 +44,7 @@ export const notificationService = {
 
   // Mark a notification as read
   async markAsRead(id: string): Promise<void> {
-    await db.withTransaction(NOTIFICATION_STORE, 'readwrite', (store) => {
-      return new Promise<void>((resolve, reject) => {
-        const request = store.get(id);
-        
-        request.onsuccess = () => {
-          const notification = request.result as Notification;
-          if (notification) {
-            const updateRequest = store.put({ 
-              ...notification, 
-              read: true,
-              updatedAt: new Date().toISOString()
-            });
-            
-            updateRequest.onsuccess = () => resolve();
-            updateRequest.onerror = () => reject(updateRequest.error);
-          } else {
-            resolve();
-          }
-        };
-        
-        request.onerror = () => reject(request.error);
-      });
-    });
+    await db.update<Notification>(STORE_NAMES.NOTIFICATIONS, id, { read: true } as Partial<Notification>);
   },
 
   // Mark all notifications as read for a company
@@ -126,35 +56,12 @@ export const notificationService = {
     
     if (items.length === 0) return;
     
-    await db.withTransaction(NOTIFICATION_STORE, 'readwrite', (store) => {
-      const now = new Date().toISOString();
-      const requests = items.map(notification => {
-        return new Promise<void>((resolve, reject) => {
-          const updated = { 
-            ...notification, 
-            read: true,
-            updatedAt: now
-          };
-          
-          const request = store.put(updated);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      });
-      
-      return Promise.all(requests).then(() => {});
-    });
+    await Promise.all(items.map(n => db.update<Notification>(STORE_NAMES.NOTIFICATIONS, n.id, { read: true })));
   },
 
   // Remove a notification
   async removeNotification(id: string): Promise<void> {
-    await db.withTransaction(NOTIFICATION_STORE, 'readwrite', (store) => {
-      return new Promise<void>((resolve, reject) => {
-        const request = store.delete(id);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    });
+    await db.delete(STORE_NAMES.NOTIFICATIONS, id);
   },
 
   // Clear all notifications for a company
@@ -165,17 +72,7 @@ export const notificationService = {
     
     if (items.length === 0) return;
     
-    await db.withTransaction(NOTIFICATION_STORE, 'readwrite', (store) => {
-      const requests = items.map(notification => {
-        return new Promise<void>((resolve, reject) => {
-          const request = store.delete(notification.id);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      });
-      
-      return Promise.all(requests).then(() => {});
-    });
+    await Promise.all(items.map(n => db.delete(STORE_NAMES.NOTIFICATIONS, n.id)));
   },
 
   // Subscribe to notification updates
@@ -214,23 +111,16 @@ export const notificationService = {
       system: 'Scheduled maintenance is planned for tomorrow at 2 AM UTC.'
     };
 
-    const notification: Omit<Notification, 'id' | 'createdAt' | 'updatedAt' | 'timestamp'> = {
+    const notificationData = {
       type,
       title: mockTitles[type] || 'New Notification',
       message: mockMessages[type] || 'You have a new notification',
       read: false,
-      metadata: {
-        companyId,
-        source: 'system',
-        priority: 'medium',
-        ...(type === 'warning' && { expiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() })
-      }
-    };
+      metadata: { source: 'system', priority: 'medium' },
+      companyId,
+    } as Omit<Notification, 'id' | 'createdAt' | 'updatedAt'>;
 
-    return db.createNotification(notification);
-    // Add to database
-    await db.put(NOTIFICATION_STORE, notification);
-    
-    return notification;
+    const created = await db.createNotification(notificationData as any);
+    return created;
   }
 };

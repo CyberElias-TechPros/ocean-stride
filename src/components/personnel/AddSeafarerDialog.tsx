@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus } from 'lucide-react';
-import { type Seafarer } from '@/lib/database';
+import type { Seafarer } from '@/lib/schemas';
 
 interface AddSeafarerDialogProps {
   onAdd: (seafarer: Partial<Seafarer>) => void;
@@ -30,7 +30,7 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
       certificates: [],
     },
     employment: {
-      status: 'available' as const,
+      status: 'on_leave' as const,
       currentVessel: '',
       position: '',
       contractStart: '',
@@ -60,7 +60,49 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd(formData);
+    // Map legacy-style formData to new Seafarer schema shape
+    const mapped: Partial<Seafarer> = {
+      personalInfo: {
+        firstName: formData.personalInfo.firstName,
+        lastName: formData.personalInfo.lastName,
+        dateOfBirth: formData.personalInfo.dateOfBirth,
+        placeOfBirth: '',
+        nationality: formData.personalInfo.nationality,
+        maritalStatus: 'single',
+        address: {
+          street: '',
+          city: '',
+          state: '',
+          postalCode: '',
+          country: formData.personalInfo.nationality || '',
+        },
+        contact: {
+          email: formData.personalInfo.email,
+          phone: formData.personalInfo.phone,
+          emergencyContact: { name: '', relationship: '', phone: '' },
+        },
+      },
+      documents: [],
+      trainings: [],
+      medicals: [],
+      skills: [],
+      languages: [],
+      employment: {
+        rank: formData.qualifications.rank,
+        department: 'deck',
+        status: (formData.employment.status === 'onboard' ? 'onboard' : 'on_leave'),
+        currentVesselId: undefined,
+        currentVesselName: formData.employment.currentVessel || undefined,
+        baseWage: Number(formData.financial.basicWage) || 0,
+        wageCurrency: formData.financial.currency || 'USD',
+        workHoursPerWeek: 48,
+        leaveDaysPerYear: 30,
+        employmentType: 'permanent',
+        employmentStatus: 'active',
+        joinedDate: new Date().toISOString(),
+      },
+    };
+    onAdd(mapped);
     setOpen(false);
     // Reset form
     setFormData({
@@ -79,7 +121,7 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
         certificates: [],
       },
       employment: {
-        status: 'available' as const,
+        status: 'on_leave' as const,
         currentVessel: '',
         position: '',
         contractStart: '',
@@ -262,17 +304,15 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
                   value={formData.employment.status}
                   onValueChange={(value) => setFormData(prev => ({
                     ...prev,
-                    employment: { ...prev.employment, status: value as any }
+                    employment: { ...prev.employment, status: value as 'onboard' | 'on_leave' }
                   }))}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="available">Available</SelectItem>
-                    <SelectItem value="on-leave">On Leave</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
+                    <SelectItem value="onboard">Onboard</SelectItem>
+                    <SelectItem value="on_leave">On Leave</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

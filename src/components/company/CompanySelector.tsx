@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCompany } from '@/context/CompanyContext';
-import { Company } from '@/lib/database';
+import type { Company } from '@/lib/schemas';
 
 export function CompanySelector() {
   const { companies, selectedCompany, setSelectedCompany } = useCompany();
@@ -74,9 +74,11 @@ function CompanyCard({ company, isSelected, onSelect }: CompanyCardProps) {
             </div>
             <div>
               <CardTitle className="text-lg">{company.name}</CardTitle>
-              <Badge variant="outline" className="mt-1">
-                {company.code}
-              </Badge>
+              {company.taxId && (
+                <Badge variant="outline" className="mt-1">
+                  {company.taxId}
+                </Badge>
+              )}
             </div>
           </div>
           {isSelected && (
@@ -96,7 +98,7 @@ function CompanyCard({ company, isSelected, onSelect }: CompanyCardProps) {
           <div className="flex items-center space-x-2 text-sm">
             <MapPin className="w-3 h-3 text-muted-foreground" />
             <span className="text-muted-foreground">
-              {company.address.city}, {company.address.country}
+              {company.address || '—'}
             </span>
           </div>
           

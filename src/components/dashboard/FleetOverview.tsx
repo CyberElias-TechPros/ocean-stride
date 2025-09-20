@@ -4,14 +4,16 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Ship, Users, MapPin, AlertTriangle } from 'lucide-react';
 import { useCompany } from '@/context/CompanyContext';
-import { db, type Vessel as DbVessel, type Seafarer } from '@/lib/database';
+import { db } from '@/lib/database2';
+import type { Vessel, Seafarer } from '@/lib/schemas';
+import { INDEX_NAMES } from '@/lib/schemas';
 
-interface FleetVessel extends DbVessel {
+interface FleetVessel extends Vessel {
   crewCount: number;
   maxCrew: number;
-  location: string;
-  status: 'operational' | 'maintenance' | 'dry-dock';
-  nextCrewChange: string;
+  location?: string; // not modeled yet
+  operationalStatus?: 'operational' | 'maintenance' | 'dry-dock'; // not modeled yet
+  nextCrewChange?: string; // not modeled yet
 }
 
 export function FleetOverview() {
@@ -25,24 +27,28 @@ export function FleetOverview() {
       
       try {
         await db.init();
-        const [companyVessels, companySeafarers] = await Promise.all([
-          db.getVesselsByCompany(selectedCompany.id),
-          db.getSeafarersByCompany(selectedCompany.id)
-        ]);
-        
-        const fleetVessels: FleetVessel[] = companyVessels.map(vessel => {
-          const assignedCrew = companySeafarers.filter(s => s.employment.currentVessel === vessel.name);
-          const maxCrew = getMaxCrewByType(vessel.type);
-          
-          return {
-            ...vessel,
-            crewCount: assignedCrew.length,
-            maxCrew,
-            location: ['Singapore', 'Hamburg', 'Houston', 'Rotterdam', 'Dubai'][Math.floor(Math.random() * 5)],
-            status: ['operational', 'maintenance', 'dry-dock'][Math.floor(Math.random() * 3)] as 'operational' | 'maintenance' | 'dry-dock',
-            nextCrewChange: new Date(Date.now() + Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          };
-        });
+        const companyVessels = await db.getVesselsByCompany(selectedCompany.id);
+
+        const fleetVessels: FleetVessel[] = await Promise.all(
+          companyVessels.map(async (vessel) => {
+            // Count crew via seafarer index by current vessel id
+            const assignedCrew: Seafarer[] = await db.getByIndex(
+              'seafarers',
+              INDEX_NAMES.SEAFARER_BY_VESSEL,
+              vessel.id
+            );
+            const maxCrew = getMaxCrewByType(vessel.type);
+            return {
+              ...vessel,
+              crewCount: assignedCrew.length,
+              maxCrew,
+              // These fields are not modeled yet; display N/A in UI
+              location: undefined,
+              operationalStatus: undefined,
+              nextCrewChange: undefined,
+            };
+          })
+        );
         
         setVessels(fleetVessels);
       } catch (error) {
@@ -64,7 +70,7 @@ export function FleetOverview() {
       default: return 20;
     }
   };
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status?: string) => {
     switch (status) {
       case 'operational': return 'bg-success text-success-foreground';
       case 'maintenance': return 'bg-warning text-warning-foreground';
@@ -114,9 +120,9 @@ export function FleetOverview() {
           vessels.map((vessel) => {
           const crewPercentage = (vessel.crewCount / vessel.maxCrew) * 100;
           const crewingStatus = getCrewingStatus(vessel.crewCount, vessel.maxCrew);
-          const daysToCrewChange = Math.ceil(
-            (new Date(vessel.nextCrewChange).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
-          );
+          const daysToCrewChange = vessel.nextCrewChange
+            ? Math.ceil((new Date(vessel.nextCrewChange).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+            : undefined;
 
           return (
             <div key={vessel.id} className="p-4 border border-border rounded-lg space-y-3 hover:bg-muted/30 transition-smooth">
@@ -126,8 +132,8 @@ export function FleetOverview() {
                   <h4 className="font-semibold text-sm">{vessel.name}</h4>
                   <p className="text-xs text-muted-foreground">{vessel.type}</p>
                 </div>
-                <Badge className={getStatusColor(vessel.status)}>
-                  {vessel.status}
+                <Badge className={getStatusColor(vessel.operationalStatus)}>
+                  {vessel.operationalStatus || 'N/A'}
                 </Badge>
               </div>
 
@@ -135,7 +141,7 @@ export function FleetOverview() {
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center space-x-1 text-muted-foreground">
                   <MapPin className="w-3 h-3" />
-                  <span>{vessel.location}</span>
+                  <span>{vessel.location || 'N/A'}</span>
                 </div>
                 <div className="flex items-center space-x-1">
                   <Users className="w-3 h-3" />
@@ -163,11 +169,11 @@ export function FleetOverview() {
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Next crew change</span>
                 <div className="flex items-center space-x-1">
-                  {daysToCrewChange <= 7 && (
+                  {daysToCrewChange !== undefined && daysToCrewChange <= 7 && (
                     <AlertTriangle className="w-3 h-3 text-warning" />
                   )}
-                  <span className={daysToCrewChange <= 7 ? 'text-warning' : 'text-muted-foreground'}>
-                    {daysToCrewChange} days
+                  <span className={daysToCrewChange !== undefined && daysToCrewChange <= 7 ? 'text-warning' : 'text-muted-foreground'}>
+                    {daysToCrewChange !== undefined ? `${daysToCrewChange} days` : 'N/A'}
                   </span>
                 </div>
               </div>

@@ -15,7 +15,9 @@ import {
   CheckCircle,
   Clock
 } from 'lucide-react';
-import { db, type Vessel, type Seafarer } from '@/lib/database';
+import { db } from '@/lib/database2';
+import type { Vessel, Seafarer } from '@/lib/schemas';
+import { INDEX_NAMES } from '@/lib/schemas';
 import { useCompany } from '@/context/CompanyContext';
 
 interface VesselWithDetails extends Vessel {
@@ -41,23 +43,26 @@ export default function Fleet() {
       try {
         await db.init();
         const allVessels = await db.getVesselsByCompany(selectedCompany.id);
-        const allSeafarers = await db.getSeafarersByCompany(selectedCompany.id);
-        
-        // Enhance vessels with crew details
-        const vesselsWithDetails: VesselWithDetails[] = allVessels.map(vessel => {
-          const onboardCrew = allSeafarers.filter(s => s.employment.currentVessel === vessel.name);
-          const requiredCrew = getRequiredCrewByType(vessel.type);
-          
-          return {
-            ...vessel,
-            crewDetails: {
-              current: onboardCrew.length,
-              required: requiredCrew,
-              nextCrewChange: getNextCrewChangeDate(vessel.name),
-              upcomingChanges: getUpcomingChanges(vessel.name),
-            }
-          };
-        });
+        // Enhance vessels with crew details computed from seafarers assigned to the vessel
+        const vesselsWithDetails: VesselWithDetails[] = await Promise.all(
+          allVessels.map(async (vessel) => {
+            const onboardCrew: Seafarer[] = await db.getByIndex(
+              'seafarers',
+              INDEX_NAMES.SEAFARER_BY_VESSEL,
+              vessel.id
+            );
+            const requiredCrew = getRequiredCrewByType(vessel.type);
+            return {
+              ...vessel,
+              crewDetails: {
+                current: onboardCrew.length,
+                required: requiredCrew,
+                nextCrewChange: '', // not modeled yet
+                upcomingChanges: 0, // not modeled yet
+              }
+            };
+          })
+        );
         
         setVessels(vesselsWithDetails);
       } catch (error) {
@@ -78,28 +83,6 @@ export default function Fleet() {
       case 'general cargo': return 18;
       default: return 20;
     }
-  };
-
-  const getNextCrewChangeDate = (vesselName: string): string => {
-    // Mock data - in real app this would come from roster/contract data
-    const dates = {
-      'MV Ocean Pride': '2024-04-15',
-      'MV Baltic Star': '2024-04-22',
-      'MV Pacific Dawn': '2024-05-01',
-      'MV Atlantic Wave': '2024-04-18',
-    };
-    return dates[vesselName as keyof typeof dates] || '2024-05-01';
-  };
-
-  const getUpcomingChanges = (vesselName: string): number => {
-    // Mock data - number of crew members with contracts ending soon
-    const changes = {
-      'MV Ocean Pride': 3,
-      'MV Baltic Star': 5,
-      'MV Pacific Dawn': 2,
-      'MV Atlantic Wave': 4,
-    };
-    return changes[vesselName as keyof typeof changes] || 2;
   };
 
   const getCrewingStatus = (current: number, required: number) => {
@@ -210,7 +193,9 @@ export default function Fleet() {
           {vessels.map((vessel) => {
             const crewingStatus = getCrewingStatus(vessel.crewDetails.current, vessel.crewDetails.required);
             const crewPercentage = (vessel.crewDetails.current / vessel.crewDetails.required) * 100;
-            const daysToCrewChange = getDaysUntilCrewChange(vessel.crewDetails.nextCrewChange);
+            const daysToCrewChange = vessel.crewDetails.nextCrewChange
+              ? getDaysUntilCrewChange(vessel.crewDetails.nextCrewChange)
+              : undefined;
             
             return (
               <Card 
@@ -264,16 +249,16 @@ export default function Fleet() {
                         <div>
                           <p className="text-sm font-medium">Next Crew Change</p>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(vessel.crewDetails.nextCrewChange).toLocaleDateString()}
+                            {vessel.crewDetails.nextCrewChange ? new Date(vessel.crewDetails.nextCrewChange).toLocaleDateString() : 'N/A'}
                           </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <Badge variant={daysToCrewChange <= 7 ? "destructive" : daysToCrewChange <= 14 ? "default" : "outline"}>
-                          {daysToCrewChange} days
+                        <Badge variant={daysToCrewChange !== undefined && daysToCrewChange <= 7 ? "destructive" : daysToCrewChange !== undefined && daysToCrewChange <= 14 ? "default" : "outline"}>
+                          {daysToCrewChange !== undefined ? `${daysToCrewChange} days` : 'N/A'}
                         </Badge>
                         <p className="text-xs text-muted-foreground mt-1">
-                          {vessel.crewDetails.upcomingChanges} crew changes
+                          {vessel.crewDetails.upcomingChanges || 0} crew changes
                         </p>
                       </div>
                     </div>

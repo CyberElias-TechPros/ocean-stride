@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/context/CompanyContext';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database2';
+import type { Applicant, Seafarer } from '@/lib/schemas';
+
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -31,30 +33,6 @@ import {
   Filter
 } from 'lucide-react';
 
-interface Applicant {
-  id: string;
-  personalInfo: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone: string;
-    nationality: string;
-    dateOfBirth: string;
-  };
-  application: {
-    position: string;
-    experience: number;
-    status: 'pending' | 'reviewing' | 'interview' | 'approved' | 'rejected';
-    appliedDate: string;
-    priority: 'high' | 'medium' | 'low';
-  };
-  qualifications: {
-    rank: string;
-    certificates: string[];
-    lastVessel: string;
-  };
-}
-
 export default function Recruitment() {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,81 +45,8 @@ export default function Recruitment() {
       
       try {
         await db.init();
-        
-        // Generate sample applicants for demonstration
-        const sampleApplicants: Applicant[] = [
-          {
-            id: '1',
-            personalInfo: {
-              firstName: 'John',
-              lastName: 'Smith',
-              email: 'john.smith@email.com',
-              phone: '+1-555-0101',
-              nationality: 'United States',
-              dateOfBirth: '1985-03-15'
-            },
-            application: {
-              position: 'Chief Engineer',
-              experience: 8,
-              status: 'reviewing',
-              appliedDate: '2024-01-15',
-              priority: 'high'
-            },
-            qualifications: {
-              rank: 'Chief Engineer',
-              certificates: ['STCW III/1', 'Engine Room Resource Management'],
-              lastVessel: 'MV Atlantic Star'
-            }
-          },
-          {
-            id: '2',
-            personalInfo: {
-              firstName: 'Maria',
-              lastName: 'Garcia',
-              email: 'maria.garcia@email.com',
-              phone: '+34-666-123456',
-              nationality: 'Spain',
-              dateOfBirth: '1990-07-22'
-            },
-            application: {
-              position: 'Second Officer',
-              experience: 4,
-              status: 'interview',
-              appliedDate: '2024-01-18',
-              priority: 'medium'
-            },
-            qualifications: {
-              rank: 'Second Officer',
-              certificates: ['STCW II/1', 'Bridge Resource Management'],
-              lastVessel: 'MV Mediterranean'
-            }
-          },
-          {
-            id: '3',
-            personalInfo: {
-              firstName: 'Erik',
-              lastName: 'Hansen',
-              email: 'erik.hansen@email.com',
-              phone: '+47-999-88776',
-              nationality: 'Norway',
-              dateOfBirth: '1982-11-08'
-            },
-            application: {
-              position: 'Chief Cook',
-              experience: 12,
-              status: 'approved',
-              appliedDate: '2024-01-10',
-              priority: 'high'
-            },
-            qualifications: {
-              rank: 'Chief Cook',
-              certificates: ['Food Safety', 'Ship Cook Certificate'],
-              lastVessel: 'MV Baltic Star'
-            }
-          }
-        ];
-        
-        setApplicants(sampleApplicants);
+        const items = await db.getApplicantsByCompany(selectedCompany.id);
+        setApplicants(items);
       } catch (error) {
         console.error('Failed to load recruitment data:', error);
         toast({
@@ -159,11 +64,11 @@ export default function Recruitment() {
 
   const updateApplicantStatus = async (applicantId: string, newStatus: Applicant['application']['status']) => {
     try {
-      setApplicants(prev => prev.map(applicant => 
-        applicant.id === applicantId 
-          ? { ...applicant, application: { ...applicant.application, status: newStatus }}
-          : applicant
-      ));
+      const existing = applicants.find(a => a.id === applicantId);
+      if (!existing) return;
+      const mergedApp = { ...existing.application, status: newStatus } as Applicant['application'];
+      const updated = await db.updateApplicant(applicantId, { application: mergedApp });
+      setApplicants(prev => prev.map(applicant => applicant.id === applicantId ? updated : applicant));
       
       const applicant = applicants.find(a => a.id === applicantId);
       toast({
@@ -184,49 +89,47 @@ export default function Recruitment() {
       const applicant = applicants.find(a => a.id === applicantId);
       if (!applicant) return;
 
-      // Convert applicant to seafarer
-      const seafarerData = {
+      // Convert applicant to Seafarer (new schema) deterministically without placeholders
+      const seafarerData: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'> = {
         companyId: selectedCompany?.id || '',
         personalInfo: {
-          ...applicant.personalInfo,
-          passportNumber: `P${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
-          seamanBook: `SB${Math.random().toString(36).substring(2, 10).toUpperCase()}`
+          firstName: applicant.personalInfo.firstName,
+          lastName: applicant.personalInfo.lastName,
+          dateOfBirth: applicant.personalInfo.dateOfBirth,
+          placeOfBirth: '',
+          nationality: applicant.personalInfo.nationality,
+          maritalStatus: 'single',
+          address: { street: '', city: '', state: '', postalCode: '', country: applicant.personalInfo.nationality },
+          contact: { email: applicant.personalInfo.email, phone: applicant.personalInfo.phone, emergencyContact: { name: '', relationship: '', phone: '' } },
         },
-        qualifications: {
-          rank: applicant.qualifications.rank,
-          certificates: applicant.qualifications.certificates.map(cert => ({
-            id: `cert-${Math.random().toString(36).substring(2, 8)}`,
-            name: cert,
-            number: `CERT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-            issuingAuthority: 'Maritime Authority',
-            issuedDate: new Date(Date.now() - Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-            expiryDate: new Date(Date.now() + 2 * 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          }))
-        },
+        documents: [],
+        trainings: [],
+        medicals: [],
+        skills: [],
+        languages: [],
         employment: {
-          status: 'available' as const,
-          position: applicant.application.position,
-          currentVessel: '',
-          contractStart: new Date().toISOString().split('T')[0],
-          contractEnd: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          rank: applicant.qualifications.rank,
+          department: 'deck',
+          status: 'on_leave',
+          currentVesselId: undefined,
+          currentVesselName: undefined,
+          baseWage: 0,
+          wageCurrency: 'USD',
+          workHoursPerWeek: 48,
+          leaveDaysPerYear: 30,
+          employmentType: 'permanent',
+          employmentStatus: 'active',
+          joinedDate: new Date().toISOString(),
         },
-        financial: {
-          bankName: 'International Bank',
-          accountNumber: `****${Math.floor(Math.random() * 9999)}`,
-          currency: 'USD',
-          basicWage: Math.floor(Math.random() * 3000) + 2000,
-          overtimeRate: 25
-        }
+        notes: undefined,
       };
 
       await db.createSeafarer(seafarerData);
       
       // Update applicant status to approved
-      setApplicants(prev => prev.map(a => 
-        a.id === applicantId 
-          ? { ...a, application: { ...a.application, status: 'approved' }}
-          : a
-      ));
+      const mergedApp = { ...applicant.application, status: 'approved' } as Applicant['application'];
+      const updated = await db.updateApplicant(applicantId, { application: mergedApp });
+      setApplicants(prev => prev.map(a => a.id === applicantId ? updated : a));
 
       toast({
         title: "Applicant Hired",

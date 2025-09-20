@@ -2,7 +2,10 @@ import { useState, useEffect } from 'react';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/context/CompanyContext';
-import { db, type Seafarer, type Vessel } from '@/lib/database';
+import { db } from '@/lib/database2';
+import type { Seafarer, Vessel, Payroll } from '@/lib/schemas';
+import { INDEX_NAMES, STORE_NAMES } from '@/lib/schemas';
+
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,80 +73,59 @@ export default function Payroll() {
       
       try {
         await db.init();
-        const [companySeafarers, companyVessels, existingPayroll] = await Promise.all([
+        const [companySeafarers, companyVessels] = await Promise.all([
           db.getSeafarersByCompany(selectedCompany.id),
-          db.getVesselsByCompany(selectedCompany.id),
-          db.getPayrollByCompany(selectedCompany.id)
+          db.getVesselsByCompany(selectedCompany.id)
         ]);
-        
         setSeafarers(companySeafarers);
         setVessels(companyVessels);
-        
-        // Generate payroll records from seafarer data if none exist
-        if (existingPayroll.length === 0) {
-          const generatedPayroll: PayrollRecord[] = companySeafarers.map(seafarer => {
-            const basicWage = seafarer.financial.bankName ? 5000 : 3000; // Use a default salary
-            const overtime = Math.floor(Math.random() * 1000) + 500;
-            const allowances = Math.floor(Math.random() * 500) + 200;
-            const bonuses = Math.floor(Math.random() * 300);
-            const grossPay = basicWage + overtime + allowances + bonuses;
-            
-            const taxes = grossPay * 0.15;
-            const insurance = grossPay * 0.05;
-            const allotments = seafarer.financial.overtimeRate * grossPay / 100; // Use overtimeRate as allotment %
-            const other = Math.floor(Math.random() * 100);
-            const totalDeductions = taxes + insurance + allotments + other;
-            
-            return {
-              id: seafarer.id,
-              seafarerId: seafarer.id,
-              seafarerName: `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`,
-              rank: seafarer.qualifications.rank,
-              vessel: seafarer.employment.currentVessel || 'Not Assigned',
-              period: {
-                start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                end: new Date().toISOString().split('T')[0]
-              },
-              earnings: {
-                basicWage,
-                overtime,
-                allowances,
-                bonuses
-              },
-              deductions: {
-                taxes,
-                insurance,
-                allotments,
-                other
-              },
-              netPay: grossPay - totalDeductions,
-              currency: seafarer.financial.currency,
-              status: ['draft', 'processed', 'paid'][Math.floor(Math.random() * 3)] as 'draft' | 'processed' | 'paid',
-              exchangeRate: seafarer.financial.currency === 'USD' ? 1 : Math.random() * 0.5 + 0.7
-            };
-          });
-          
-          setPayrollRecords(generatedPayroll);
-          
-          // Skip database save - using in-memory payroll data for demo
-        } else {
-          // Map database records to UI format
-          const mappedRecords = existingPayroll.map(record => ({
-            id: record.id,
-            seafarerId: record.seafarerId,
-            seafarerName: record.seafarerId, // Will be populated by seafarer lookup
-            rank: 'Unknown',
-            vessel: 'Unknown',
-            period: { start: '', end: '' },
-            earnings: { basicWage: 0, overtime: 0, allowances: 0, bonuses: 0 },
-            deductions: { taxes: 0, insurance: 0, allotments: 0, other: 0 },
-            netPay: 0,
-            currency: 'USD',
-            status: 'draft' as const,
-            exchangeRate: 1
-          }));
-          setPayrollRecords(mappedRecords);
-        }
+
+        // Fetch payrolls for all seafarers of this company
+        const payrolls: Payroll[] = (
+          await Promise.all(
+            companySeafarers.map(s => db.getByIndex<Payroll>(STORE_NAMES.PAYROLLS, INDEX_NAMES.PAYROLL_BY_SEAFARER, s.id))
+          )
+        ).flat();
+
+        // Map payroll schema to UI-friendly records deterministically
+        const records: PayrollRecord[] = payrolls.map(p => {
+          const seafarer = companySeafarers.find(s => s.id === p.seafarerId);
+          const vesselName = p.vesselName || companyVessels.find(v => v.id === p.vesselId)?.name || 'Not Assigned';
+
+          const bonusesTotal = (p.bonuses || []).reduce((sum, b) => sum + (b.amount || 0), 0);
+          const deductionsTotal = (p.deductions || []).reduce((sum, d) => sum + (d.amount || 0), 0);
+          const overtimeAmount = (p.overtimeHours || 0) * (p.overtimeRate || 0);
+
+          const earnings = {
+            basicWage: p.basicSalary || 0,
+            overtime: overtimeAmount,
+            allowances: 0,
+            bonuses: bonusesTotal,
+          };
+          const deductions = {
+            taxes: 0,
+            insurance: 0,
+            allotments: 0,
+            other: deductionsTotal,
+          };
+
+          return {
+            id: p.id,
+            seafarerId: p.seafarerId,
+            seafarerName: seafarer ? `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}` : p.seafarerName || p.seafarerId,
+            rank: seafarer?.employment.rank || '—',
+            vessel: vesselName,
+            period: { start: p.periodStart, end: p.periodEnd },
+            earnings,
+            deductions,
+            netPay: p.netSalary || 0,
+            currency: p.currency || 'USD',
+            status: p.status === 'paid' ? 'paid' : p.status === 'pending' ? 'processed' : 'draft',
+            exchangeRate: 1,
+          };
+        });
+
+        setPayrollRecords(records);
       } catch (error) {
         console.error('Failed to load payroll data:', error);
         toast({

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { DashboardStats, QuickActions, RecentActivity } from '@/components/dashboard/DashboardStats';
 import { FleetOverview } from '@/components/dashboard/FleetOverview';
-import { db } from '@/lib/database';
+import { db } from '@/lib/database2';
+import { INDEX_NAMES, type Seafarer, type Vessel, type Payroll } from '@/lib/schemas';
 
 interface DashboardData {
   seafarers: {
@@ -33,12 +34,8 @@ export default function Dashboard() {
     const initializeDatabase = async () => {
       try {
         await db.init();
-        const companies = (await db.getAll('companies')) as any[];
-        if (!companies.length) {
-          await db.generateSampleData();
-        }
-        const companiesAfter = (await db.getAll('companies')) as any[];
-        const companyId = companiesAfter[0]?.id;
+        const companiesAfter = await db.getAll('companies');
+        const companyId = (companiesAfter as any[])[0]?.id as string | undefined;
         if (companyId) {
           const stats = await computeStats(companyId);
           setDashboardData(stats);
@@ -54,21 +51,38 @@ export default function Dashboard() {
   }, []);
 
   const computeStats = async (companyId: string): Promise<DashboardData> => {
-    const seafarers = await db.getSeafarersByCompany(companyId);
-    const vessels = await db.getVesselsByCompany(companyId);
-    const payroll = await db.getPayrollByCompany(companyId);
+    const seafarers = (await db.getSeafarersByCompany(companyId)) as Seafarer[];
+    const vessels = (await db.getVesselsByCompany(companyId)) as Vessel[];
 
     const total = seafarers.length;
-    const active = seafarers.filter(s => s.employment.status === 'active').length;
-    const available = seafarers.filter(s => s.employment.status === 'available').length;
-    const onboard = seafarers.filter(s => s.employment.currentVessel).length;
+    const active = seafarers.filter(s => s.employment.employmentStatus === 'active').length;
+    const onboard = seafarers.filter(s => s.employment.status === 'onboard').length;
+    const available = seafarers.filter(s => s.employment.status === 'on_leave').length;
 
-    const fullyManned = vessels.filter(v => seafarers.some(s => s.employment.currentVessel === v.name)).length;
-    const needCrew = vessels.length - fullyManned;
+    // Vessel manning: consider vessels with at least one seafarer whose currentVesselId matches
+    const vesselCrewMap = new Map<string, number>();
+    seafarers.forEach(s => {
+      const vid = s.employment.currentVesselId;
+      if (vid) vesselCrewMap.set(vid, (vesselCrewMap.get(vid) || 0) + 1);
+    });
+    const fullyManned = vessels.filter(v => (vesselCrewMap.get(v.id) || 0) > 0).length;
+    const needCrew = Math.max(0, vessels.length - fullyManned);
 
+    // Payroll: aggregate by seafarers for current month
     const now = new Date();
-    const ym = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const monthlyRecords = payroll.filter(p => p.period.start.startsWith(ym));
+    const month = now.getMonth();
+    const year = now.getFullYear();
+    const seafarerIds = seafarers.map(s => s.id);
+    const payrollRecords: Payroll[] = (
+      await Promise.all(
+        seafarerIds.map(id => db.getByIndex<Payroll>('payrolls', INDEX_NAMES.PAYROLL_BY_SEAFARER, id))
+      )
+    ).flat();
+
+    const monthlyRecords = payrollRecords.filter(r => {
+      const d = new Date(r.periodStart);
+      return d.getMonth() === month && d.getFullYear() === year;
+    });
     const monthlyTotal = monthlyRecords.reduce((sum, p) => sum + (p.netSalary || 0), 0);
 
     return {
@@ -77,7 +91,6 @@ export default function Dashboard() {
       payroll: { monthlyTotal, recordsCount: monthlyRecords.length },
     };
   };
-
 
   if (loading) {
     return (

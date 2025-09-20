@@ -10,15 +10,16 @@ import {
   type Payroll,
   type Document,
   type Notification,
-  type EntityType,
-  type EntityName
+  type Applicant,
+  
 } from './schemas';
 
 class DatabaseService {
   private static instance: DatabaseService;
   private db: IDBDatabase | null = null;
-  private dbName = 'OceanStrideDB';
-  private version = 1;
+  // Use a new DB name to avoid clobbering the legacy schema during migration
+  private dbName = 'OceanStrideDB_v2';
+  private version = 2;
 
   private constructor() {}
 
@@ -61,6 +62,12 @@ class DatabaseService {
     if (!db.objectStoreNames.contains(STORE_NAMES.COMPANIES)) {
       const store = db.createObjectStore(STORE_NAMES.COMPANIES, { keyPath: 'id' });
       store.createIndex(INDEX_NAMES.COMPANY_BY_NAME, 'name', { unique: true });
+      // Optional: support finding by code if present in the schema
+      try {
+        store.createIndex('by_code', 'code', { unique: false });
+      } catch (_) {
+        // ignore if index already exists
+      }
     }
 
     // Vessels store
@@ -113,6 +120,14 @@ class DatabaseService {
       store.createIndex(INDEX_NAMES.NOTIFICATION_BY_READ_STATUS, 'read', { unique: false });
       store.createIndex(INDEX_NAMES.NOTIFICATION_BY_DATE, 'createdAt', { unique: false });
       store.createIndex(INDEX_NAMES.NOTIFICATION_BY_TYPE, 'type', { unique: false });
+    }
+
+    // Applicants store
+    if (!db.objectStoreNames.contains(STORE_NAMES.APPLICANTS)) {
+      const store = db.createObjectStore(STORE_NAMES.APPLICANTS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.APPLICANT_BY_COMPANY, 'companyId', { unique: false });
+      store.createIndex(INDEX_NAMES.APPLICANT_BY_STATUS, 'application.status', { unique: false });
+      store.createIndex(INDEX_NAMES.APPLICANT_BY_POSITION, 'application.position', { unique: false });
     }
   }
 
@@ -388,6 +403,23 @@ class DatabaseService {
 
   async markNotificationAsRead(id: string): Promise<void> {
     await this.update<Notification>(STORE_NAMES.NOTIFICATIONS, id, { read: true });
+  }
+
+  // Applicant methods
+  async createApplicant(data: Omit<Applicant, keyof BaseEntity>): Promise<Applicant> {
+    return this.create<Applicant>(STORE_NAMES.APPLICANTS, data);
+  }
+
+  async getApplicantsByCompany(companyId: string): Promise<Applicant[]> {
+    return this.getByIndex<Applicant>(STORE_NAMES.APPLICANTS, INDEX_NAMES.APPLICANT_BY_COMPANY, companyId);
+  }
+
+  async updateApplicant(id: string, updates: Partial<Omit<Applicant, keyof BaseEntity>>): Promise<Applicant> {
+    return this.update<Applicant>(STORE_NAMES.APPLICANTS, id, updates);
+  }
+
+  async deleteApplicant(id: string): Promise<void> {
+    return this.delete(STORE_NAMES.APPLICANTS, id);
   }
 }
 

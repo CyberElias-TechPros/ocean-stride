@@ -12,12 +12,13 @@ import { errorBoundaryHandler } from '@/lib/error-handler';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CompanyProvider } from './context/CompanyContext';
-import { DatabaseProvider } from './contexts/DatabaseContext';
+import { DatabaseProvider } from '@/context/DatabaseContext';
 import { I18nProvider } from './i18n/I18nProvider';
 
 // Lazy load pages
 const LoginPage = lazy(() => import('@/pages/Login'));
-const DashboardPage = lazy(() => import('@/pages/Index'));
+// Layout wrapper hosting authenticated routes (renders <Outlet />)
+const LayoutPage = lazy(() => import('@/pages/Index'));
 
 // Create query client with default error handling
 const queryClient = new QueryClient({
@@ -63,13 +64,13 @@ const AppRoutes = () => {
     {
       element: (
         <ProtectedRoute>
-          <DashboardPage />
+          <LayoutPage />
         </ProtectedRoute>
       ),
       children: [
         {
           index: true,
-          element: <Navigate to={ROUTES.DASHBOARD} replace />,
+          element: <Navigate to="dashboard" replace />,
         },
         ...appRoutes
           .filter(route => route.path !== ROUTES.LOGIN && route.path !== ROUTES.NOT_FOUND)
@@ -108,27 +109,27 @@ const App = () => {
     <ErrorBoundary onError={errorBoundaryHandler}>
       <QueryClientProvider client={queryClient}>
         <I18nProvider>
-          <DatabaseProvider>
-            <ThemeProvider defaultTheme="system" storageKey="ocean-stride-theme">
-              <TooltipProvider delayDuration={300}>
-                <QueryErrorResetBoundary>
-                  {() => (
-                    <BrowserRouter>
-                      <AuthProvider>
+          <AuthProvider>
+            <DatabaseProvider>
+              <ThemeProvider defaultTheme="system" storageKey="ocean-stride-theme">
+                <TooltipProvider delayDuration={300}>
+                  <QueryErrorResetBoundary>
+                    {() => (
+                      <BrowserRouter>
                         <CompanyProvider>
                           <RouteLoadingBoundary>
                             <AppRoutes />
                           </RouteLoadingBoundary>
                         </CompanyProvider>
-                      </AuthProvider>
-                      <Toaster />
-                      <Sonner position="top-right" />
-                    </BrowserRouter>
-                  )}
-                </QueryErrorResetBoundary>
-              </TooltipProvider>
-            </ThemeProvider>
-          </DatabaseProvider>
+                        <Toaster />
+                        <Sonner position="top-right" />
+                      </BrowserRouter>
+                    )}
+                  </QueryErrorResetBoundary>
+                </TooltipProvider>
+              </ThemeProvider>
+            </DatabaseProvider>
+          </AuthProvider>
         </I18nProvider>
       </QueryClientProvider>
     </ErrorBoundary>

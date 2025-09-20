@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { db, type Company, type Seafarer, type Vessel, type PayrollRecord } from '@/lib/database';
+import { db } from '@/lib/database2';
+import type { Company, Seafarer, Vessel } from '@/lib/schemas';
+import { STORE_NAMES } from '@/lib/schemas';
+
 import { useToast } from '@/hooks/use-toast';
 
 interface DatabaseState {
@@ -187,7 +190,7 @@ export const useSeafarers = (companyId?: string) => {
 
   const updateSeafarer = async (id: string, updates: Partial<Seafarer>) => {
     try {
-      const updatedSeafarer = await db.updateSeafarer(id, updates);
+      const updatedSeafarer = await db.update<Seafarer>(STORE_NAMES.SEAFARERS, id, updates);
       setSeafarers(prev => prev.map(s => s.id === id ? updatedSeafarer : s));
       toast({
         title: 'Success',
@@ -288,7 +291,7 @@ export const useVessels = (companyId?: string) => {
 
   const updateVessel = async (id: string, updates: Partial<Vessel>) => {
     try {
-      const updatedVessel = await db.updateVessel(id, updates);
+      const updatedVessel = await db.update<Vessel>(STORE_NAMES.VESSELS, id, updates);
       setVessels(prev => prev.map(v => v.id === id ? updatedVessel : v));
       toast({
         title: 'Success',

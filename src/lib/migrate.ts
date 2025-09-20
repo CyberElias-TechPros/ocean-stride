@@ -525,7 +525,8 @@ class DatabaseMigrator {
 
   private async migratePayrolls(): Promise<void> {
     try {
-      const oldPayrolls = await oldDb.getAll('payrolls');
+      // Legacy DB uses singular 'payroll' store name
+      const oldPayrolls = await oldDb.getAll('payroll');
       let migratedCount = 0;
       
       for (const oldPayroll of oldPayrolls) {

@@ -226,6 +226,30 @@ export interface Notification extends BaseEntity {
   expiresAt?: string;
 }
 
+// Recruitment
+export interface Applicant extends BaseEntity {
+  personalInfo: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    nationality: string;
+    dateOfBirth: string;
+  };
+  application: {
+    position: string;
+    experience: number;
+    status: 'pending' | 'reviewing' | 'interview' | 'approved' | 'rejected';
+    appliedDate: string;
+    priority: 'high' | 'medium' | 'low';
+  };
+  qualifications: {
+    rank: string;
+    certificates: string[];
+    lastVessel?: string;
+  };
+}
+
 // Type guards
 export function isCompany(entity: any): entity is Company {
   return entity && 'name' in entity && 'address' in entity;
@@ -263,6 +287,7 @@ export const STORE_NAMES = {
   PAYROLLS: 'payrolls',
   DOCUMENTS: 'documents',
   NOTIFICATIONS: 'notifications',
+  APPLICANTS: 'applicants',
 } as const;
 
 // IndexedDB index names
@@ -304,4 +329,9 @@ export const INDEX_NAMES = {
   NOTIFICATION_BY_READ_STATUS: 'by_read_status',
   NOTIFICATION_BY_DATE: 'by_date',
   NOTIFICATION_BY_TYPE: 'by_type',
+
+  // Applicant indexes
+  APPLICANT_BY_COMPANY: 'by_company',
+  APPLICANT_BY_STATUS: 'by_status',
+  APPLICANT_BY_POSITION: 'by_position',
 } as const;

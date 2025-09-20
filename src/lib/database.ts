@@ -181,7 +181,8 @@ export interface PayrollRecord {
 
 // IndexedDB configuration
 const DB_NAME = 'OceanStrideDB';
-const DB_VERSION = 3;
+// Bump version due to schema changes (adding notifications store and safer migrations)
+const DB_VERSION = 4;
 
 interface StoreConfig {
   name: string;
@@ -239,6 +240,16 @@ const STORES: StoreConfig[] = [
       { name: 'status', keyPath: 'status' },
       { name: 'period', keyPath: 'period.start' }
     ]
+  },
+  {
+    name: 'notifications',
+    keyPath: 'id',
+    indexes: [
+      { name: 'companyId', keyPath: 'metadata.companyId' },
+      { name: 'read', keyPath: 'read' },
+      { name: 'type', keyPath: 'type' },
+      { name: 'createdAt', keyPath: 'createdAt' }
+    ]
   }
 ];
 
@@ -274,20 +285,19 @@ class SeafarerDatabase {
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
         
-        // Remove existing stores
-        const existingStores = Array.from(db.objectStoreNames);
-        existingStores.forEach(storeName => {
-          db.deleteObjectStore(storeName);
-        });
-
-        // Create new stores
+        // Create or upgrade stores without deleting existing data
         STORES.forEach(storeConfig => {
-          const store = db.createObjectStore(storeConfig.name, {
-            keyPath: storeConfig.keyPath
-          });
+          const hasStore = db.objectStoreNames.contains(storeConfig.name);
+          const store = hasStore
+            ? (event.currentTarget as IDBOpenDBRequest).transaction!.objectStore(storeConfig.name)
+            : db.createObjectStore(storeConfig.name, { keyPath: storeConfig.keyPath });
 
+          // Ensure indexes exist
+          const existingIndexes = hasStore ? Array.from((store as IDBObjectStore).indexNames) : [];
           storeConfig.indexes.forEach(index => {
-            store.createIndex(index.name, index.keyPath, index.options);
+            if (!existingIndexes.includes(index.name)) {
+              store.createIndex(index.name, index.keyPath, index.options);
+            }
           });
         });
       };
@@ -625,10 +635,11 @@ class SeafarerDatabase {
     vessels: { total: number; fullyManned: number; needCrew: number };
     payroll: { monthlyTotal: number; recordsCount: number };
   }> {
-    const [seafarers, vessels, payrolls] = await Promise.all([
+    const [seafarers, vessels, payrolls, crewAssignments] = await Promise.all([
       this.getAll<Seafarer>('seafarers'),
       this.getAll<Vessel>('vessels'),
-      this.getAll<PayrollRecord>('payrolls')
+      this.getAll<PayrollRecord>('payroll'),
+      this.getAll<CrewAssignment>('crew_assignments')
     ]);
 
     const now = new Date();
@@ -652,11 +663,23 @@ class SeafarerDatabase {
       available: seafarers.filter(s => s.employment.status === 'available').length
     };
 
-    // Calculate vessel stats
+    // Calculate vessel stats based on active crew assignments
+    const activeAssignmentsByVessel = new Map<string, number>();
+    crewAssignments
+      .filter(a => a.status === 'active')
+      .forEach(a => {
+        activeAssignmentsByVessel.set(
+          a.vesselId,
+          (activeAssignmentsByVessel.get(a.vesselId) || 0) + 1
+        );
+      });
+
+    // Consider vessels with 0 active assignments as needing crew
+    const needCrew = vessels.filter(v => (activeAssignmentsByVessel.get(v.id) || 0) === 0).length;
     const vesselStats = {
       total: vessels.length,
-      fullyManned: Math.floor(vessels.length * 0.7), // Placeholder logic
-      needCrew: Math.ceil(vessels.length * 0.3)     // Placeholder logic
+      fullyManned: Math.max(0, vessels.length - needCrew),
+      needCrew,
     };
 
     return {

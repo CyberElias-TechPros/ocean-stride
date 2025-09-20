@@ -1,39 +1,34 @@
-import { db } from '@/lib/database';
+import { db } from '@/lib/database2';
+import { STORE_NAMES, INDEX_NAMES } from '@/lib/schemas';
+import type { Seafarer, Vessel, Document } from '@/lib/schemas';
 
 export const crewService = {
   async getCrewStats(companyId: string) {
-    const seafarers = await db.getAll('seafarers');
-    const vessels = await db.getAll('vessels');
-    
+    const seafarers = await db.getByIndex<Seafarer>(STORE_NAMES.SEAFARERS, INDEX_NAMES.SEAFARER_BY_COMPANY, companyId);
+    const vessels = await db.getByIndex<Vessel>(STORE_NAMES.VESSELS, INDEX_NAMES.VESSEL_BY_COMPANY, companyId);
+
     return {
       totalCrew: seafarers.length,
-      onboard: seafarers.filter((s: any) => 
-        s.employment?.status === 'active' && s.employment?.currentVessel
-      ).length,
-      available: seafarers.filter((s: any) => 
-        s.employment?.status === 'available'
-      ).length,
-      totalVessels: vessels.length
+      onboard: seafarers.filter((s) => s.employment?.status === 'onboard').length,
+      available: seafarers.filter((s) => s.employment?.status === 'on_leave').length,
+      totalVessels: vessels.length,
     };
   },
   
   async getExpiringCertificates(companyId: string, daysThreshold = 30) {
-    const seafarers = await db.getAll('seafarers');
     const now = new Date();
     const thresholdDate = new Date();
     thresholdDate.setDate(now.getDate() + daysThreshold);
-    
-    let expiringCount = 0;
-    
-    seafarers.forEach((seafarer: any) => {
-      seafarer.qualifications?.certificates?.forEach((cert: any) => {
-        const expiryDate = new Date(cert.expiryDate);
-        if (expiryDate <= thresholdDate && expiryDate >= now) {
-          expiringCount++;
-        }
-      });
-    });
-    
-    return expiringCount;
+
+    // Fetch all documents and filter by company if present
+    const documents = await db.getAll<Document>(STORE_NAMES.DOCUMENTS);
+    return documents.filter((d) => {
+      if (d.type !== 'certificate') return false;
+      if (!d.expiryDate) return false;
+      const exp = new Date(d.expiryDate);
+      const inWindow = exp <= thresholdDate && exp >= now;
+      const matchesCompany = d.companyId ? d.companyId === companyId : true;
+      return inWindow && matchesCompany;
+    }).length;
   }
 };
