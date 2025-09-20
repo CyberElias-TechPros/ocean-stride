@@ -11,7 +11,7 @@ import ErrorBoundary from '@/contexts/ErrorBoundary';
 import { errorBoundaryHandler } from '@/lib/error-handler';
 import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
-import { CompanyProvider } from './context/CompanyContext';
+import { CompanyProvider } from '@/context/CompanyContext';
 import { DatabaseProvider } from '@/context/DatabaseContext';
 import { I18nProvider } from './i18n/I18nProvider';
 
