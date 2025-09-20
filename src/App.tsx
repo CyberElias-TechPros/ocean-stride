@@ -49,6 +49,10 @@ const RouteLoadingBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
  */
 const AppRoutes = () => {
   const { isLoading } = useAuth();
+  // Flatten protected child routes from config so we don't double-wrap ProtectedRoute
+  const protectedContainer = appRoutes.find((r: any) => Array.isArray((r as any).children));
+  const protectedChildren = (protectedContainer as any)?.children ?? [];
+
   const element = useRoutes([
     // Public routes
     {
@@ -70,12 +74,16 @@ const AppRoutes = () => {
       children: [
         {
           index: true,
-          element: <Navigate to="dashboard" replace />,
+          element: (
+            <RouteLoadingBoundary>
+              {protectedChildren.find((r: any) => r.path === ROUTES.DASHBOARD)?.element}
+            </RouteLoadingBoundary>
+          ),
         },
-        ...appRoutes
-          .filter(route => route.path !== ROUTES.LOGIN && route.path !== ROUTES.NOT_FOUND)
-          .map(route => ({
-            path: route.path === ROUTES.DASHBOARD ? 'dashboard' : route.path?.substring(1),
+        ...protectedChildren
+          .filter((route: any) => route.path && route.path !== ROUTES.DASHBOARD)
+          .map((route: any) => ({
+            path: route.path?.substring(1),
             element: (
               <RouteLoadingBoundary>
                 {route.element}

@@ -38,7 +38,9 @@ export function Header({ onMenuClick }: HeaderProps) {
     if (selectedCompany?.id) {
       fetchNotifications(selectedCompany.id);
     }
-  }, [selectedCompany?.id, fetchNotifications]);
+    // We intentionally exclude fetchNotifications to avoid infinite loops if its identity changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCompany?.id]);
 
   return (
     <header className="h-16 border-b border-border bg-card/50 backdrop-blur-sm">
