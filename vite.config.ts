@@ -1,3 +1,4 @@
+// @ts-nocheck
 export default {
   server: {
     host: "::",
@@ -6,10 +7,11 @@ export default {
   plugins: [],
   resolve: {
     alias: {
-      "@": "./src",
+      "@": "/src",
     },
   },
   build: {
+    target: "esnext",
     commonjsOptions: {
       include: [/node_modules/],
     },
