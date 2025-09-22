@@ -1,3 +1,7 @@
+// Export all types
+export * from './assignment.types';
+export * from './payroll.types';
+
 // User Types
 export interface User {
   id: string;
