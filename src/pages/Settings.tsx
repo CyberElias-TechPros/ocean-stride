@@ -46,39 +46,24 @@ interface NotificationSetting {
   push: boolean;
 }
 
-const mockUsers: User[] = [
+// Function to create initial system users if none exist
+const createInitialUsers = (): User[] => [
   {
-    id: '1',
-    name: 'Admin User',
-    email: 'admin@seamanager.com',
+    id: 'admin-1',
+    name: 'System Administrator',
+    email: 'admin@maritime.com',
     role: 'admin',
     status: 'active',
-    lastLogin: '2024-01-20'
+    lastLogin: new Date().toISOString().split('T')[0]
   },
   {
-    id: '2',
-    name: 'HR Manager',
-    email: 'hr@seamanager.com',
+    id: 'manager-1',
+    name: 'Fleet Manager',
+    email: 'manager@maritime.com',
     role: 'manager',
     status: 'active',
-    lastLogin: '2024-01-19'
+    lastLogin: new Date().toISOString().split('T')[0]
   },
-  {
-    id: '3',
-    name: 'Fleet Coordinator',
-    email: 'fleet@seamanager.com',
-    role: 'manager',
-    status: 'active',
-    lastLogin: '2024-01-18'
-  },
-  {
-    id: '4',
-    name: 'Viewer User',
-    email: 'viewer@seamanager.com',
-    role: 'viewer',
-    status: 'inactive',
-    lastLogin: '2024-01-15'
-  }
 ];
 
 const notificationSettings: NotificationSetting[] = [
@@ -125,9 +110,43 @@ const notificationSettings: NotificationSetting[] = [
 ];
 
 export default function Settings() {
-  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [users, setUsers] = useState<User[]>([]);
   const [notifications, setNotifications] = useState<NotificationSetting[]>(notificationSettings);
   const [activeTab, setActiveTab] = useState('general');
+  const [loading, setLoading] = useState(true);
+
+  // Load users from localStorage on component mount
+  useEffect(() => {
+    const loadUsers = () => {
+      try {
+        const storedUsers = localStorage.getItem('settings_users');
+        if (storedUsers) {
+          setUsers(JSON.parse(storedUsers));
+        } else {
+          // Initialize with default users if none exist
+          const initialUsers = createInitialUsers();
+          setUsers(initialUsers);
+          localStorage.setItem('settings_users', JSON.stringify(initialUsers));
+        }
+      } catch (error) {
+        console.error('Failed to load users:', error);
+        const initialUsers = createInitialUsers();
+        setUsers(initialUsers);
+        localStorage.setItem('settings_users', JSON.stringify(initialUsers));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers();
+  }, []);
+
+  // Save users to localStorage whenever users change
+  useEffect(() => {
+    if (users.length > 0) {
+      localStorage.setItem('settings_users', JSON.stringify(users));
+    }
+  }, [users]);
 
   const getRoleBadge = (role: string) => {
     const variants = {

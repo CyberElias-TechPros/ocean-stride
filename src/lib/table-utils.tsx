@@ -1,4 +1,4 @@
-import { ColumnDef } from '@tanstack/react-table';
+import React from 'react';
 
 type ColumnConfig<TData> = {
   id: string;
@@ -10,37 +10,6 @@ type ColumnConfig<TData> = {
   width?: number | string;
   align?: 'left' | 'center' | 'right';
 };
-
-export function createColumns<TData>(
-  configs: ColumnConfig<TData>[]
-): ColumnDef<TData>[] {
-  return configs.map((config) => ({
-    id: config.id,
-    accessorKey: config.accessor as string,
-    header: ({ column }) => (
-      <div 
-        className={config.sortable ? 'cursor-pointer select-none' : ''}
-        onClick={config.sortable ? () => column.toggleSorting(column.getIsSorted() === 'asc') : undefined}
-      >
-        {config.header}
-        {config.sortable && (
-          <span className="ml-2">
-            {column.getIsSorted() === 'desc' ? '↓' : column.getIsSorted() === 'asc' ? '↑' : '↕'}
-          </span>
-        )}
-      </div>
-    ),
-    cell: config.cell 
-      ? ({ row }) => config.cell?.(row.original[config.id as keyof TData], row.original)
-      : ({ getValue }) => {
-          const value = getValue();
-          return <div className={`text-${config.align || 'left'}`}>{value as React.ReactNode}</div>;
-        },
-    enableSorting: config.sortable,
-    enableColumnFilter: config.filterable,
-    size: config.width ? (typeof config.width === 'string' ? undefined : config.width) : 150,
-  }));
-}
 
 export function createFilterOptions<TData>(
   data: TData[],
@@ -108,11 +77,11 @@ export function getStatusVariant(status: string): StatusVariant {
 export function StatusBadge({ status }: { status: string }) {
   const variant = getStatusVariant(status);
   const variantClasses = {
-    default: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
+    default: 'bg-muted text-muted-foreground',
+    success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    error: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
+    info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
   };
   
   return (

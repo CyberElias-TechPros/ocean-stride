@@ -28,13 +28,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // TODO: Replace with actual session check
         const storedUser = localStorage.getItem('user');
         if (storedUser) {
-          setUser(JSON.parse(storedUser));
+          const user = JSON.parse(storedUser);
+          // Validate stored user data
+          if (user.id && user.email && user.role && user.name) {
+            setUser(user);
+          } else {
+            // Clear invalid stored data
+            localStorage.removeItem('user');
+          }
         }
       } catch (error) {
         console.error('Auth check failed', error);
+        localStorage.removeItem('user'); // Clear corrupted data
       } finally {
         setIsLoading(false);
       }
@@ -46,28 +53,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      // Mock API call - replace with actual API call
-      return new Promise<void>((resolve, reject) => {
-        setTimeout(() => {
-          if (email && password) {
-            const mockUser: User = {
-              id: '1',
-              email,
-              role: 'admin',
-              name: email.split('@')[0],
-            };
-            setUser(mockUser);
-            localStorage.setItem('user', JSON.stringify(mockUser));
-            console.log('User logged in:', email);
-            resolve();
-          } else {
-            reject(new Error('Invalid credentials'));
-          }
-        }, 1000);
-      });
+      
+      // Validate credentials
+      if (!email || !password) {
+        throw new Error('Email and password are required');
+      }
+
+      // For now, accept any valid email/password combination
+      // In production, this would validate against a user database
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('Invalid email format');
+      }
+
+      if (password.length < 3) {
+        throw new Error('Password must be at least 3 characters');
+      }
+
+      // Create user based on email domain logic
+      const user: User = {
+        id: btoa(email), // Use base64 encoded email as ID
+        email,
+        role: email.includes('admin') ? 'admin' : 'manager',
+        name: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+      };
+
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
       console.log('User logged in:', email);
       
-      // Navigation is handled by the ProtectedRoute component
     } catch (error) {
       console.error('Login failed:', error);
       throw error;
