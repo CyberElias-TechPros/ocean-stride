@@ -37,17 +37,50 @@ export const QUERY_KEYS = {
     LISTS: (filters: Record<string, any> = {}) => ['users', 'list', ...Object.entries(filters)],
     DETAILS: (id: string) => ['users', id],
   },
+  COMPANIES: {
+    ALL: ['companies'],
+    LISTS: (filters: any) => ['companies', 'list', filters],
+    DETAILS: (id: string) => ['companies', 'detail', id],
+    STATS: (id: string) => ['companies', 'stats', id],
+  },
   VESSELS: {
     ALL: ['vessels'],
     LISTS: (filters: Record<string, any> = {}) => ['vessels', 'list', ...Object.entries(filters)],
     DETAILS: (id: string) => ['vessels', id],
     CREW: (vesselId: string) => ['vessels', vesselId, 'crew'],
   },
+  SEAFARERS: {
+    ALL: ['seafarers'],
+    LISTS: (filters: any) => ['seafarers', 'list', filters],
+    DETAILS: (id: string) => ['seafarers', 'detail', id],
+  },
   CREW: {
     ALL: ['crew'],
     LISTS: (filters: Record<string, any> = {}) => ['crew', 'list', ...Object.entries(filters)],
     DETAILS: (id: string) => ['crew', id],
     CERTIFICATIONS: (crewId: string) => ['crew', crewId, 'certifications'],
+  },
+  ASSIGNMENTS: {
+    ALL: ['assignments'],
+    LISTS: (filters: any) => ['assignments', 'list', filters],
+    DETAILS: (id: string) => ['assignments', 'detail', id],
+  },
+  PAYROLLS: {
+    ALL: ['payrolls'],
+    LISTS: (filters: any) => ['payrolls', 'list', filters],
+    DETAILS: (id: string) => ['payrolls', 'detail', id],
+  },
+  CERTIFICATES: {
+    ALL: ['certificates'],
+    LISTS: (filters: any) => ['certificates', 'list', filters],
+    DETAILS: (id: string) => ['certificates', 'detail', id],
+    EXPIRING: (days: number) => ['certificates', 'expiring', days],
+    EXPIRED: ['certificates', 'expired'],
+  },
+  RANKS: {
+    ALL: ['ranks'],
+    LISTS: (filters: any) => ['ranks', 'list', filters],
+    DETAILS: (id: string) => ['ranks', 'detail', id],
   },
   DOCUMENTS: {
     BY_TYPE: (type: string, id: string) => ['documents', type, id],

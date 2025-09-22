@@ -1,6 +1,7 @@
 // Export all types
 export * from './assignment.types';
 export * from './payroll.types';
+export * from '../lib/schemas_v2';
 
 // User Types
 export interface User {
