@@ -7,12 +7,14 @@ import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/use-toast';
 import { ROUTES } from '@/config/routes';
+import { GOOGLE_OAUTH_CONFIG, GoogleCredentialResponse } from '@/config/oauth';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login, isAuthenticated } = useAuth();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { login, loginWithGoogle, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -27,7 +29,7 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast({
         title: 'Error',
@@ -40,12 +42,12 @@ const LoginPage: React.FC = () => {
     try {
       setIsLoading(true);
       await login(email, password);
-      
+
       toast({
         title: 'Success',
         description: 'You have been logged in successfully',
       });
-      
+
       // Navigation will be handled by the useEffect above
     } catch (error) {
       console.error('Login failed:', error);
@@ -56,6 +58,63 @@ const LoginPage: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsGoogleLoading(true);
+
+      // Check if Google Identity Services is loaded
+      if (!window.google?.accounts?.id) {
+        throw new Error('Google Identity Services not loaded');
+      }
+
+      // Initialize Google Sign-In
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_OAUTH_CONFIG.clientId,
+        callback: handleGoogleCallback,
+        auto_select: false,
+        cancel_on_tap_outside: true,
+      });
+
+      // Prompt the user to sign in
+      window.google.accounts.id.prompt();
+
+    } catch (error) {
+      console.error('Google sign-in initialization failed:', error);
+      toast({
+        title: 'Google Sign-In Error',
+        description: 'Failed to initialize Google sign-in. Please check your configuration.',
+        variant: 'destructive',
+      });
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleCallback = async (response: GoogleCredentialResponse) => {
+    try {
+      if (!response.credential) {
+        throw new Error('No credential received from Google');
+      }
+
+      await loginWithGoogle(response.credential);
+
+      toast({
+        title: 'Success',
+        description: 'You have been logged in with Google successfully',
+      });
+
+      // Navigation will be handled by the useEffect above
+    } catch (error) {
+      console.error('Google login failed:', error);
+      toast({
+        title: 'Google Login Failed',
+        description: error instanceof Error ? error.message : 'Failed to authenticate with Google',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGoogleLoading(false);
     }
   };
 
@@ -150,8 +209,13 @@ const LoginPage: React.FC = () => {
                 </span>
               </div>
             </div>
-            <Button variant="outline" type="button" disabled={isLoading}>
-              {isLoading ? (
+            <Button
+              variant="outline"
+              type="button"
+              disabled={isLoading || isGoogleLoading}
+              onClick={handleGoogleSignIn}
+            >
+              {isGoogleLoading ? (
                 <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <Icons.google className="mr-2 h-4 w-4" />

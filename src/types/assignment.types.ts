@@ -1,7 +1,7 @@
 import { BaseEntity } from '@/lib/schemas_v2';
 
 export type AssignmentFrequency = 'single' | 'weekly' | 'biweekly' | 'monthly' | 'custom';
-export type AssignmentStatus = 'scheduled' | 'active' | 'completed' | 'cancelled';
+export type AssignmentStatus = 'draft' | 'pending_approval' | 'approved' | 'active' | 'completed' | 'cancelled' | 'terminated';
 
 export interface CrewAssignment extends BaseEntity {
   seafarerId: string;
@@ -58,3 +58,6 @@ export interface AssignmentUpdateDto extends Partial<Omit<AssignmentCreateDto, '
   signedByCompany?: boolean;
   signedDocumentUrl?: string;
 }
+
+// Type alias for compatibility
+export type Assignment = CrewAssignment;

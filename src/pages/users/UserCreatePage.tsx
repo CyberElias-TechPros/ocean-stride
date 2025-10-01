@@ -4,7 +4,7 @@ import { UserForm } from '@/components/users/UserForm';
 import { toast } from 'sonner';
 import { ROUTES } from '@/config/routes';
 
-export function UserCreatePage() {
+export default function UserCreatePage() {
   const navigate = useNavigate();
   const createUser = useCreateUser();
 

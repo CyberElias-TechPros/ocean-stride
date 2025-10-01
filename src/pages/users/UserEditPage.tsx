@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { ROUTES } from '@/config/routes';
 
-export function UserEditPage() {
+export default function UserEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   

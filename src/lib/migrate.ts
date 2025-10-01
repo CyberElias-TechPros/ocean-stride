@@ -95,54 +95,42 @@ class DatabaseMigrator {
   async checkAndMigrate(): Promise<boolean> {
     // Skip if already migrating
     if (this.isMigrating) {
-      console.log('Migration already in progress');
       return false;
     }
 
     this.isMigrating = true;
     
     try {
-      console.log('[Migration] Checking if migration is needed...');
       const needsMigration = await this.needsMigration();
       if (!needsMigration) {
-        console.log('[Migration] Database is up to date');
         return false;
       }
 
-      console.log('[Migration] Starting database migration...');
-      
       // Initialize the new database
-      console.log('[Migration] Initializing new database...');
       if (!newDb.isInitialized()) {
         await newDb.init();
       }
-      
+
       // Initialize the old database
-      console.log('[Migration] Initializing old database...');
       try {
         // First ensure the old database is initialized
         if (typeof oldDb.init === 'function') {
           await oldDb.init();
         }
-        
+
         // Then verify we can access it
-        console.log('[Migration] Verifying old database access...');
         const companies = await oldDb.getAll('companies');
-        console.log(`[Migration] Found ${companies.length} companies in old database`);
       } catch (error) {
         console.error('[Migration] Failed to initialize or access old database:', error);
         throw new Error('Could not access old database for migration');
       }
-      
+
       // Start the migration process
-      console.log('[Migration] Starting data migration...');
       await this.migrateData();
-      
+
       // Mark migration as complete
-      console.log('[Migration] Marking migration as complete...');
       await this.markMigrationComplete();
-      
-      console.log('[Migration] Database migration completed successfully');
+
       return true;
     } catch (error) {
       console.error('Migration failed:', error);
@@ -391,8 +379,6 @@ class DatabaseMigrator {
 
         await newDb.createSeafarer(newSeafarer);
       }
-      
-      console.log(`Migrated ${oldSeafarers.length} seafarers`);
     } catch (error) {
       console.error('Error migrating seafarers:', error);
       throw error;
@@ -489,8 +475,6 @@ class DatabaseMigrator {
           throw error;
         }
       }
-      
-      console.log(`Migrated ${oldAssignments.length} crew changes`);
     } catch (error) {
       console.error('Error migrating crew changes:', error);
       throw error;
@@ -531,7 +515,6 @@ class DatabaseMigrator {
       
       for (const oldPayroll of oldPayrolls) {
         if (!isOldPayroll(oldPayroll)) {
-          console.warn('Skipping invalid payroll record:', oldPayroll);
           continue;
         }
 
@@ -570,7 +553,7 @@ class DatabaseMigrator {
             }
           }
         } catch (error) {
-          console.warn(`Could not find seafarer ${oldPayroll.seafarerId} for payroll ${oldPayroll.id}`, error);
+          // Could not find seafarer - continue without name
         }
 
         // Try to get the vessel name
@@ -581,15 +564,13 @@ class DatabaseMigrator {
               newPayroll.vesselName = vessel.name;
             }
           } catch (error) {
-            console.warn(`Could not find vessel ${oldPayroll.vesselId} for payroll ${oldPayroll.id}`);
+            // Could not find vessel - continue without name
           }
         }
 
         await newDb.create('payrolls', newPayroll);
         migratedCount++;
       }
-      
-      console.log(`Migrated ${migratedCount} payroll records`);
     } catch (error) {
       console.error('Error migrating payrolls:', error);
       throw error;
@@ -632,11 +613,10 @@ class DatabaseMigrator {
         const seafarerName = `${firstName} ${lastName}`.trim();
         
         for (const cert of seafarer.qualifications.certificates) {
-          if (!isObject(cert) || 
-              !hasStringProperty(cert, 'name') || 
+          if (!isObject(cert) ||
+              !hasStringProperty(cert, 'name') ||
               !hasStringProperty(cert, 'number') ||
               !hasStringProperty(cert, 'issuedDate')) {
-            console.warn('Skipping invalid certificate:', cert);
             continue;
           }
           
@@ -678,8 +658,6 @@ class DatabaseMigrator {
           documentCount++;
         }
       }
-      
-      console.log(`Migrated ${documentCount} documents`);
     } catch (error) {
       console.error('Error migrating documents:', error);
       throw error;
@@ -703,7 +681,6 @@ class DatabaseMigrator {
     try {
       // In the old schema, notifications might not exist or be in a different format
       // This is a placeholder for any notification migration logic
-      console.log('No notifications to migrate');
     } catch (error) {
       console.error('Error migrating notifications:', error);
       // Don't throw for notifications as they're less critical
@@ -714,7 +691,6 @@ class DatabaseMigrator {
     try {
       // Store migration completion in localStorage
       localStorage.setItem('migrationCompleted', 'true');
-      console.log('Migration marked as complete');
     } catch (error) {
       console.error('Error marking migration as complete:', error);
       throw error;
@@ -737,10 +713,8 @@ export async function runMigrationIfNeeded(): Promise<boolean> {
   migrationInProgress = true;
   
   try {
-    console.log('Checking if database needs migration...');
     // Ensure the database is initialized
     if (!newDb.isInitialized()) {
-      console.log('Waiting for database to initialize...');
       await new Promise<void>((resolve) => {
         const checkDb = setInterval(() => {
           if (newDb.isInitialized()) {

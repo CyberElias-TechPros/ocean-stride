@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/use-toast';
+import authService from '@/lib/api/authService';
+import { CheckCircle } from 'lucide-react';
 
 const ForgotPasswordPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -24,14 +26,25 @@ const ForgotPasswordPage: React.FC = () => {
       return;
     }
 
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     try {
       setIsLoading(true);
-      // TODO: Replace with actual API call to request password reset
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      await authService.forgotPassword(email);
+
       // Show success message
       setIsSubmitted(true);
-      
+
       toast({
         title: 'Success',
         description: 'If an account exists with this email, you will receive a password reset link.',
@@ -53,7 +66,7 @@ const ForgotPasswordPage: React.FC = () => {
       <div className="container flex h-screen w-screen flex-col items-center justify-center">
         <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
           <div className="flex flex-col space-y-2 text-center">
-            <Icons.checkCircle className="mx-auto h-6 w-6 text-green-500" />
+            <CheckCircle className="mx-auto h-6 w-6 text-green-500" />
             <h1 className="text-2xl font-semibold tracking-tight">Check your email</h1>
             <p className="text-sm text-muted-foreground">
               We've sent a password reset link to <strong>{email}</strong> if an account exists.

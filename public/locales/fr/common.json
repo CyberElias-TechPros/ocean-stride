@@ -1,0 +1,71 @@
+{
+  "app": {
+    "name": "Ocean Stride",
+    "description": "Système de Gestion des Marins",
+    "loading": "Chargement...",
+    "error": "Erreur",
+    "success": "Succès",
+    "warning": "Avertissement",
+    "info": "Information"
+  },
+  "navigation": {
+    "dashboard": "Tableau de Bord",
+    "personnel": "Personnel",
+    "fleet": "Flotte",
+    "recruitment": "Recrutement",
+    "payroll": "Paie",
+    "compliance": "Conformité",
+    "analytics": "Analyses",
+    "settings": "Paramètres",
+    "users": "Utilisateurs"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "add": "Ajouter",
+    "view": "Voir",
+    "search": "Rechercher",
+    "filter": "Filtrer",
+    "export": "Exporter",
+    "import": "Importer",
+    "refresh": "Actualiser"
+  },
+  "forms": {
+    "required": "Requis",
+    "optional": "Optionnel",
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "Email",
+    "phone": "Téléphone",
+    "address": "Adresse",
+    "dateOfBirth": "Date de Naissance",
+    "nationality": "Nationalité",
+    "submit": "Soumettre",
+    "reset": "Réinitialiser"
+  },
+  "validation": {
+    "required": "{{field}} est requis",
+    "email": "Veuillez saisir une adresse email valide",
+    "phone": "Veuillez saisir un numéro de téléphone valide",
+    "minLength": "Doit contenir au moins {{count}} caractères",
+    "maxLength": "Ne doit pas dépasser {{count}} caractères",
+    "invalid": "{{field}} invalide"
+  },
+  "messages": {
+    "confirmDelete": "Êtes-vous sûr de vouloir supprimer cet élément ?",
+    "deleteSuccess": "Élément supprimé avec succès",
+    "saveSuccess": "Modifications enregistrées avec succès",
+    "loadError": "Échec du chargement des données",
+    "networkError": "Erreur de connexion réseau"
+  },
+  "accessibility": {
+    "skipToContent": "Aller au contenu principal",
+    "openMenu": "Ouvrir le menu de navigation",
+    "closeMenu": "Fermer le menu de navigation",
+    "loading": "Chargement du contenu",
+    "error": "Une erreur s'est produite",
+    "success": "Opération terminée avec succès"
+  }
+}

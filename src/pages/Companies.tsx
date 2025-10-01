@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Plus, Search, Building2, Users, Ship, Settings } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Building2, Users, Ship, Settings, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useCompanies, useCompanyStats } from '@/hooks/queries/useCompanyQueries';
 import { CompanyForm } from '@/components/companies/CompanyForm';
 import { Company } from '@/lib/schemas_v2';
+import { exportToCSV } from '@/lib/utils/exportUtils';
+import { useToast } from '@/hooks/use-toast';
+import { ROUTES } from '@/config/routes';
 
 function CompanyCard({ company }: { company: Company }) {
+  const navigate = useNavigate();
   const { data: stats } = useCompanyStats(company.id);
 
   return (
@@ -92,7 +97,7 @@ function CompanyCard({ company }: { company: Company }) {
               <CompanyForm company={company} />
             </DialogContent>
           </Dialog>
-          <Button size="sm" className="flex-1">
+          <Button size="sm" className="flex-1" onClick={() => navigate(ROUTES.COMPANIES.DETAILS(company.id))}>
             View Details
           </Button>
         </div>
@@ -104,10 +109,42 @@ function CompanyCard({ company }: { company: Company }) {
 export default function Companies() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
   const { data: companies = [], isLoading } = useCompanies({
     search: searchTerm,
   });
+
+  const handleExportCompanies = () => {
+    try {
+      const exportData = companies.map(company => ({
+        'Name': company.name,
+        'Email': company.email,
+        'Phone': company.phone,
+        'Address': company.address,
+        'Website': company.website || '',
+        'Active Vessels': company.stats?.activeVessels || 0,
+        'Total Vessels': company.stats?.totalVessels || 0,
+        'Active Seafarers': company.stats?.activeSeafarers || 0,
+        'Total Seafarers': company.stats?.totalSeafarers || 0,
+        'Active Assignments': company.stats?.activeAssignments || 0
+      }));
+
+      exportToCSV(exportData, undefined, `companies_data_${new Date().toISOString().split('T')[0]}.csv`);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported ${companies.length} companies to CSV`
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export companies data",
+        variant: "destructive"
+      });
+    }
+  };
 
   return (
     <div className="container mx-auto py-6">
@@ -118,24 +155,30 @@ export default function Companies() {
             Manage shipping companies and their maritime operations
           </p>
         </div>
-        
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Company
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Create New Company</DialogTitle>
-            </DialogHeader>
-            <CompanyForm 
-              onSuccess={() => setIsCreateDialogOpen(false)}
-              onCancel={() => setIsCreateDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+
+        <div className="flex gap-3">
+          <Button variant="outline" onClick={handleExportCompanies}>
+            <Download className="h-4 w-4 mr-2" />
+            Export Data
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Company
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Create New Company</DialogTitle>
+              </DialogHeader>
+              <CompanyForm
+                onSuccess={() => setIsCreateDialogOpen(false)}
+                onCancel={() => setIsCreateDialogOpen(false)}
+              />
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex items-center space-x-4 mb-6">

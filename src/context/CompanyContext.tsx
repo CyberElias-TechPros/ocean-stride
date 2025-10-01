@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { db } from '@/lib/database2';
+import { db } from '@/lib/database2_fixed';
 import type { Company } from '@/lib/schemas';
-import { STORE_NAMES, INDEX_NAMES } from '@/lib/schemas';
+import { STORE_NAMES } from '@/lib/schemas';
 
 interface CompanyContextType {
   selectedCompany: Company | null;
@@ -20,6 +20,17 @@ export const useCompany = () => {
   return context;
 };
 
+// Hook that provides the currently selected company
+export const useCurrentCompany = () => {
+  const { selectedCompany } = useCompany();
+  
+  if (!selectedCompany) {
+    throw new Error('No company found. Make sure to wrap your app with CompanyProvider and a company is selected.');
+  }
+  
+  return selectedCompany;
+};
+
 export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [selectedCompany, setSelectedCompanyState] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -32,10 +43,22 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const loadCompanies = async () => {
     try {
+      // Initialize the database
       await db.init();
-      const companiesData = await db.getAll<Company>(STORE_NAMES.COMPANIES);
       
+      // Get all companies
+      let companiesData: Company[] = [];
+      try {
+        companiesData = await db.getAll<Company>(STORE_NAMES.COMPANIES);
+      } catch (error) {
+        console.error('Error fetching companies:', error);
+        return;
+      }
+      
+      // If no companies exist, create sample data
       if (companiesData.length === 0) {
+        console.log('No companies found, creating sample data...');
+        
         // Create sample companies (new schema: flat address string, no code field)
         const sampleCompanies: Array<Omit<Company, 'id' | 'createdAt' | 'updatedAt'>> = [
           {
@@ -82,45 +105,43 @@ export const CompanyProvider: React.FC<{ children: React.ReactNode }> = ({ child
           },
         ];
 
-        for (const c of sampleCompanies) {
-          // Check by unique name index to avoid duplicates (Strict Mode double-invoke)
-          const existingByName = await db.getByIndex<Company>(
-            STORE_NAMES.COMPANIES,
-            INDEX_NAMES.COMPANY_BY_NAME,
-            c.name
-          );
-          if (!existingByName || existingByName.length === 0) {
-            try {
-              await db.createCompany(c);
-            } catch (err) {
-              // Ignore ConstraintError if another render just created it
-              console.warn('[Company] Skipping duplicate company seed for', c.name, err);
-            }
+        // Create sample companies
+        for (const company of sampleCompanies) {
+          try {
+            await db.create<Company>(STORE_NAMES.COMPANIES, company);
+          } catch (err) {
+            console.warn('Error creating sample company:', company.name, err);
           }
         }
         
-        const newCompanies = await db.getAll<Company>(STORE_NAMES.COMPANIES);
-        setCompanies(newCompanies);
-        
-        // Auto-select first company
-        if (newCompanies.length > 0) {
-          setSelectedCompany(newCompanies[0]);
+        // Reload companies after creating samples
+        try {
+          companiesData = await db.getAll<Company>(STORE_NAMES.COMPANIES);
+        } catch (error) {
+          console.error('Error reloading companies after seeding:', error);
+          return;
         }
-      } else {
-        setCompanies(companiesData);
-        
+      }
+      
+      // Update state with loaded companies
+      setCompanies(companiesData);
+      
+      // Handle company selection
+      if (companiesData.length > 0) {
         // Try to restore selected company from localStorage
         const savedCompanyId = localStorage.getItem('selectedCompanyId');
         const savedCompany = companiesData.find(c => c.id === savedCompanyId);
         
         if (savedCompany) {
-          setSelectedCompanyState(savedCompany);
-        } else if (companiesData.length > 0) {
+          setSelectedCompany(savedCompany);
+        } else {
+          // Default to first company if none is saved
           setSelectedCompany(companiesData[0]);
         }
       }
     } catch (error) {
       console.error('Failed to load companies:', error);
+      // You might want to show an error to the user here
     }
   };
 

@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { BarChart3, PieChart, TrendingUp, Users, DollarSign, Ship } from 'lucide-react';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { PieChart as RechartsPieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line, AreaChart, Area, ResponsiveContainer } from 'recharts';
 
 interface ChartData {
   name: string;
@@ -60,23 +62,32 @@ export function AnalyticsCharts({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {crewChartData.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                  <div>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-muted-foreground">{item.value} seafarers</div>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Progress value={item.percentage || 0} className="w-24" />
-                  <span className="text-sm font-medium w-8">{item.percentage}%</span>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ChartContainer
+            config={{
+              officers: { label: "Officers", color: "hsl(var(--chart-1))" },
+              engineers: { label: "Engineers", color: "hsl(var(--chart-2))" },
+              ratings: { label: "Ratings", color: "hsl(var(--chart-3))" },
+              catering: { label: "Catering", color: "hsl(var(--chart-4))" },
+            }}
+            className="h-[300px]"
+          >
+            <RechartsPieChart>
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Pie
+                data={crewChartData}
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+                label={({ name, percentage }) => `${name} ${percentage}%`}
+              >
+                {crewChartData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={`hsl(var(--chart-${index + 1}))`} />
+                ))}
+              </Pie>
+            </RechartsPieChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 
@@ -89,23 +100,24 @@ export function AnalyticsCharts({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {costChartData.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${item.color}`} />
-                  <div>
-                    <div className="font-medium">{item.name}</div>
-                    <div className="text-sm text-muted-foreground">{item.percentage}% of total</div>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">${(item.value / 1000).toFixed(0)}K</div>
-                  <Progress value={item.percentage || 0} className="w-20 mt-1" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ChartContainer
+            config={{
+              wages: { label: "Wages & Salaries", color: "hsl(var(--chart-1))" },
+              travel: { label: "Travel & Repatriation", color: "hsl(var(--chart-2))" },
+              training: { label: "Training & Certification", color: "hsl(var(--chart-3))" },
+              insurance: { label: "Insurance & Benefits", color: "hsl(var(--chart-4))" },
+              recruitment: { label: "Recruitment", color: "hsl(var(--chart-5))" },
+            }}
+            className="h-[300px]"
+          >
+            <BarChart data={costChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="value" fill="hsl(var(--chart-1))" />
+            </BarChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 
@@ -118,24 +130,23 @@ export function AnalyticsCharts({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {performanceChartData.map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                <div>
-                  <div className="font-medium">{item.name}</div>
-                  <div className="text-2xl font-bold">
-                    {item.value}{item.name.includes('ROI') ? '%' : item.name.includes('Score') ? '%' : '%'}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge variant="outline" className={item.color}>
-                    {item.trend}
-                  </Badge>
-                  <TrendingUp className="w-4 h-4 mt-1 text-success" />
-                </div>
-              </div>
-            ))}
-          </div>
+          <ChartContainer
+            config={{
+              utilization: { label: "Fleet Utilization", color: "hsl(var(--chart-1))" },
+              retention: { label: "Crew Retention", color: "hsl(var(--chart-2))" },
+              compliance: { label: "Compliance Score", color: "hsl(var(--chart-3))" },
+              roi: { label: "Training ROI", color: "hsl(var(--chart-4))" },
+            }}
+            className="h-[300px]"
+          >
+            <BarChart data={performanceChartData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar dataKey="value" fill="hsl(var(--chart-1))" />
+            </BarChart>
+          </ChartContainer>
         </CardContent>
       </Card>
 

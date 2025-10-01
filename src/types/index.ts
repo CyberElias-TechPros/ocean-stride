@@ -5,6 +5,7 @@ export * from '../lib/schemas_v2';
 
 // User Types
 export interface User {
+  status: ReactI18NextChildren | Iterable<ReactI18NextChildren>;
   id: string;
   email: string;
   name: string;

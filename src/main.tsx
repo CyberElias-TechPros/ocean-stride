@@ -3,6 +3,10 @@ import { createRoot } from "react-dom/client";
 import { StrictMode, Suspense } from "react";
 import { db } from "./lib/database2";
 import { runMigrationIfNeeded } from "./lib/migrate";
+import { initializeSecurity } from "./lib/security";
+import { setupCrashReporting } from "./lib/error-handler";
+import { initializeAccessibility } from "./lib/accessibility";
+import { initializePerformanceOptimizations } from "./lib/performance";
 import App from "./App.tsx";
 import "./index.css";
 // Using branded loader (logo + title) instead of generic spinner
@@ -21,31 +25,62 @@ async function initializeApp(): Promise<boolean> {
   }
 
   isInitializing = true;
-  console.log('[App] Starting application initialization...');
 
   initializationPromise = new Promise<boolean>(async (resolve) => {
     try {
       // Step 1: Initialize the database
-      console.log('[App] Initializing database...');
       await db.init();
       
       if (!db.isInitialized()) {
         throw new Error('Database failed to initialize');
       }
-      console.log('[App] Database initialized successfully');
 
       // Step 2: Run migrations if needed
-      console.log('[App] Checking for database migrations...');
       try {
         const migrationResult = await runMigrationIfNeeded();
-        console.log('[App] Migration completed:', migrationResult);
       } catch (migrationError) {
         console.error('[App] Migration error:', migrationError);
         // Don't fail the app for migration errors, but log them
       }
 
-      // Step 3: Additional initialization can go here
-      console.log('[App] Application initialization complete');
+      // Step 3: Initialize security features
+      initializeSecurity();
+
+      // Step 4: Initialize accessibility features
+      initializeAccessibility();
+
+      // Step 5: Initialize performance optimizations
+      initializePerformanceOptimizations();
+
+      // Step 6: Register service worker for offline capabilities
+      if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js', {
+            scope: '/'
+          });
+
+          // Handle service worker updates
+          registration.addEventListener('updatefound', () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  // New content is available, notify user
+                }
+              });
+            }
+          });
+
+          // Listen for messages from service worker
+          navigator.serviceWorker.addEventListener('message', (event) => {
+            // Handle service worker messages if needed
+          });
+        } catch (error) {
+          console.error('[App] Service worker registration failed:', error);
+        }
+      }
+
+      // Step 7: Additional initialization can go here
       resolve(true);
     } catch (error) {
       console.error('[App] Initialization failed:', error);

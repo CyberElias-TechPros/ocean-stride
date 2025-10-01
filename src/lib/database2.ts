@@ -1,17 +1,22 @@
 import { v4 as uuidv4 } from 'uuid';
-import { 
-  STORE_NAMES, 
-  INDEX_NAMES, 
-  type BaseEntity, 
-  type Company, 
-  type Vessel, 
+import {
+  type BaseEntity,
+  type Company,
+  type Vessel,
   type Seafarer,
+  type CrewAssignment,
+} from './schemas_v2';
+
+import {
+  STORE_NAMES,
+  INDEX_NAMES,
   type CrewChange,
   type Payroll,
   type Document,
   type Notification,
   type Applicant,
-  
+  type JobPosting,
+  type SystemSettings,
 } from './schemas';
 
 class DatabaseService {
@@ -19,9 +24,37 @@ class DatabaseService {
   private db: IDBDatabase | null = null;
   // Use a new DB name to avoid clobbering the legacy schema during migration
   private dbName = 'OceanStrideDB_v2';
-  private version = 2;
+  private version = 4;
 
-  private constructor() {}
+  private constructor() {
+    // Add event listeners for version conflicts
+    window.addEventListener('unhandledrejection', (event) => {
+      if (event.reason?.name === 'VersionError') {
+        console.warn('Caught unhandled VersionError, attempting to recover...');
+        event.preventDefault();
+        this.handleVersionConflict().catch(console.error);
+      }
+    });
+  }
+
+  private async handleVersionConflict(): Promise<void> {
+    // Close the current database connection if it exists
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+
+    // Delete the existing database
+    await new Promise<void>((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(this.dbName);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => {
+        console.warn('Database is blocked, cannot delete');
+        resolve(); // Resolve anyway to avoid hanging
+      };
+    }).catch(console.error);
+  }
 
   static getInstance(): DatabaseService {
     if (!DatabaseService.instance) {
@@ -34,14 +67,61 @@ class DatabaseService {
     return this.db !== null;
   }
 
+  private async clearOldDatabases(): Promise<void> {
+    // List of old database names to clean up
+    const oldDbNames = ['OceanStrideDB', 'OceanStrideDB_v1'];
+    
+    for (const dbName of oldDbNames) {
+      try {
+        const req = indexedDB.deleteDatabase(dbName);
+        await new Promise<void>((resolve, reject) => {
+          req.onsuccess = () => {
+            console.log(`Successfully deleted old database: ${dbName}`);
+            resolve();
+          };
+          req.onerror = () => {
+            console.warn(`Failed to delete old database ${dbName}:`, req.error);
+            resolve(); // Don't reject, as this is not critical
+          };
+          req.onblocked = () => {
+            console.warn(`Database ${dbName} is blocked and cannot be deleted`);
+            resolve(); // Don't reject, as this is not critical
+          };
+        });
+      } catch (error) {
+        console.warn(`Error deleting database ${dbName}:`, error);
+        // Continue with other databases even if one fails
+      }
+    }
+  }
+
   async init(): Promise<void> {
     if (this.db) return;
+
+    try {
+      // First, clean up any old databases
+      await this.clearOldDatabases();
+    } catch (error) {
+      console.warn('Error during database cleanup:', error);
+      // Continue with initialization even if cleanup fails
+    }
 
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.version);
 
-      request.onerror = () => {
+      request.onerror = (event) => {
         console.error('Database error:', request.error);
+        // If the error is due to version conflict, try to delete and recreate the database
+        if (request.error?.name === 'VersionError') {
+          console.warn('Version conflict detected, attempting to recreate database...');
+          this.handleVersionConflict()
+            .then(() => {
+              // After handling the conflict, try to initialize again
+              this.init().then(resolve).catch(reject);
+            })
+            .catch(reject);
+          return;
+        }
         reject(request.error);
       };
 
@@ -52,58 +132,137 @@ class DatabaseService {
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        this.createStores(db);
+        const tx = (event.target as IDBOpenDBRequest).transaction!;
+        this.createStores(db, tx);
       };
     });
   }
 
-  private createStores(db: IDBDatabase) {
-    // Companies store
-    if (!db.objectStoreNames.contains(STORE_NAMES.COMPANIES)) {
-      const store = db.createObjectStore(STORE_NAMES.COMPANIES, { keyPath: 'id' });
-      store.createIndex(INDEX_NAMES.COMPANY_BY_NAME, 'name', { unique: true });
+  private createStores(db: IDBDatabase, tx: IDBTransaction) {
+    console.log('Database upgrade: creating stores. Current stores:', Array.from(db.objectStoreNames));
+
+    {
+      // Companies store
+      let store: IDBObjectStore;
+      if (!db.objectStoreNames.contains(STORE_NAMES.COMPANIES)) {
+        console.log('Creating companies store');
+        store = db.createObjectStore(STORE_NAMES.COMPANIES, { keyPath: 'id' });
+      } else {
+        console.log('Companies store already exists');
+        store = tx.objectStore(STORE_NAMES.COMPANIES);
+      }
+      console.log('Creating index:', INDEX_NAMES.COMPANY_BY_NAME);
+      if (!store.indexNames.contains(INDEX_NAMES.COMPANY_BY_NAME)) {
+        store.createIndex(INDEX_NAMES.COMPANY_BY_NAME, 'name', { unique: true });
+      }
       // Optional: support finding by code if present in the schema
-      try {
+      console.log('Creating index: by_code');
+      if (!store.indexNames.contains('by_code')) {
         store.createIndex('by_code', 'code', { unique: false });
-      } catch (_) {
-        // ignore if index already exists
       }
     }
 
-    // Vessels store
-    if (!db.objectStoreNames.contains(STORE_NAMES.VESSELS)) {
-      const store = db.createObjectStore(STORE_NAMES.VESSELS, { keyPath: 'id' });
-      store.createIndex(INDEX_NAMES.VESSEL_BY_NAME, 'name', { unique: false });
-      store.createIndex(INDEX_NAMES.VESSEL_BY_IMO, 'imoNumber', { unique: true });
-      store.createIndex(INDEX_NAMES.VESSEL_BY_STATUS, 'status', { unique: false });
-      store.createIndex(INDEX_NAMES.VESSEL_BY_COMPANY, 'companyId', { unique: false });
+    {
+      // Vessels store
+      let store: IDBObjectStore;
+      if (!db.objectStoreNames.contains(STORE_NAMES.VESSELS)) {
+        console.log('Creating vessels store');
+        store = db.createObjectStore(STORE_NAMES.VESSELS, { keyPath: 'id' });
+      } else {
+        console.log('Vessels store already exists');
+        store = tx.objectStore(STORE_NAMES.VESSELS);
+      }
+      console.log('Creating index:', INDEX_NAMES.VESSEL_BY_NAME);
+      if (!store.indexNames.contains(INDEX_NAMES.VESSEL_BY_NAME)) {
+        store.createIndex(INDEX_NAMES.VESSEL_BY_NAME, 'name', { unique: false });
+      }
+      console.log('Creating index:', INDEX_NAMES.VESSEL_BY_IMO);
+      if (!store.indexNames.contains(INDEX_NAMES.VESSEL_BY_IMO)) {
+        store.createIndex(INDEX_NAMES.VESSEL_BY_IMO, 'imoNumber', { unique: true });
+      }
+      console.log('Creating index:', INDEX_NAMES.VESSEL_BY_STATUS);
+      if (!store.indexNames.contains(INDEX_NAMES.VESSEL_BY_STATUS)) {
+        store.createIndex(INDEX_NAMES.VESSEL_BY_STATUS, 'status', { unique: false });
+      }
+      console.log('Creating index:', INDEX_NAMES.VESSEL_BY_COMPANY);
+      if (!store.indexNames.contains(INDEX_NAMES.VESSEL_BY_COMPANY)) {
+        store.createIndex(INDEX_NAMES.VESSEL_BY_COMPANY, 'companyId', { unique: false });
+      }
     }
 
-    // Seafarers store
-    if (!db.objectStoreNames.contains(STORE_NAMES.SEAFARERS)) {
-      const store = db.createObjectStore(STORE_NAMES.SEAFARERS, { keyPath: 'id' });
-      store.createIndex(INDEX_NAMES.SEAFARER_BY_NAME, ['personalInfo.lastName', 'personalInfo.firstName'], { unique: false });
-      store.createIndex(INDEX_NAMES.SEAFARER_BY_RANK, 'employment.rank', { unique: false });
-      store.createIndex(INDEX_NAMES.SEAFARER_BY_STATUS, 'employment.status', { unique: false });
-      store.createIndex(INDEX_NAMES.SEAFARER_BY_VESSEL, 'employment.currentVesselId', { unique: false });
-      store.createIndex(INDEX_NAMES.SEAFARER_BY_COMPANY, 'companyId', { unique: false });
+    {
+      // Seafarers store
+      let store: IDBObjectStore;
+      if (!db.objectStoreNames.contains(STORE_NAMES.SEAFARERS)) {
+        store = db.createObjectStore(STORE_NAMES.SEAFARERS, { keyPath: 'id' });
+      } else {
+        store = tx.objectStore(STORE_NAMES.SEAFARERS);
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.SEAFARER_BY_NAME)) {
+        store.createIndex(INDEX_NAMES.SEAFARER_BY_NAME, ['personalInfo.lastName', 'personalInfo.firstName'], { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.SEAFARER_BY_RANK)) {
+        store.createIndex(INDEX_NAMES.SEAFARER_BY_RANK, 'employment.rank', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.SEAFARER_BY_STATUS)) {
+        store.createIndex(INDEX_NAMES.SEAFARER_BY_STATUS, 'employment.status', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.SEAFARER_BY_VESSEL)) {
+        store.createIndex(INDEX_NAMES.SEAFARER_BY_VESSEL, 'employment.currentVesselId', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.SEAFARER_BY_COMPANY)) {
+        store.createIndex(INDEX_NAMES.SEAFARER_BY_COMPANY, 'companyId', { unique: false });
+      }
     }
 
-    // Crew Changes store
-    if (!db.objectStoreNames.contains(STORE_NAMES.CREW_CHANGES)) {
-      const store = db.createObjectStore(STORE_NAMES.CREW_CHANGES, { keyPath: 'id' });
-      store.createIndex(INDEX_NAMES.CREW_CHANGE_BY_VESSEL, 'vesselId', { unique: false });
-      store.createIndex(INDEX_NAMES.CREW_CHANGE_BY_DATE, 'scheduledDate', { unique: false });
-      store.createIndex(INDEX_NAMES.CREW_CHANGE_BY_STATUS, 'status', { unique: false });
+    {
+      // Crew Assignments store (renamed from crew_changes)
+      let store: IDBObjectStore;
+      if (!db.objectStoreNames.contains(STORE_NAMES.CREW_ASSIGNMENTS)) {
+        console.log('Creating crew_assignments store');
+        store = db.createObjectStore(STORE_NAMES.CREW_ASSIGNMENTS, { keyPath: 'id' });
+      } else {
+        console.log('Crew assignments store already exists');
+        store = tx.objectStore(STORE_NAMES.CREW_ASSIGNMENTS);
+      }
+      console.log('Creating index:', INDEX_NAMES.CREW_ASSIGNMENT_BY_SEAFARER);
+      if (!store.indexNames.contains(INDEX_NAMES.CREW_ASSIGNMENT_BY_SEAFARER)) {
+        store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_SEAFARER, 'seafarerId', { unique: false });
+      }
+      console.log('Creating index:', INDEX_NAMES.CREW_ASSIGNMENT_BY_VESSEL);
+      if (!store.indexNames.contains(INDEX_NAMES.CREW_ASSIGNMENT_BY_VESSEL)) {
+        store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_VESSEL, 'vesselId', { unique: false });
+      }
+      console.log('Creating index:', INDEX_NAMES.CREW_ASSIGNMENT_BY_STATUS);
+      if (!store.indexNames.contains(INDEX_NAMES.CREW_ASSIGNMENT_BY_STATUS)) {
+        store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_STATUS, 'status', { unique: false });
+      }
+      console.log('Creating index:', INDEX_NAMES.CREW_ASSIGNMENT_BY_DATE_RANGE);
+      if (!store.indexNames.contains(INDEX_NAMES.CREW_ASSIGNMENT_BY_DATE_RANGE)) {
+        store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_DATE_RANGE, ['startDate', 'endDate'], { unique: false });
+      }
     }
 
-    // Payrolls store
-    if (!db.objectStoreNames.contains(STORE_NAMES.PAYROLLS)) {
-      const store = db.createObjectStore(STORE_NAMES.PAYROLLS, { keyPath: 'id' });
-      store.createIndex(INDEX_NAMES.PAYROLL_BY_SEAFARER, 'seafarerId', { unique: false });
-      store.createIndex(INDEX_NAMES.PAYROLL_BY_VESSEL, 'vesselId', { unique: false });
-      store.createIndex(INDEX_NAMES.PAYROLL_BY_PERIOD, ['periodStart', 'periodEnd'], { unique: false });
-      store.createIndex(INDEX_NAMES.PAYROLL_BY_STATUS, 'status', { unique: false });
+    {
+      // Payrolls store
+      let store: IDBObjectStore;
+      if (!db.objectStoreNames.contains(STORE_NAMES.PAYROLLS)) {
+        store = db.createObjectStore(STORE_NAMES.PAYROLLS, { keyPath: 'id' });
+      } else {
+        store = tx.objectStore(STORE_NAMES.PAYROLLS);
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.PAYROLL_BY_SEAFARER)) {
+        store.createIndex(INDEX_NAMES.PAYROLL_BY_SEAFARER, 'seafarerId', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.PAYROLL_BY_VESSEL)) {
+        store.createIndex(INDEX_NAMES.PAYROLL_BY_VESSEL, 'vesselId', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.PAYROLL_BY_PERIOD)) {
+        store.createIndex(INDEX_NAMES.PAYROLL_BY_PERIOD, ['periodStart', 'periodEnd'], { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.PAYROLL_BY_STATUS)) {
+        store.createIndex(INDEX_NAMES.PAYROLL_BY_STATUS, 'status', { unique: false });
+      }
     }
 
     // Documents store
@@ -128,6 +287,60 @@ class DatabaseService {
       store.createIndex(INDEX_NAMES.APPLICANT_BY_COMPANY, 'companyId', { unique: false });
       store.createIndex(INDEX_NAMES.APPLICANT_BY_STATUS, 'application.status', { unique: false });
       store.createIndex(INDEX_NAMES.APPLICANT_BY_POSITION, 'application.position', { unique: false });
+    }
+
+    {
+      // Certificates store
+      let store: IDBObjectStore;
+      if (!db.objectStoreNames.contains(STORE_NAMES.CERTIFICATES)) {
+        store = db.createObjectStore(STORE_NAMES.CERTIFICATES, { keyPath: 'id' });
+      } else {
+        store = tx.objectStore(STORE_NAMES.CERTIFICATES);
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.CERTIFICATE_BY_SEAFARER)) {
+        store.createIndex(INDEX_NAMES.CERTIFICATE_BY_SEAFARER, 'seafarerId', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.CERTIFICATE_BY_TYPE)) {
+        store.createIndex(INDEX_NAMES.CERTIFICATE_BY_TYPE, 'type', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.CERTIFICATE_BY_STATUS)) {
+        store.createIndex(INDEX_NAMES.CERTIFICATE_BY_STATUS, 'status', { unique: false });
+      }
+      if (!store.indexNames.contains(INDEX_NAMES.CERTIFICATE_BY_EXPIRY)) {
+        store.createIndex(INDEX_NAMES.CERTIFICATE_BY_EXPIRY, 'expiryDate', { unique: false });
+      }
+    }
+
+    // Ranks store
+    if (!db.objectStoreNames.contains(STORE_NAMES.RANKS)) {
+      const store = db.createObjectStore(STORE_NAMES.RANKS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.RANK_BY_COMPANY, 'companyId', { unique: false });
+      store.createIndex(INDEX_NAMES.RANK_BY_DEPARTMENT, 'department', { unique: false });
+    }
+
+    // Payroll Settings store
+    if (!db.objectStoreNames.contains(STORE_NAMES.PAYROLL_SETTINGS)) {
+      const store = db.createObjectStore(STORE_NAMES.PAYROLL_SETTINGS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.PAYROLL_SETTINGS_BY_COMPANY, 'companyId', { unique: true });
+    }
+
+    // Company Settings store
+    if (!db.objectStoreNames.contains(STORE_NAMES.COMPANY_SETTINGS)) {
+      const store = db.createObjectStore(STORE_NAMES.COMPANY_SETTINGS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.COMPANY_SETTINGS_BY_COMPANY, 'companyId', { unique: true });
+    }
+
+    // Job Postings store
+    if (!db.objectStoreNames.contains(STORE_NAMES.JOB_POSTINGS)) {
+      const store = db.createObjectStore(STORE_NAMES.JOB_POSTINGS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.JOB_POSTING_BY_COMPANY, 'companyId', { unique: false });
+      store.createIndex(INDEX_NAMES.JOB_POSTING_BY_STATUS, 'status', { unique: false });
+    }
+
+    // System Settings store
+    if (!db.objectStoreNames.contains(STORE_NAMES.SYSTEM_SETTINGS)) {
+      const store = db.createObjectStore(STORE_NAMES.SYSTEM_SETTINGS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.SYSTEM_SETTINGS_BY_COMPANY, 'companyId', { unique: true });
     }
   }
 
@@ -178,13 +391,21 @@ class DatabaseService {
     return this.withTransaction(storeName, 'readwrite', async (tx) => {
       const store = tx.objectStore(storeName);
       const entity = await this.addTimestamps<T>(data);
-      
+
       return new Promise((resolve, reject) => {
         const request = store.add(entity);
         request.onsuccess = () => resolve(entity);
         request.onerror = () => reject(request.error);
       });
     });
+  }
+
+  // Alias for create
+  async add<T extends BaseEntity>(
+    storeName: string,
+    data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<T> {
+    return this.create<T>(storeName, data);
   }
 
   /**
@@ -209,7 +430,6 @@ class DatabaseService {
           request.onsuccess = () => {
             const result = request.result;
             if (!result) {
-              console.log(`No ${storeName} found with id ${id}`);
               resolve(null);
               return;
             }
@@ -420,6 +640,28 @@ class DatabaseService {
 
   async deleteApplicant(id: string): Promise<void> {
     return this.delete(STORE_NAMES.APPLICANTS, id);
+  }
+
+  // System Settings methods
+  async createSystemSettings(data: Omit<SystemSettings, keyof BaseEntity>): Promise<SystemSettings> {
+    return this.create<SystemSettings>(STORE_NAMES.SYSTEM_SETTINGS, data);
+  }
+
+  async getSystemSettings(companyId: string): Promise<SystemSettings | null> {
+    const settings = await this.getByIndex<SystemSettings>(
+      STORE_NAMES.SYSTEM_SETTINGS,
+      INDEX_NAMES.SYSTEM_SETTINGS_BY_COMPANY,
+      companyId
+    );
+    return settings.length > 0 ? settings[0] : null;
+  }
+
+  async updateSystemSettings(id: string, updates: Partial<Omit<SystemSettings, keyof BaseEntity>>): Promise<SystemSettings> {
+    return this.update<SystemSettings>(STORE_NAMES.SYSTEM_SETTINGS, id, updates);
+  }
+
+  async deleteSystemSettings(id: string): Promise<void> {
+    return this.delete(STORE_NAMES.SYSTEM_SETTINGS, id);
   }
 }
 

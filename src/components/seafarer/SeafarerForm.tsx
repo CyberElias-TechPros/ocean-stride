@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,49 +12,167 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { Seafarer } from '@/lib/schemas_v2';
+import { useToast } from '@/components/ui/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+// Define document schema
+const documentSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, 'Document name is required'),
+  type: z.string().min(1, 'Document type is required'),
+  file: z.instanceof(File).optional(),
+  url: z.string().optional(),
+  issueDate: z.date().optional(),
+  expiryDate: z.date().optional(),
+  status: z.enum(['valid', 'expired', 'expiring_soon', 'missing']).default('valid'),
+  notes: z.string().optional(),
+});
+
+// type DocumentType = z.infer<typeof documentSchema>;
 
 // Define form schema using Zod
 const seafarerFormSchema = z.object({
+  // Personal Information
   personalInfo: z.object({
-    firstName: z.string().min(1, 'First name is required'),
-    lastName: z.string().min(1, 'Last name is required'),
-    dateOfBirth: z.string().or(z.date()),
+    firstName: z.string().min(1, 'First name is required').max(50, 'First name is too long'),
+    middleName: z.string().max(50, 'Middle name is too long').optional(),
+    lastName: z.string().min(1, 'Last name is required').max(50, 'Last name is too long'),
+    dateOfBirth: z.date({
+      required_error: 'Date of birth is required',
+      invalid_type_error: 'Invalid date',
+    }),
+    placeOfBirth: z.string().min(1, 'Place of birth is required'),
     nationality: z.string().min(1, 'Nationality is required'),
+    gender: z.enum(['male', 'female', 'other', 'prefer_not_to_say']).default('prefer_not_to_say'),
+    maritalStatus: z.enum(['single', 'married', 'divorced', 'widowed', 'separated']).default('single'),
+    bloodType: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-']).optional(),
+    
+    // Contact Information
     contact: z.object({
       email: z.string().email('Invalid email address'),
-      phone: z.string().min(1, 'Phone number is required'),
+      phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+      address: z.object({
+        street: z.string().min(1, 'Street address is required'),
+        city: z.string().min(1, 'City is required'),
+        state: z.string().min(1, 'State/Province is required'),
+        postalCode: z.string().min(1, 'Postal code is required'),
+        country: z.string().min(1, 'Country is required'),
+      }),
       emergencyContact: z.object({
         name: z.string().min(1, 'Emergency contact name is required'),
         relationship: z.string().min(1, 'Relationship is required'),
-        phone: z.string().min(1, 'Emergency contact phone is required'),
+        phone: z.string().min(10, 'Emergency contact phone is required'),
+        email: z.string().email('Invalid email address').optional(),
+        address: z.string().optional(),
       }),
     }),
   }),
+  
+  // Employment Information
   employment: z.object({
+    employeeId: z.string().min(1, 'Employee ID is required'),
     rank: z.string().min(1, 'Rank is required'),
     department: z.enum(['deck', 'engine', 'catering', 'electrical', 'other']),
     status: z.enum(['onboard', 'on_leave', 'on_training', 'inactive']),
+    employmentType: z.enum(['permanent', 'contract', 'temporary']),
+    joinedDate: z.date({
+      required_error: 'Joined date is required',
+      invalid_type_error: 'Invalid date',
+    }),
+    contractStartDate: z.date({
+      required_error: 'Contract start date is required',
+      invalid_type_error: 'Invalid date',
+    }),
+    contractEndDate: z.date({
+      required_error: 'Contract end date is required',
+      invalid_type_error: 'Invalid date',
+    }).optional(),
     baseWage: z.number().min(0, 'Base wage must be a positive number'),
     wageCurrency: z.string().min(1, 'Currency is required'),
-    employmentType: z.enum(['permanent', 'contract', 'temporary']),
-    joinedDate: z.string().or(z.date()),
-    contractEndDate: z.string().or(z.date()).optional(),
+    bankAccount: z.object({
+      accountNumber: z.string().min(1, 'Account number is required'),
+      bankName: z.string().min(1, 'Bank name is required'),
+      branch: z.string().optional(),
+      swiftCode: z.string().optional(),
+      iban: z.string().optional(),
+    }).optional(),
+    taxInformation: z.object({
+      taxId: z.string().optional(),
+      taxStatus: z.string().optional(),
+      socialSecurityNumber: z.string().optional(),
+    }).optional(),
   }),
+  
+  // Documents
+  documents: z.array(documentSchema).default([]),
+  
+  // Medical Information
+  medicalInfo: z.object({
+    bloodGroup: z.string().optional(),
+    allergies: z.array(z.string()).default([]),
+    medicalConditions: z.array(z.string()).default([]),
+    lastMedicalCheckup: z.date().optional(),
+    nextMedicalCheckup: z.date().optional(),
+    notes: z.string().optional(),
+  }).optional(),
+  
+  // Training & Certifications
+  trainings: z.array(z.object({
+    id: z.string(),
+    name: z.string().min(1, 'Training name is required'),
+    provider: z.string().optional(),
+    issueDate: z.date().optional(),
+    expiryDate: z.date().optional(),
+    status: z.enum(['valid', 'expired', 'expiring_soon', 'missing']).default('valid'),
+    documentId: z.string().optional(),
+  })).default([]),
+  
+  // Emergency Contacts (additional)
+  emergencyContacts: z.array(z.object({
+    id: z.string(),
+    name: z.string().min(1, 'Name is required'),
+    relationship: z.string().min(1, 'Relationship is required'),
+    phone: z.string().min(1, 'Phone number is required'),
+    email: z.string().email('Invalid email').optional(),
+    address: z.string().optional(),
+    isPrimary: z.boolean().default(false),
+  })).default([]),
+  
+  // Notes
+  notes: z.string().optional(),
 });
 
 type SeafarerFormValues = z.infer<typeof seafarerFormSchema>;
 
 interface SeafarerFormProps {
-  initialData?: Seafarer;
-  onSubmit: (data: SeafarerFormValues) => void;
+  initialData?: Partial<Seafarer>;
+  onSubmit: (data: SeafarerFormValues) => Promise<void> | void;
   onCancel: () => void;
-  isSubmitting?: boolean;
+  className?: string;
 }
 
+// Constants
 const RANKS = [
-  'Captain', 'Chief Officer', 'Second Officer', 'Third Officer',
-  'Chief Engineer', 'Second Engineer', 'Third Engineer', 'Fourth Engineer',
-  'Bosun', 'Able Seaman', 'Ordinary Seaman', 'Cook', 'Steward'
+  { value: 'captain', label: 'Captain' },
+  { value: 'chief_officer', label: 'Chief Officer' },
+  { value: 'second_officer', label: 'Second Officer' },
+  { value: 'third_officer', label: 'Third Officer' },
+  { value: 'chief_engineer', label: 'Chief Engineer' },
+  { value: 'second_engineer', label: 'Second Engineer' },
+  { value: 'third_engineer', label: 'Third Engineer' },
+  { value: 'fourth_engineer', label: 'Fourth Engineer' },
+  { value: 'electrical_engineer', label: 'Electrical Engineer' },
+  { value: 'electro_technical_officer', label: 'Electro-Technical Officer' },
+  { value: 'bosun', label: 'Bosun' },
+  { value: 'able_seaman', label: 'Able Seaman' },
+  { value: 'ordinary_seaman', label: 'Ordinary Seaman' },
+  { value: 'deck_rating', label: 'Deck Rating' },
+  { value: 'engine_rating', label: 'Engine Rating' },
+  { value: 'cook', label: 'Cook' },
+  { value: 'steward', label: 'Steward' },
+  { value: 'other', label: 'Other' },
 ];
 
 const DEPARTMENTS = [
@@ -62,106 +180,193 @@ const DEPARTMENTS = [
   { value: 'engine', label: 'Engine' },
   { value: 'catering', label: 'Catering' },
   { value: 'electrical', label: 'Electrical' },
-  { value: 'other', label: 'Other' }
+  { value: 'hotel', label: 'Hotel' },
+  { value: 'other', label: 'Other' },
 ];
 
 const STATUS_OPTIONS = [
   { value: 'onboard', label: 'Onboard' },
   { value: 'on_leave', label: 'On Leave' },
   { value: 'on_training', label: 'On Training' },
-  { value: 'inactive', label: 'Inactive' }
+  { value: 'sick_leave', label: 'Sick Leave' },
+  { value: 'inactive', label: 'Inactive' },
+  { value: 'terminated', label: 'Terminated' },
 ];
 
 const EMPLOYMENT_TYPES = [
   { value: 'permanent', label: 'Permanent' },
   { value: 'contract', label: 'Contract' },
-  { value: 'temporary', label: 'Temporary' }
+  { value: 'temporary', label: 'Temporary' },
+  { value: 'probation', label: 'Probation' },
+  { value: 'internship', label: 'Internship' },
 ];
 
 const CURRENCIES = [
-  { value: 'USD', label: 'USD ($)' },
-  { value: 'EUR', label: 'EUR (€)' },
-  { value: 'GBP', label: 'GBP (£)' },
-  { value: 'JPY', label: 'JPY (¥)' },
-  { value: 'SGD', label: 'SGD (S$)' }
+  { value: 'USD', label: 'US Dollar (USD)' },
+  { value: 'EUR', label: 'Euro (EUR)' },
+  { value: 'GBP', label: 'British Pound (GBP)' },
+  { value: 'JPY', label: 'Japanese Yen (JPY)' },
+  { value: 'AUD', label: 'Australian Dollar (AUD)' },
+  { value: 'CAD', label: 'Canadian Dollar (CAD)' },
+  { value: 'CHF', label: 'Swiss Franc (CHF)' },
+  { value: 'CNY', label: 'Chinese Yuan (CNY)' },
+  { value: 'HKD', label: 'Hong Kong Dollar (HKD)' },
+  { value: 'SGD', label: 'Singapore Dollar (SGD)' },
 ];
 
-export function SeafarerForm({ 
-  initialData, 
-  onSubmit, 
-  onCancel, 
-  isSubmitting = false 
-}: SeafarerFormProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const defaultValues: Partial<SeafarerFormValues> = {
-    personalInfo: {
-      firstName: '',
-      lastName: '',
-      dateOfBirth: new Date(),
-      nationality: '',
-      contact: {
-        email: '',
-        phone: '',
-        emergencyContact: {
-          name: '',
-          relationship: '',
-          phone: ''
-        }
-      }
-    },
-    employment: {
-      rank: '',
-      department: 'deck',
-      status: 'on_leave',
-      baseWage: 0,
-      wageCurrency: 'USD',
-      employmentType: 'permanent',
-      joinedDate: new Date(),
-      contractEndDate: undefined
-    }
+
+// File upload handler with progress
+const useFileUpload = () => {
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const uploadFile = async (file: File, onProgress?: (progress: number) => void) => {
+    setIsUploading(true);
+    setError(null);
+    
+    return new Promise<string>((resolve, reject) => {
+      // Simulate file upload with progress
+      const totalSize = file.size;
+      let uploadedSize = 0;
+      const chunkSize = 1024 * 1024; // 1MB chunks
+      
+      const readChunk = (offset: number) => {
+        const reader = new FileReader();
+        const blob = file.slice(offset, offset + Math.min(chunkSize, totalSize - offset));
+        
+        reader.onload = (e) => {
+          // In a real app, you would send this chunk to your server
+          uploadedSize += (e.loaded as number);
+          const progress = Math.round((uploadedSize / totalSize) * 100);
+          setUploadProgress(progress);
+          if (onProgress) onProgress(progress);
+          
+          if (uploadedSize < totalSize) {
+            readChunk(uploadedSize);
+          } else {
+            // Simulate server response with file URL
+            setTimeout(() => {
+              const fileUrl = URL.createObjectURL(file);
+              setIsUploading(false);
+              resolve(fileUrl);
+            }, 500);
+          }
+        };
+        
+        reader.onerror = () => {
+          const error = new Error('File read error');
+          setError('Failed to read file');
+          setIsUploading(false);
+          reject(error);
+        };
+        
+        reader.readAsArrayBuffer(blob);
+      };
+      
+      readChunk(0);
+    });
   };
   
+  return { uploadFile, uploadProgress, isUploading, error };
+};
+
+export function SeafarerForm({
+  initialData = {},
+  onSubmit,
+  onCancel,
+  
+}: SeafarerFormProps) {
+  const { toast } = useToast();
+  // const [activeTab, setActiveTab] = useState('personal');
+  // const [isDocumentDialogOpen, setIsDocumentDialogOpen] = useState(false);
+  // const [currentDocument, setCurrentDocument] = useState<DocumentType | null>(null);
+  // const [isDocumentUploading, setIsDocumentUploading] = useState(false);
+  // const [documentUploadProgress, setDocumentUploadProgress] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+  // const { uploadFile } = useFileUpload();
+  
   // Initialize form with react-hook-form
-  const { 
-    register, 
-    handleSubmit, 
-    formState: { errors },
-    setValue,
-    watch,
-    reset
-  } = useForm<SeafarerFormValues>({
+  const form = useForm<SeafarerFormValues>({
     resolver: zodResolver(seafarerFormSchema),
-    defaultValues: initialData ? {
+    defaultValues: useMemo(() => ({
       personalInfo: {
-        firstName: initialData.personalInfo.firstName,
-        lastName: initialData.personalInfo.lastName,
-        dateOfBirth: initialData.personalInfo.dateOfBirth,
-        nationality: initialData.personalInfo.nationality,
+        firstName: initialData?.personalInfo?.firstName || '',
+        middleName: initialData?.personalInfo?.middleName || '',
+        lastName: initialData?.personalInfo?.lastName || '',
+        dateOfBirth: initialData?.personalInfo?.dateOfBirth ? new Date(initialData.personalInfo.dateOfBirth) : new Date(),
+        placeOfBirth: initialData?.personalInfo?.placeOfBirth || '',
+        nationality: initialData?.personalInfo?.nationality || '',
+        gender: (initialData?.personalInfo?.gender as any) || 'prefer_not_to_say',
+        maritalStatus: (initialData?.personalInfo?.maritalStatus as any) || 'single',
+        bloodType: (initialData?.personalInfo?.bloodType as any) || undefined,
         contact: {
-          email: initialData.personalInfo.contact.email,
-          phone: initialData.personalInfo.contact.phone,
+          email: initialData?.personalInfo?.contact?.email || '',
+          phone: initialData?.personalInfo?.contact?.phone || '',
+          address: {
+            street: initialData?.personalInfo?.contact?.address?.street || '',
+            city: initialData?.personalInfo?.contact?.address?.city || '',
+            state: initialData?.personalInfo?.contact?.address?.state || '',
+            postalCode: initialData?.personalInfo?.contact?.address?.postalCode || '',
+            country: initialData?.personalInfo?.contact?.address?.country || '',
+          },
           emergencyContact: {
-            name: initialData.personalInfo.contact.emergencyContact?.name || '',
-            relationship: initialData.personalInfo.contact.emergencyContact?.relationship || '',
-            phone: initialData.personalInfo.contact.emergencyContact?.phone || ''
-          }
-        }
+            name: initialData?.personalInfo?.contact?.emergencyContact?.name || '',
+            relationship: initialData?.personalInfo?.contact?.emergencyContact?.relationship || '',
+            phone: initialData?.personalInfo?.contact?.emergencyContact?.phone || '',
+            email: initialData?.personalInfo?.contact?.emergencyContact?.email || '',
+            address: initialData?.personalInfo?.contact?.emergencyContact?.address || '',
+          },
+        },
       },
       employment: {
-        rank: initialData.employment.rank,
-        department: initialData.employment.department,
-        status: initialData.employment.status,
-        baseWage: initialData.employment.baseWage,
-        wageCurrency: initialData.employment.wageCurrency,
-        employmentType: initialData.employment.employmentType,
-        joinedDate: initialData.employment.joinedDate,
-        contractEndDate: initialData.employment.contractEndDate
-      }
-    } : defaultValues
+        employeeId: initialData?.employment?.employeeId || `EMP-${Math.random().toString(36).substr(2, 8).toUpperCase()}`,
+        rank: initialData?.employment?.rank || '',
+        department: (initialData?.employment?.department as any) || 'deck',
+        status: (initialData?.employment?.status as any) || 'on_leave',
+        employmentType: (initialData?.employment?.employmentType as any) || 'permanent',
+        joinedDate: initialData?.employment?.joinedDate ? new Date(initialData.employment.joinedDate) : new Date(),
+        contractStartDate: initialData?.employment?.contractStartDate ? new Date(initialData.employment.contractStartDate) : new Date(),
+        contractEndDate: initialData?.employment?.contractEndDate ? new Date(initialData.employment.contractEndDate) : undefined,
+        baseWage: initialData?.employment?.baseWage || 0,
+        wageCurrency: initialData?.employment?.wageCurrency || 'USD',
+        bankAccount: {
+          accountNumber: initialData?.employment?.bankAccount?.accountNumber || '',
+          bankName: initialData?.employment?.bankAccount?.bankName || '',
+          branch: initialData?.employment?.bankAccount?.branch || '',
+          swiftCode: initialData?.employment?.bankAccount?.swiftCode || '',
+          iban: initialData?.employment?.bankAccount?.iban || '',
+        },
+        taxInformation: {
+          taxId: initialData?.employment?.taxInformation?.taxId || '',
+          taxStatus: initialData?.employment?.taxInformation?.taxStatus || '',
+          socialSecurityNumber: initialData?.employment?.taxInformation?.socialSecurityNumber || '',
+        },
+      },
+      documents: initialData?.documents?.map(doc => ({
+        ...doc,
+        issueDate: doc.issueDate ? new Date(doc.issueDate) : undefined,
+        expiryDate: doc.expiryDate ? new Date(doc.expiryDate) : undefined,
+      })) || [],
+      medicalInfo: {
+        bloodGroup: initialData?.medicalInfo?.bloodGroup || '',
+        allergies: initialData?.medicalInfo?.allergies || [],
+        medicalConditions: initialData?.medicalInfo?.medicalConditions || [],
+        lastMedicalCheckup: initialData?.medicalInfo?.lastMedicalCheckup ? new Date(initialData.medicalInfo.lastMedicalCheckup) : undefined,
+        nextMedicalCheckup: initialData?.medicalInfo?.nextMedicalCheckup ? new Date(initialData.medicalInfo.nextMedicalCheckup) : undefined,
+        notes: initialData?.medicalInfo?.notes || '',
+      },
+      trainings: initialData?.trainings?.map(training => ({
+        ...training,
+        issueDate: training.issueDate ? new Date(training.issueDate) : undefined,
+        expiryDate: training.expiryDate ? new Date(training.expiryDate) : undefined,
+      })) || [],
+      emergencyContacts: initialData?.emergencyContacts || [],
+      notes: initialData?.notes || '',
+    }), [initialData]),
   });
-  
-  // Watch values for conditional rendering
+
+  const { register, watch, formState: { errors }, setValue } = form;
   const employmentType = watch('employment.employmentType');
   
   // Handle form submission
@@ -169,31 +374,99 @@ export function SeafarerForm({
     try {
       setIsLoading(true);
       await onSubmit(data);
+      toast({
+        title: 'Success',
+        description: 'Seafarer information saved successfully',
+        variant: 'default',
+      });
+    } catch (error) {
+      console.error('Error saving seafarer:', error);
+      toast({
+        title: 'Error',
+        description: error instanceof Error ? error.message : 'Failed to save seafarer information',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
   };
   
+  // Reusable form field component
+  const renderFormField = ({
+    label,
+    name,
+    form,
+    render = (field) => (
+      <Input
+        {...field}
+        onChange={(e) => field.onChange(e.target.value)}
+      />
+    ),
+    description,
+    className = '',
+  }: {
+    label: string;
+    name: string;
+    form: any;
+    render?: (field: any) => React.ReactNode;
+    description?: string;
+    className?: string;
+  }) => {
+    const fieldState = form.getFieldState(name);
+    const fieldError = fieldState.error;
+  
+    return (
+      <FormField
+        control={form.control}
+        name={name}
+        render={({ field }) => (
+          <FormItem className={className}>
+            <FormLabel>{label}</FormLabel>
+            <FormControl>
+              {render(field)}
+            </FormControl>
+            {description && <FormDescription>{description}</FormDescription>}
+            <FormMessage>{fieldError?.message}</FormMessage>
+          </FormItem>
+        )}
+      />
+    );
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6">
-      <div className="space-y-4">
-        <h3 className="text-lg font-medium">Personal Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="firstName">First Name *</Label>
-            <Input 
-              id="firstName" 
-              {...register('personalInfo.firstName')} 
-              error={errors.personalInfo?.firstName?.message}
-            />
-          </div>
-          <div>
-            <Label htmlFor="lastName">Last Name *</Label>
-            <Input 
-              id="lastName" 
-              {...register('personalInfo.lastName')} 
-              error={errors.personalInfo?.lastName?.message}
-            />
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmitHandler)} className="space-y-6">
+        <Tabs defaultValue="personal" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="personal">Personal</TabsTrigger>
+            <TabsTrigger value="employment">Employment</TabsTrigger>
+            <TabsTrigger value="documents">Documents</TabsTrigger>
+            <TabsTrigger value="medical">Medical</TabsTrigger>
+          </TabsList>
+
+          {/* Personal Information Tab */}
+          <TabsContent value="personal" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Personal Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {renderFormField({
+                    label: "First Name *",
+                    name: "personalInfo.firstName",
+                    form: form,
+                  })}
+                  {renderFormField({
+                    label: "Middle Name",
+                    name: "personalInfo.middleName",
+                    form: form,
+                  })}
+                  {renderFormField({
+                    label: "Last Name *",
+                    name: "personalInfo.lastName",
+                    form: form,
+                  })}
           </div>
           <div>
             <Label htmlFor="dateOfBirth">Date of Birth</Label>
@@ -207,17 +480,23 @@ export function SeafarerForm({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {watch('personalInfo.dateOfBirth') ? (
-                    format(new Date(watch('personalInfo.dateOfBirth')), 'PPP')
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
+                  {(() => {
+                    const dateOfBirth = watch('personalInfo.dateOfBirth');
+                    return dateOfBirth ? (
+                      format(new Date(dateOfBirth), 'PPP')
+                    ) : (
+                      <span>Pick a date</span>
+                    );
+                  })()}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
-                  selected={new Date(watch('personalInfo.dateOfBirth'))}
+                  selected={(() => {
+                    const dateOfBirth = watch('personalInfo.dateOfBirth');
+                    return dateOfBirth ? new Date(dateOfBirth) : undefined;
+                  })()}
                   onSelect={(date) => setValue('personalInfo.dateOfBirth', date || new Date())}
                   initialFocus
                 />
@@ -226,57 +505,51 @@ export function SeafarerForm({
           </div>
           <div>
             <Label htmlFor="nationality">Nationality *</Label>
-            <Input 
-              id="nationality" 
-              {...register('personalInfo.nationality')} 
-              error={errors.personalInfo?.nationality?.message}
+            <Input
+              id="nationality"
+              {...register('personalInfo.nationality')}
             />
           </div>
           <div>
             <Label htmlFor="email">Email *</Label>
-            <Input 
-              id="email" 
-              type="email" 
-              {...register('personalInfo.contact.email')} 
-              error={errors.personalInfo?.contact?.email?.message}
+            <Input
+              id="email"
+              type="email"
+              {...register('personalInfo.contact.email')}
             />
           </div>
           <div>
             <Label htmlFor="phone">Phone *</Label>
-            <Input 
-              id="phone" 
-              {...register('personalInfo.contact.phone')} 
-              error={errors.personalInfo?.contact?.phone?.message}
+            <Input
+              id="phone"
+              {...register('personalInfo.contact.phone')}
             />
           </div>
-        </div>
-      </div>
+        </CardContent>
+        </Card>
       
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Emergency Contact</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <Label htmlFor="emergencyName">Name *</Label>
-            <Input 
-              id="emergencyName" 
-              {...register('personalInfo.contact.emergencyContact.name')} 
-              error={errors.personalInfo?.contact?.emergencyContact?.name?.message}
+            <Input
+              id="emergencyName"
+              {...register('personalInfo.contact.emergencyContact.name')}
             />
           </div>
           <div>
             <Label htmlFor="emergencyRelationship">Relationship *</Label>
-            <Input 
-              id="emergencyRelationship" 
-              {...register('personalInfo.contact.emergencyContact.relationship')} 
-              error={errors.personalInfo?.contact?.emergencyContact?.relationship?.message}
+            <Input
+              id="emergencyRelationship"
+              {...register('personalInfo.contact.emergencyContact.relationship')}
             />
           </div>
           <div>
             <Label htmlFor="emergencyPhone">Phone *</Label>
-            <Input 
-              id="emergencyPhone" 
-              {...register('personalInfo.contact.emergencyContact.phone')} 
-              error={errors.personalInfo?.contact?.emergencyContact?.phone?.message}
+            <Input
+              id="emergencyPhone"
+              {...register('personalInfo.contact.emergencyContact.phone')}
             />
           </div>
         </div>
@@ -296,8 +569,8 @@ export function SeafarerForm({
               </SelectTrigger>
               <SelectContent>
                 {RANKS.map((rank) => (
-                  <SelectItem key={rank} value={rank}>
-                    {rank}
+                  <SelectItem key={rank.value} value={rank.value}>
+                    {rank.label}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -374,17 +647,23 @@ export function SeafarerForm({
                   )}
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {watch('employment.joinedDate') ? (
-                    format(new Date(watch('employment.joinedDate')), 'PPP')
-                  ) : (
-                    <span>Pick a date</span>
-                  )}
+                  {(() => {
+                    const joinedDate = watch('employment.joinedDate');
+                    return joinedDate ? (
+                      format(new Date(joinedDate), 'PPP')
+                    ) : (
+                      <span>Pick a date</span>
+                    );
+                  })()}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0">
                 <Calendar
                   mode="single"
-                  selected={new Date(watch('employment.joinedDate'))}
+                  selected={(() => {
+                    const joinedDate = watch('employment.joinedDate');
+                    return joinedDate ? new Date(joinedDate) : undefined;
+                  })()}
                   onSelect={(date) => setValue('employment.joinedDate', date || new Date())}
                   initialFocus
                 />
@@ -404,17 +683,23 @@ export function SeafarerForm({
                     )}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {watch('employment.contractEndDate') ? (
-                      format(new Date(watch('employment.contractEndDate')), 'PPP')
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
+                    {(() => {
+                      const contractEndDate = watch('employment.contractEndDate');
+                      return contractEndDate ? (
+                        format(new Date(contractEndDate), 'PPP')
+                      ) : (
+                        <span>Pick a date</span>
+                      );
+                    })()}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0">
                   <Calendar
                     mode="single"
-                    selected={watch('employment.contractEndDate') ? new Date(watch('employment.contractEndDate')) : undefined}
+                    selected={(() => {
+                      const contractEndDate = watch('employment.contractEndDate');
+                      return contractEndDate ? new Date(contractEndDate) : undefined;
+                    })()}
                     onSelect={(date) => setValue('employment.contractEndDate', date || undefined)}
                     initialFocus
                   />
@@ -425,12 +710,11 @@ export function SeafarerForm({
           <div className="flex gap-4">
             <div className="flex-1">
               <Label htmlFor="baseWage">Base Wage *</Label>
-              <Input 
-                id="baseWage" 
-                type="number" 
+              <Input
+                id="baseWage"
+                type="number"
                 step="0.01"
-                {...register('employment.baseWage', { valueAsNumber: true })} 
-                error={errors.employment?.baseWage?.message}
+                {...register('employment.baseWage', { valueAsNumber: true })}
               />
             </div>
             <div className="w-32">
@@ -472,6 +756,9 @@ export function SeafarerForm({
           {isLoading ? 'Saving...' : 'Save Seafarer'}
         </Button>
       </div>
+    </TabsContent>
+    </Tabs>
     </form>
+  </Form>
   );
 }

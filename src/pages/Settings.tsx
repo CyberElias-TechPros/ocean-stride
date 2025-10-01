@@ -9,9 +9,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Settings as SettingsIcon, 
-  Users, 
+import { useEffect } from 'react';
+import { RankManagement } from '@/components/settings/RankManagement';
+import { useSettings } from '@/hooks/useSettings';
+import { useCurrentCompany } from '@/context/CompanyContext';
+import {
+  Settings as SettingsIcon,
+  Users,
   Bell,
   Shield,
   Database,
@@ -110,10 +114,25 @@ const notificationSettings: NotificationSetting[] = [
 ];
 
 export default function Settings() {
+  const company = useCurrentCompany();
+  const companyId = company?.id || 'default-company'; // Fallback for demo
+
+  const {
+    settings,
+    loading: settingsLoading,
+    error: settingsError,
+    updateGeneralSettings,
+    updateUserManagementSettings,
+    updateSecuritySettings,
+    updateIntegrationSettings,
+    updateBackupSettings,
+    updateAllSettings
+  } = useSettings(companyId);
+
   const [users, setUsers] = useState<User[]>([]);
-  const [notifications, setNotifications] = useState<NotificationSetting[]>(notificationSettings);
   const [activeTab, setActiveTab] = useState('general');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Load users from localStorage on component mount
   useEffect(() => {
@@ -178,10 +197,184 @@ export default function Settings() {
   };
 
   const updateNotification = (id: string, field: 'email' | 'sms' | 'push', value: boolean) => {
-    setNotifications(prev => prev.map(notification => 
+    if (!settings) return;
+    const updatedNotifications = settings.userManagement.notifications.map(notification =>
       notification.id === id ? { ...notification, [field]: value } : notification
-    ));
+    );
+    updateUserManagementSettings({ notifications: updatedNotifications });
   };
+
+  // Save handlers for different settings categories
+  const handleSaveGeneral = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      // Get form values - in a real implementation, these would come from controlled inputs
+      const formData = new FormData(document.querySelector('form') as HTMLFormElement);
+      const updates = {
+        companyInfo: {
+          name: formData.get('company-name') as string || settings.general.companyInfo.name,
+          email: formData.get('company-email') as string || settings.general.companyInfo.email,
+          phone: formData.get('company-phone') as string || settings.general.companyInfo.phone,
+          address: (document.querySelector('#company-address') as HTMLTextAreaElement)?.value || settings.general.companyInfo.address,
+        },
+        regional: {
+          timezone: formData.get('timezone') as string || settings.general.regional.timezone,
+          currency: formData.get('currency') as string || settings.general.regional.currency,
+          language: formData.get('language') as string || settings.general.regional.language,
+          dateFormat: formData.get('date-format') as string || settings.general.regional.dateFormat,
+        },
+        appearance: {
+          theme: (formData.get('theme') as 'light' | 'dark' | 'auto') || settings.general.appearance.theme,
+          compactMode: (document.querySelector('#compact-mode') as HTMLInputElement)?.checked || settings.general.appearance.compactMode,
+        },
+        dataManagement: {
+          retentionPeriod: formData.get('retention-period') as string || settings.general.dataManagement.retentionPeriod,
+          autoCleanup: (document.querySelector('#auto-cleanup') as HTMLInputElement)?.checked || settings.general.dataManagement.autoCleanup,
+          auditLogging: (document.querySelector('#audit-logging') as HTMLInputElement)?.checked || settings.general.dataManagement.auditLogging,
+        }
+      };
+      await updateGeneralSettings(updates);
+    } catch (error) {
+      console.error('Failed to save general settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveUserManagement = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      // User management settings are handled by the updateNotification function
+      // No additional save needed here as changes are saved immediately
+    } catch (error) {
+      console.error('Failed to save user management settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveSecurity = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      // Get form values from security tab
+      const formData = new FormData(document.querySelector('form') as HTMLFormElement);
+      const updates = {
+        passwordPolicy: {
+          minLength: parseInt(formData.get('min-length') as string) || settings.security.passwordPolicy.minLength,
+          requireUppercase: (document.querySelector('#require-uppercase') as HTMLInputElement)?.checked || settings.security.passwordPolicy.requireUppercase,
+          requireNumbers: (document.querySelector('#require-numbers') as HTMLInputElement)?.checked || settings.security.passwordPolicy.requireNumbers,
+          requireSymbols: (document.querySelector('#require-symbols') as HTMLInputElement)?.checked || settings.security.passwordPolicy.requireSymbols,
+        },
+        sessionManagement: {
+          timeout: parseInt(formData.get('session-timeout') as string) || settings.security.sessionManagement.timeout,
+          forceLogoutOnClose: (document.querySelector('#force-logout') as HTMLInputElement)?.checked || settings.security.sessionManagement.forceLogoutOnClose,
+          allowConcurrentSessions: (document.querySelector('#concurrent-sessions') as HTMLInputElement)?.checked || settings.security.sessionManagement.allowConcurrentSessions,
+        },
+        twoFactorAuth: {
+          requireForAdmins: (document.querySelector('#require-2fa') as HTMLInputElement)?.checked || settings.security.twoFactorAuth.requireForAdmins,
+          allowForAllUsers: (document.querySelector('#optional-2fa') as HTMLInputElement)?.checked || settings.security.twoFactorAuth.allowForAllUsers,
+        }
+      };
+      await updateSecuritySettings(updates);
+    } catch (error) {
+      console.error('Failed to save security settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveIntegrations = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      // Integrations are mostly static for now
+      await updateIntegrationSettings({});
+    } catch (error) {
+      console.error('Failed to save integration settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveBackup = async () => {
+    if (!settings) return;
+    setSaving(true);
+    try {
+      const formData = new FormData(document.querySelector('form') as HTMLFormElement);
+      const updates = {
+        automatic: {
+          enabled: (document.querySelector('#auto-backup') as HTMLInputElement)?.checked || settings.backup.automatic.enabled,
+          frequency: (formData.get('backup-frequency') as 'hourly' | 'daily' | 'weekly' | 'monthly') || settings.backup.automatic.frequency,
+          retention: parseInt(formData.get('backup-retention') as string) || settings.backup.automatic.retention,
+        }
+      };
+      await updateBackupSettings(updates);
+    } catch (error) {
+      console.error('Failed to save backup settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    setSaving(true);
+    try {
+      // This would collect all form data and save everything at once
+      // For now, just call individual save handlers
+      await handleSaveGeneral();
+      await handleSaveUserManagement();
+      await handleSaveSecurity();
+      await handleSaveIntegrations();
+      await handleSaveBackup();
+    } catch (error) {
+      console.error('Failed to save all settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (settingsLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
+            <p className="text-muted-foreground">Configure system preferences and user management</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+            <p className="mt-2 text-muted-foreground">Loading settings...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (settingsError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
+            <p className="text-muted-foreground">Configure system preferences and user management</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-500">Failed to load settings. Please try again.</p>
+            <Button onClick={() => window.location.reload()} className="mt-4">
+              Reload Page
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
       <div className="space-y-6">
@@ -191,23 +384,28 @@ export default function Settings() {
             <h1 className="text-3xl font-bold text-foreground">System Settings</h1>
             <p className="text-muted-foreground">Configure system preferences and user management</p>
           </div>
-          
+
           <div className="flex gap-3">
             <Button variant="outline">
               <Download className="w-4 h-4 mr-2" />
               Export Settings
             </Button>
-            <Button className="ocean-gradient">
+            <Button
+              className="ocean-gradient"
+              onClick={handleSaveAll}
+              disabled={saving || settingsLoading}
+            >
               <Save className="w-4 h-4 mr-2" />
-              Save Changes
+              {saving ? 'Saving...' : 'Save Changes'}
             </Button>
           </div>
         </div>
 
         {/* Settings Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="ranks">Ranks</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
             <TabsTrigger value="security">Security</TabsTrigger>
@@ -228,19 +426,39 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="company-name">Company Name</Label>
-                    <Input id="company-name" defaultValue="SeaManager Maritime Solutions" />
+                    <Input
+                      id="company-name"
+                      name="company-name"
+                      defaultValue={settings?.general.companyInfo.name || "SeaManager Maritime Solutions"}
+                      disabled={settingsLoading}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="company-email">Contact Email</Label>
-                    <Input id="company-email" type="email" defaultValue="contact@seamanager.com" />
+                    <Input
+                      id="company-email"
+                      name="company-email"
+                      type="email"
+                      defaultValue={settings?.general.companyInfo.email || "contact@seamanager.com"}
+                      disabled={settingsLoading}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="company-phone">Phone Number</Label>
-                    <Input id="company-phone" defaultValue="+1-555-0123" />
+                    <Input
+                      id="company-phone"
+                      name="company-phone"
+                      defaultValue={settings?.general.companyInfo.phone || "+1-555-0123"}
+                      disabled={settingsLoading}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="company-address">Address</Label>
-                    <Textarea id="company-address" defaultValue="123 Harbor Street, Maritime City, MC 12345" />
+                    <Textarea
+                      id="company-address"
+                      defaultValue={settings?.general.companyInfo.address || "123 Harbor Street, Maritime City, MC 12345"}
+                      disabled={settingsLoading}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -256,7 +474,7 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="timezone">Default Timezone</Label>
-                    <Select defaultValue="utc">
+                    <Select name="timezone" defaultValue={settings?.general.regional.timezone || "utc"} disabled={settingsLoading}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -270,7 +488,7 @@ export default function Settings() {
                   </div>
                   <div>
                     <Label htmlFor="currency">Default Currency</Label>
-                    <Select defaultValue="usd">
+                    <Select name="currency" defaultValue={settings?.general.regional.currency || "usd"} disabled={settingsLoading}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -284,7 +502,7 @@ export default function Settings() {
                   </div>
                   <div>
                     <Label htmlFor="language">System Language</Label>
-                    <Select defaultValue="en">
+                    <Select name="language" defaultValue={settings?.general.regional.language || "en"} disabled={settingsLoading}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -298,7 +516,7 @@ export default function Settings() {
                   </div>
                   <div>
                     <Label htmlFor="date-format">Date Format</Label>
-                    <Select defaultValue="mm-dd-yyyy">
+                    <Select name="date-format" defaultValue={settings?.general.regional.dateFormat || "mm-dd-yyyy"} disabled={settingsLoading}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -323,7 +541,7 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="theme">Theme</Label>
-                    <Select defaultValue="light">
+                    <Select name="theme" defaultValue={settings?.general.appearance.theme || "light"} disabled={settingsLoading}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -348,7 +566,7 @@ export default function Settings() {
                       <Label htmlFor="compact-mode">Compact Mode</Label>
                       <p className="text-sm text-muted-foreground">Reduce spacing and padding</p>
                     </div>
-                    <Switch id="compact-mode" />
+                    <Switch id="compact-mode" defaultChecked={settings?.general.appearance.compactMode} disabled={settingsLoading} />
                   </div>
                 </CardContent>
               </Card>
@@ -364,7 +582,7 @@ export default function Settings() {
                 <CardContent className="space-y-4">
                   <div>
                     <Label htmlFor="retention-period">Data Retention Period</Label>
-                    <Select defaultValue="7-years">
+                    <Select name="retention-period" defaultValue={settings?.general.dataManagement.retentionPeriod || "7-years"} disabled={settingsLoading}>
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
@@ -381,18 +599,22 @@ export default function Settings() {
                       <Label htmlFor="auto-cleanup">Automatic Data Cleanup</Label>
                       <p className="text-sm text-muted-foreground">Remove old records automatically</p>
                     </div>
-                    <Switch id="auto-cleanup" defaultChecked />
+                    <Switch id="auto-cleanup" defaultChecked={settings?.general.dataManagement.autoCleanup} disabled={settingsLoading} />
                   </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <Label htmlFor="audit-logging">Audit Logging</Label>
                       <p className="text-sm text-muted-foreground">Track all system changes</p>
                     </div>
-                    <Switch id="audit-logging" defaultChecked />
+                    <Switch id="audit-logging" defaultChecked={settings?.general.dataManagement.auditLogging} disabled={settingsLoading} />
                   </div>
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="ranks" className="space-y-6">
+            <RankManagement />
           </TabsContent>
 
           <TabsContent value="users" className="space-y-6">
@@ -503,7 +725,7 @@ export default function Settings() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {notifications.map((notification) => (
+                    {settings?.userManagement.notifications.map((notification) => (
                       <TableRow key={notification.id}>
                         <TableCell>
                           <div>
@@ -512,21 +734,24 @@ export default function Settings() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Switch 
+                          <Switch
                             checked={notification.email}
                             onCheckedChange={(checked) => updateNotification(notification.id, 'email', checked)}
+                            disabled={settingsLoading}
                           />
                         </TableCell>
                         <TableCell>
-                          <Switch 
+                          <Switch
                             checked={notification.sms}
                             onCheckedChange={(checked) => updateNotification(notification.id, 'sms', checked)}
+                            disabled={settingsLoading}
                           />
                         </TableCell>
                         <TableCell>
-                          <Switch 
+                          <Switch
                             checked={notification.push}
                             onCheckedChange={(checked) => updateNotification(notification.id, 'push', checked)}
+                            disabled={settingsLoading}
                           />
                         </TableCell>
                       </TableRow>
@@ -586,7 +811,7 @@ export default function Settings() {
                     <h4 className="font-medium">Password Policy</h4>
                     <div>
                       <Label htmlFor="min-length">Minimum Password Length</Label>
-                      <Select defaultValue="8">
+                      <Select name="min-length" defaultValue={settings?.security.passwordPolicy.minLength.toString() || "8"} disabled={settingsLoading}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -603,21 +828,21 @@ export default function Settings() {
                         <Label htmlFor="require-uppercase">Require Uppercase</Label>
                         <p className="text-sm text-muted-foreground">At least one uppercase letter</p>
                       </div>
-                      <Switch id="require-uppercase" defaultChecked />
+                      <Switch id="require-uppercase" defaultChecked={settings?.security.passwordPolicy.requireUppercase} disabled={settingsLoading} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="require-numbers">Require Numbers</Label>
                         <p className="text-sm text-muted-foreground">At least one numeric character</p>
                       </div>
-                      <Switch id="require-numbers" defaultChecked />
+                      <Switch id="require-numbers" defaultChecked={settings?.security.passwordPolicy.requireNumbers} disabled={settingsLoading} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="require-symbols">Require Special Characters</Label>
                         <p className="text-sm text-muted-foreground">At least one special character</p>
                       </div>
-                      <Switch id="require-symbols" />
+                      <Switch id="require-symbols" defaultChecked={settings?.security.passwordPolicy.requireSymbols} disabled={settingsLoading} />
                     </div>
                   </div>
 
@@ -625,7 +850,7 @@ export default function Settings() {
                     <h4 className="font-medium">Session Management</h4>
                     <div>
                       <Label htmlFor="session-timeout">Session Timeout</Label>
-                      <Select defaultValue="60">
+                      <Select name="session-timeout" defaultValue={settings?.security.sessionManagement.timeout.toString() || "60"} disabled={settingsLoading}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -642,14 +867,14 @@ export default function Settings() {
                         <Label htmlFor="force-logout">Force Logout on Browser Close</Label>
                         <p className="text-sm text-muted-foreground">Enhanced security for shared devices</p>
                       </div>
-                      <Switch id="force-logout" />
+                      <Switch id="force-logout" defaultChecked={settings?.security.sessionManagement.forceLogoutOnClose} disabled={settingsLoading} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="concurrent-sessions">Allow Multiple Sessions</Label>
                         <p className="text-sm text-muted-foreground">Same user on multiple devices</p>
                       </div>
-                      <Switch id="concurrent-sessions" defaultChecked />
+                      <Switch id="concurrent-sessions" defaultChecked={settings?.security.sessionManagement.allowConcurrentSessions} disabled={settingsLoading} />
                     </div>
                   </div>
                 </div>
@@ -662,14 +887,14 @@ export default function Settings() {
                         <Label htmlFor="require-2fa">Require 2FA for Admin Users</Label>
                         <p className="text-sm text-muted-foreground">Mandatory for administrator accounts</p>
                       </div>
-                      <Switch id="require-2fa" defaultChecked />
+                      <Switch id="require-2fa" defaultChecked={settings?.security.twoFactorAuth.requireForAdmins} disabled={settingsLoading} />
                     </div>
                     <div className="flex items-center justify-between">
                       <div>
                         <Label htmlFor="optional-2fa">Allow 2FA for All Users</Label>
                         <p className="text-sm text-muted-foreground">Optional enhanced security</p>
                       </div>
-                      <Switch id="optional-2fa" defaultChecked />
+                      <Switch id="optional-2fa" defaultChecked={settings?.security.twoFactorAuth.allowForAllUsers} disabled={settingsLoading} />
                     </div>
                   </div>
                 </div>
@@ -683,11 +908,7 @@ export default function Settings() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[
-                    { name: 'Mobile App API', key: 'sk_live_••••••••••••1234', created: '2024-01-15', status: 'active' },
-                    { name: 'Third-party Integration', key: 'sk_live_••••••••••••5678', created: '2024-01-10', status: 'active' },
-                    { name: 'Webhook Endpoint', key: 'sk_live_••••••••••••9012', created: '2024-01-05', status: 'inactive' }
-                  ].map((apiKey, idx) => (
+                  {settings?.security.apiKeys.map((apiKey, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 border rounded-lg">
                       <div>
                         <div className="font-medium">{apiKey.name}</div>
@@ -721,44 +942,7 @@ export default function Settings() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {[
-                    {
-                      name: 'Accounting System',
-                      description: 'Sync payroll data with QuickBooks',
-                      status: 'connected',
-                      lastSync: '2024-01-20 14:30'
-                    },
-                    {
-                      name: 'Email Service',
-                      description: 'SendGrid for notification delivery',
-                      status: 'connected',
-                      lastSync: '2024-01-20 15:45'
-                    },
-                    {
-                      name: 'SMS Provider',
-                      description: 'Twilio for SMS notifications',
-                      status: 'disconnected',
-                      lastSync: 'Never'
-                    },
-                    {
-                      name: 'Document Storage',
-                      description: 'AWS S3 for certificate storage',
-                      status: 'connected',
-                      lastSync: '2024-01-20 16:15'
-                    },
-                    {
-                      name: 'Maritime Database',
-                      description: 'IMO vessel information lookup',
-                      status: 'connected',
-                      lastSync: '2024-01-20 12:00'
-                    },
-                    {
-                      name: 'Training Provider',
-                      description: 'Online training platform API',
-                      status: 'disconnected',
-                      lastSync: 'Never'
-                    }
-                  ].map((integration, idx) => (
+                  {settings?.integrations.integrations.map((integration, idx) => (
                     <Card key={idx}>
                       <CardContent className="pt-6">
                         <div className="flex justify-between items-start mb-3">
@@ -805,11 +989,11 @@ export default function Settings() {
                         <Label htmlFor="auto-backup">Enable Automatic Backups</Label>
                         <p className="text-sm text-muted-foreground">Regular system backups</p>
                       </div>
-                      <Switch id="auto-backup" defaultChecked />
+                      <Switch id="auto-backup" defaultChecked={settings?.backup.automatic.enabled} disabled={settingsLoading} />
                     </div>
                     <div>
                       <Label htmlFor="backup-frequency">Backup Frequency</Label>
-                      <Select defaultValue="daily">
+                      <Select name="backup-frequency" defaultValue={settings?.backup.automatic.frequency || "daily"} disabled={settingsLoading}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -823,7 +1007,7 @@ export default function Settings() {
                     </div>
                     <div>
                       <Label htmlFor="backup-retention">Retention Period</Label>
-                      <Select defaultValue="30">
+                      <Select name="backup-retention" defaultValue={settings?.backup.automatic.retention.toString() || "30"} disabled={settingsLoading}>
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
@@ -866,13 +1050,7 @@ export default function Settings() {
                 <div className="border-t pt-6">
                   <h4 className="font-medium mb-4">Recent Backups</h4>
                   <div className="space-y-2">
-                    {[
-                      { date: '2024-01-20 02:00', size: '2.4 GB', status: 'completed' },
-                      { date: '2024-01-19 02:00', size: '2.3 GB', status: 'completed' },
-                      { date: '2024-01-18 02:00', size: '2.3 GB', status: 'completed' },
-                      { date: '2024-01-17 02:00', size: '2.2 GB', status: 'failed' },
-                      { date: '2024-01-16 02:00', size: '2.2 GB', status: 'completed' }
-                    ].map((backup, idx) => (
+                    {settings?.backup.manual.backups.map((backup, idx) => (
                       <div key={idx} className="flex items-center justify-between p-3 bg-muted/20 rounded-lg">
                         <div>
                           <div className="font-medium">{backup.date}</div>

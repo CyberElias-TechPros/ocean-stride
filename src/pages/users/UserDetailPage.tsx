@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { Loader2, Edit, Trash2, Upload, User as UserIcon } from 'lucide-react';
 import { ROUTES } from '@/config/routes';
 
-export function UserDetailPage() {
+export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   

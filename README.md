@@ -1,73 +1,201 @@
-# Welcome to your Lovable project
+# Ocean Stride - Seafarer Management System
 
-## Project info
+A comprehensive web-based application for managing seafarer personnel, vessel operations, and maritime company administration. Built for shipping companies to efficiently manage their crew, vessels, payroll, and compliance requirements.
 
-**URL**: https://lovable.dev/projects/7b6436be-179c-41cd-b29e-e049f844e258
+## Features
 
-## How can I edit this code?
+### 🏢 Multi-Company Support
+- Create and manage multiple shipping companies
+- Company-specific vessel and personnel management
+- Isolated data per company for security and organization
 
-There are several ways of editing your application.
+### 👥 Personnel Management
+- Complete seafarer profiles with personal, employment, and certification details
+- Rank-based hierarchy management
+- Document and certificate tracking with expiry alerts
+- Medical record management
+- Skills and language proficiency tracking
 
-**Use Lovable**
+### 🚢 Vessel Management
+- Vessel registration with detailed specifications
+- Company assignment and status tracking
+- Crew assignment and rotation management
+- Vessel-specific payroll calculations
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/7b6436be-179c-41cd-b29e-e049f844e258) and start prompting.
+### 💰 Payroll System
+- Comprehensive payroll calculations
+- Rank-based salary structures
+- Overtime and bonus calculations
+- Deductions management (taxes, pensions, company deductions)
+- Multi-currency support
+- Payroll history and reporting
 
-Changes made via Lovable will be committed automatically to this repo.
+### 📋 Crew Assignments
+- Flexible crew assignment scheduling (daily/weekly/monthly)
+- Vessel-specific crew requirements
+- Assignment tracking and history
+- Automated crew rotation management
 
-**Use your preferred IDE**
+### 📊 Analytics & Reporting
+- Dashboard with key metrics
+- Personnel analytics
+- Payroll reports
+- Compliance tracking
+- Certificate expiry monitoring
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 🔐 Security & Compliance
+- Role-based access control
+- Data encryption for sensitive information
+- Audit logging
+- GDPR-compliant data handling
+- Secure offline-capable PWA
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Technology Stack
 
-Follow these steps:
+- **Frontend**: React 18, TypeScript, Vite
+- **UI Framework**: ShadCN/UI, Tailwind CSS
+- **State Management**: Zustand, React Query
+- **Database**: IndexedDB (client-side)
+- **Forms**: React Hook Form, Zod validation
+- **Internationalization**: i18next
+- **Charts**: Recharts
+- **Build Tool**: Vite
+- **Deployment**: Docker, Nginx
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Quick Start
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Prerequisites
+- Node.js 18+ and npm
+- Modern web browser with IndexedDB support
 
-# Step 3: Install the necessary dependencies.
-npm i
+### Installation
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```bash
+# Clone the repository
+git clone <repository-url>
+cd ocean-stride
+
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Build for Production
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+# Build the application
+npm run build
 
-**Use GitHub Codespaces**
+# Preview production build
+npm run preview
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Project Structure
 
-## What technologies are used for this project?
+```
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # Core ShadCN/UI components
+│   ├── forms/          # Form components
+│   └── ...
+├── pages/              # Page components
+├── lib/                # Utilities and services
+│   ├── database/       # Database operations
+│   ├── security/       # Security utilities
+│   ├── validation/     # Data validation
+│   └── ...
+├── hooks/              # Custom React hooks
+├── contexts/           # React contexts
+├── types/              # TypeScript type definitions
+└── schemas/            # Data schemas
+```
 
-This project is built with:
+## Environment Configuration
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+The application uses the following environment variables:
 
-## How can I deploy this project?
+- `VITE_API_BASE_URL`: API base URL (defaults to '/api' for client-side operation)
 
-Simply open [Lovable](https://lovable.dev/projects/7b6436be-179c-41cd-b29e-e049f844e258) and click on Share -> Publish.
+## Deployment
 
-## Can I connect a custom domain to my Lovable project?
+### Docker Deployment
 
-Yes, you can!
+```bash
+# Build Docker image
+docker build -t ocean-stride .
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+# Run with Docker Compose
+docker-compose up -d
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Manual Deployment
+
+1. Build the application: `npm run build`
+2. Serve the `dist/` folder with a static server
+3. Configure your web server (Nginx/Apache) to serve the static files
+
+### Nginx Configuration Example
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /path/to/ocean-stride/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Cache static assets
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
+```
+
+## Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build
+- `npm run lint` - Run ESLint
+- `npm run type-check` - Run TypeScript type checking
+- `npm run format` - Format code with Prettier
+- `npm run test` - Run tests
+- `npm run test:coverage` - Run tests with coverage
+
+### Code Quality
+
+- **Linting**: ESLint with TypeScript support
+- **Formatting**: Prettier
+- **Type Checking**: TypeScript strict mode
+- **Testing**: Vitest with React Testing Library
+
+## Browser Support
+
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit changes: `git commit -am 'Add your feature'`
+4. Push to branch: `git push origin feature/your-feature`
+5. Submit a pull request
+
+## License
+
+This project is proprietary software. All rights reserved.
+
+## Support
+
+For support and questions, please contact the development team or create an issue in the repository.

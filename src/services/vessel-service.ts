@@ -1,9 +1,9 @@
 import { BaseApi } from '@/lib/api/base-api';
 import { API_ENDPOINTS, getApiUrl } from '@/config/api';
-import { 
-  Vessel, 
-  CreateVesselDto, 
-  UpdateVesselDto,
+import {
+  Vessel,
+  VesselCreateDto,
+  VesselUpdateDto,
   VesselStatus,
   PaginatedResponse
 } from '@/types';
@@ -35,11 +35,11 @@ export class VesselService extends BaseApi {
     return this.get<Vessel>(API_ENDPOINTS.VESSELS.BY_ID(id));
   }
 
-  async createVessel(data: CreateVesselDto): Promise<Vessel> {
+  async createVessel(data: VesselCreateDto): Promise<Vessel> {
     return this.post<Vessel>(API_ENDPOINTS.VESSELS.BASE, data);
   }
 
-  async updateVessel(id: string, data: UpdateVesselDto): Promise<Vessel> {
+  async updateVessel(id: string, data: VesselUpdateDto): Promise<Vessel> {
     return this.patch<Vessel>(API_ENDPOINTS.VESSELS.BY_ID(id), data);
   }
 

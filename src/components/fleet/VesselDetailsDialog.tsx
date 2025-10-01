@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Ship, Users, MapPin, Calendar, AlertTriangle } from 'lucide-react';
+import { RosterPlannerModal } from '@/components/roster/RosterPlannerModal';
 
 interface VesselDetailsDialogProps {
   vessel: any;
@@ -13,6 +14,8 @@ interface VesselDetailsDialogProps {
 }
 
 export function VesselDetailsDialog({ vessel, open, onOpenChange }: VesselDetailsDialogProps) {
+  const [showRosterPlanner, setShowRosterPlanner] = useState(false);
+
   if (!vessel) return null;
 
   const crewPercentage = (vessel.crewDetails.current / vessel.crewDetails.required) * 100;
@@ -125,7 +128,7 @@ export function VesselDetailsDialog({ vessel, open, onOpenChange }: VesselDetail
               <Users className="w-4 h-4 mr-2" />
               Manage Crew
             </Button>
-            <Button variant="outline" className="flex-1">
+            <Button variant="outline" className="flex-1" onClick={() => setShowRosterPlanner(true)}>
               <Calendar className="w-4 h-4 mr-2" />
               Plan Roster
             </Button>
@@ -136,6 +139,13 @@ export function VesselDetailsDialog({ vessel, open, onOpenChange }: VesselDetail
           </div>
         </div>
       </DialogContent>
+
+      {/* Roster Planner Modal */}
+      <RosterPlannerModal
+        open={showRosterPlanner}
+        onOpenChange={setShowRosterPlanner}
+        selectedVessel={vessel}
+      />
     </Dialog>
   );
 }

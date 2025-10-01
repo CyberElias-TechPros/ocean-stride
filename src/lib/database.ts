@@ -1,330 +1,187 @@
 import { v4 as uuidv4 } from 'uuid';
+import {
+  STORE_NAMES,
+  INDEX_NAMES,
+  type BaseEntity,
+  type Company,
+  type Vessel,
+  type Seafarer,
+  type CrewAssignment,
+  type Payroll,
+  type Document,
+  type Notification,
+  type Applicant,
+  type Certificate,
+  type Rank,
+  type PayrollSettings,
+  type CompanySettings,
 
-type NotificationType = 'info' | 'warning' | 'error' | 'success' | 'reminder';
+} from './schemas_v2';
 
-export interface NotificationMetadata {
-  companyId: string;
-  source: string;
-  priority: 'low' | 'medium' | 'high';
-  [key: string]: unknown;
-}
-
-export interface NotificationAction {
-  action: string;
-  title: string;
-  icon?: string;
-  [key: string]: unknown;
-}
-
-export interface Notification {
-  id: string;
-  type: NotificationType;
-  title: string;
-  message: string;
-  read: boolean;
-  timestamp: string;
-  createdAt: string;
-  updatedAt: string;
-  badge: string;
-  body: string;
-  data: Record<string, unknown>;
-  dir: 'auto' | 'ltr' | 'rtl';
-  icon?: string;
-  image?: string;
-  lang?: string;
-  renotify: boolean;
-  requireInteraction: boolean;
-  silent: boolean;
-  tag: string;
-  vibrate: number[];
-  actions: NotificationAction[];
-  metadata: NotificationMetadata;
-}
-
-// Type definitions for the database entities
-export interface Address {
-  street: string;
-  city: string;
-  country: string;
-  postalCode: string;
-}
-
-export interface Contact {
-  email: string;
-  phone: string;
-  website?: string;
-}
-
-export interface CompanySettings {
-  currency: string;
-  timezone: string;
-  fiscalYearStart: string;
-}
-
-export interface Company {
-  id: string;
-  name: string;
-  code: string;
-  address: Address;
-  contact: Contact;
-  settings: CompanySettings;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PersonalInfo {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  nationality: string;
-  dateOfBirth: string;
-  passportNumber: string;
-  seamanBook: string;
-}
-
-export interface Certificate {
-  id: string;
-  name: string;
-  number: string;
-  issuedDate: string;
-  expiryDate: string;
-  issuingAuthority: string;
-  document?: string;
-}
-
-export interface Employment {
-  status: 'active' | 'available' | 'on-leave' | 'retired';
-  currentVessel?: string;
-  position: string;
-  contractStart?: string;
-  contractEnd?: string;
-  dayOffDue?: number;
-}
-
-export interface Financial {
-  bankName: string;
-  accountNumber: string;
-  iban?: string;
-  swiftCode?: string;
-  currency: string;
-  basicWage: number;
-  overtimeRate: number;
-}
-
-export interface Seafarer {
-  id: string;
-  companyId: string;
-  personalInfo: PersonalInfo;
-  qualifications: {
-    rank: string;
-    certificates: Certificate[];
-  };
-  employment: Employment;
-  financial: Financial;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Vessel {
-  id: string;
-  companyId: string;
-  name: string;
-  type: string;
-  imoNumber: string;
-  flag: string;
-  yearBuilt?: number;
-  grossTonnage?: number;
-  netTonnage?: number;
-  lengthOverall?: number;
-  beam?: number;
-  draft?: number;
-  dwt?: number;
-  portOfRegistry?: string;
-  documents: Certificate[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CrewAssignment {
-  id: string;
-  seafarerId: string;
-  vesselId: string;
-  position: string;
-  startDate: string;
-  endDate?: string;
-  status: 'active' | 'completed' | 'cancelled';
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PayrollRecord {
-  id: string;
-  companyId: string;
-  seafarerId: string;
-  period: {
-    start: string;
-    end: string;
-  };
-  basicSalary: number;
-  overtime: number;
-  allowances: number;
-  deductions: number;
-  netSalary: number;
-  currency: string;
-  status: 'draft' | 'approved' | 'paid' | 'cancelled';
-  paymentDate?: string;
-  notes?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-// IndexedDB configuration
-const DB_NAME = 'OceanStrideDB';
-// Bump version due to schema changes (adding notifications store and safer migrations)
-const DB_VERSION = 4;
-
-interface StoreConfig {
-  name: string;
-  keyPath: string;
-  indexes: Array<{
-    name: string;
-    keyPath: string | string[];
-    options?: IDBIndexParameters;
-  }>;
-}
-
-const STORES: StoreConfig[] = [
-  {
-    name: 'companies',
-    keyPath: 'id',
-    indexes: [
-      { name: 'name', keyPath: 'name' },
-      { name: 'code', keyPath: 'code' }
-    ]
-  },
-  {
-    name: 'seafarers',
-    keyPath: 'id',
-    indexes: [
-      { name: 'companyId', keyPath: 'companyId' },
-      { name: 'email', keyPath: 'personalInfo.email' },
-      { name: 'rank', keyPath: 'qualifications.rank' },
-      { name: 'status', keyPath: 'employment.status' }
-    ]
-  },
-  {
-    name: 'vessels',
-    keyPath: 'id',
-    indexes: [
-      { name: 'companyId', keyPath: 'companyId' },
-      { name: 'name', keyPath: 'name' },
-      { name: 'imo', keyPath: 'imoNumber' }
-    ]
-  },
-  {
-    name: 'crew_assignments',
-    keyPath: 'id',
-    indexes: [
-      { name: 'seafarerId', keyPath: 'seafarerId' },
-      { name: 'vesselId', keyPath: 'vesselId' },
-      { name: 'status', keyPath: 'status' }
-    ]
-  },
-  {
-    name: 'payroll',
-    keyPath: 'id',
-    indexes: [
-      { name: 'companyId', keyPath: 'companyId' },
-      { name: 'seafarerId', keyPath: 'seafarerId' },
-      { name: 'status', keyPath: 'status' },
-      { name: 'period', keyPath: 'period.start' }
-    ]
-  },
-  {
-    name: 'notifications',
-    keyPath: 'id',
-    indexes: [
-      { name: 'companyId', keyPath: 'metadata.companyId' },
-      { name: 'read', keyPath: 'read' },
-      { name: 'type', keyPath: 'type' },
-      { name: 'createdAt', keyPath: 'createdAt' }
-    ]
-  }
-];
-
-class SeafarerDatabase {
+class DatabaseService {
+  private static instance: DatabaseService;
   private db: IDBDatabase | null = null;
-  private static instance: SeafarerDatabase;
+  // Use a new DB name to avoid clobbering the legacy schema during migration
+  private dbName = 'OceanStrideDB_v2';
+  private version = 2;
 
   private constructor() {}
 
-  public static getInstance(): SeafarerDatabase {
-    if (!SeafarerDatabase.instance) {
-      SeafarerDatabase.instance = new SeafarerDatabase();
+  static getInstance(): DatabaseService {
+    if (!DatabaseService.instance) {
+      DatabaseService.instance = new DatabaseService();
     }
-    return SeafarerDatabase.instance;
+    return DatabaseService.instance;
+  }
+
+  isInitialized(): boolean {
+    return this.db !== null;
   }
 
   async init(): Promise<void> {
     if (this.db) return;
 
     return new Promise((resolve, reject) => {
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const request = indexedDB.open(this.dbName, this.version);
 
       request.onerror = () => {
-        reject(new Error('Failed to open database'));
+        console.error('Database error:', request.error);
+        reject(request.error);
       };
 
       request.onsuccess = () => {
         this.db = request.result;
-        console.log('Database initialized successfully');
         resolve();
       };
 
       request.onupgradeneeded = (event) => {
         const db = (event.target as IDBOpenDBRequest).result;
-        
-        // Create or upgrade stores without deleting existing data
-        STORES.forEach(storeConfig => {
-          const hasStore = db.objectStoreNames.contains(storeConfig.name);
-          const store = hasStore
-            ? (event.currentTarget as IDBOpenDBRequest).transaction!.objectStore(storeConfig.name)
-            : db.createObjectStore(storeConfig.name, { keyPath: storeConfig.keyPath });
-
-          // Ensure indexes exist
-          const existingIndexes = hasStore ? Array.from((store as IDBObjectStore).indexNames) : [];
-          storeConfig.indexes.forEach(index => {
-            if (!existingIndexes.includes(index.name)) {
-              store.createIndex(index.name, index.keyPath, index.options);
-            }
-          });
-        });
+        this.createStores(db);
       };
     });
   }
 
-  // Public method to handle transactions
-  async withTransaction<T>(
-    storeName: string | string[], 
-    mode: IDBTransactionMode, 
-    callback: (store: IDBObjectStore) => Promise<T> | T
-  ): Promise<T> {
-    if (!this.db) {
-      throw new Error('Database not initialized');
+  private createStores(db: IDBDatabase) {
+    // Companies store
+    if (!db.objectStoreNames.contains(STORE_NAMES.COMPANIES)) {
+      const store = db.createObjectStore(STORE_NAMES.COMPANIES, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.COMPANY_BY_NAME, 'name', { unique: true });
+      // Optional: support finding by code if present in the schema
+      try {
+        store.createIndex('by_code', 'code', { unique: false });
+      } catch (_) {
+        // ignore if index already exists
+      }
     }
 
-    const storeNames = Array.isArray(storeName) ? storeName : [storeName];
-    const transaction = this.db.transaction(storeNames, mode);
-    
+    // Vessels store
+    if (!db.objectStoreNames.contains(STORE_NAMES.VESSELS)) {
+      const store = db.createObjectStore(STORE_NAMES.VESSELS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.VESSEL_BY_NAME, 'name', { unique: false });
+      store.createIndex(INDEX_NAMES.VESSEL_BY_IMO, 'imoNumber', { unique: true });
+      store.createIndex(INDEX_NAMES.VESSEL_BY_STATUS, 'status', { unique: false });
+      store.createIndex(INDEX_NAMES.VESSEL_BY_COMPANY, 'companyId', { unique: false });
+    }
+
+    // Seafarers store
+    if (!db.objectStoreNames.contains(STORE_NAMES.SEAFARERS)) {
+      const store = db.createObjectStore(STORE_NAMES.SEAFARERS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.SEAFARER_BY_NAME, ['personalInfo.lastName', 'personalInfo.firstName'], { unique: false });
+      store.createIndex(INDEX_NAMES.SEAFARER_BY_RANK, 'employment.rank', { unique: false });
+      store.createIndex(INDEX_NAMES.SEAFARER_BY_STATUS, 'employment.status', { unique: false });
+      store.createIndex(INDEX_NAMES.SEAFARER_BY_VESSEL, 'employment.currentVesselId', { unique: false });
+      store.createIndex(INDEX_NAMES.SEAFARER_BY_COMPANY, 'companyId', { unique: false });
+    }
+
+    // Crew Assignments store (renamed from crew_changes)
+    if (!db.objectStoreNames.contains(STORE_NAMES.CREW_ASSIGNMENTS)) {
+      const store = db.createObjectStore(STORE_NAMES.CREW_ASSIGNMENTS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_SEAFARER, 'seafarerId', { unique: false });
+      store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_VESSEL, 'vesselId', { unique: false });
+      store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_STATUS, 'status', { unique: false });
+      store.createIndex(INDEX_NAMES.CREW_ASSIGNMENT_BY_DATE_RANGE, ['startDate', 'endDate'], { unique: false });
+    }
+
+    // Payrolls store
+    if (!db.objectStoreNames.contains(STORE_NAMES.PAYROLLS)) {
+      const store = db.createObjectStore(STORE_NAMES.PAYROLLS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.PAYROLL_BY_SEAFARER, 'seafarerId', { unique: false });
+      store.createIndex(INDEX_NAMES.PAYROLL_BY_VESSEL, 'vesselId', { unique: false });
+      store.createIndex(INDEX_NAMES.PAYROLL_BY_PERIOD, ['periodStart', 'periodEnd'], { unique: false });
+      store.createIndex(INDEX_NAMES.PAYROLL_BY_STATUS, 'status', { unique: false });
+    }
+
+    // Documents store
+    if (!db.objectStoreNames.contains(STORE_NAMES.DOCUMENTS)) {
+      const store = db.createObjectStore(STORE_NAMES.DOCUMENTS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.DOCUMENT_BY_TYPE, 'type', { unique: false });
+      store.createIndex(INDEX_NAMES.DOCUMENT_BY_ENTITY, ['relatedTo.entityType', 'relatedTo.entityId'], { unique: false });
+      store.createIndex(INDEX_NAMES.DOCUMENT_BY_EXPIRY, 'expiryDate', { unique: false });
+    }
+
+    // Notifications store
+    if (!db.objectStoreNames.contains(STORE_NAMES.NOTIFICATIONS)) {
+      const store = db.createObjectStore(STORE_NAMES.NOTIFICATIONS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.NOTIFICATION_BY_READ_STATUS, 'read', { unique: false });
+      store.createIndex(INDEX_NAMES.NOTIFICATION_BY_DATE, 'createdAt', { unique: false });
+      store.createIndex(INDEX_NAMES.NOTIFICATION_BY_TYPE, 'type', { unique: false });
+    }
+
+    // Applicants store
+    if (!db.objectStoreNames.contains(STORE_NAMES.APPLICANTS)) {
+      const store = db.createObjectStore(STORE_NAMES.APPLICANTS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.APPLICANT_BY_COMPANY, 'companyId', { unique: false });
+      store.createIndex(INDEX_NAMES.APPLICANT_BY_STATUS, 'application.status', { unique: false });
+      store.createIndex(INDEX_NAMES.APPLICANT_BY_POSITION, 'application.position', { unique: false });
+    }
+
+    // Certificates store
+    if (!db.objectStoreNames.contains(STORE_NAMES.CERTIFICATES)) {
+      const store = db.createObjectStore(STORE_NAMES.CERTIFICATES, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.CERTIFICATE_BY_SEAFARER, 'seafarerId', { unique: false });
+      store.createIndex(INDEX_NAMES.CERTIFICATE_BY_TYPE, 'type', { unique: false });
+      store.createIndex(INDEX_NAMES.CERTIFICATE_BY_STATUS, 'status', { unique: false });
+      store.createIndex(INDEX_NAMES.CERTIFICATE_BY_EXPIRY, 'expiryDate', { unique: false });
+    }
+
+    // Ranks store
+    if (!db.objectStoreNames.contains(STORE_NAMES.RANKS)) {
+      const store = db.createObjectStore(STORE_NAMES.RANKS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.RANK_BY_COMPANY, 'companyId', { unique: false });
+      store.createIndex(INDEX_NAMES.RANK_BY_DEPARTMENT, 'department', { unique: false });
+    }
+
+    // Payroll Settings store
+    if (!db.objectStoreNames.contains(STORE_NAMES.PAYROLL_SETTINGS)) {
+      const store = db.createObjectStore(STORE_NAMES.PAYROLL_SETTINGS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.PAYROLL_SETTINGS_BY_COMPANY, 'companyId', { unique: true });
+    }
+
+    // Company Settings store
+    if (!db.objectStoreNames.contains(STORE_NAMES.COMPANY_SETTINGS)) {
+      const store = db.createObjectStore(STORE_NAMES.COMPANY_SETTINGS, { keyPath: 'id' });
+      store.createIndex(INDEX_NAMES.COMPANY_SETTINGS_BY_COMPANY, 'companyId', { unique: true });
+    }
+  }
+
+  // Generic CRUD Operations
+  private async withTransaction<T>(
+    storeNames: string | string[],
+    mode: IDBTransactionMode,
+    callback: (tx: IDBTransaction) => Promise<T> | T
+  ): Promise<T> {
+    if (!this.db) {
+      throw new Error('Database not initialized. Call init() first.');
+    }
+
+    const tx = this.db.transaction(storeNames, mode);
+
     return new Promise((resolve, reject) => {
-      transaction.onerror = () => reject(transaction.error);
-      transaction.onabort = () => reject(new Error('Transaction aborted'));
-      
+      tx.oncomplete = () => {};
+      tx.onerror = () => reject(tx.error);
+
       try {
-        const store = transaction.objectStore(storeNames[0]);
-        const result = callback(store);
-        
+        const result = callback(tx);
         if (result instanceof Promise) {
           result.then(resolve).catch(reject);
         } else {
@@ -336,618 +193,283 @@ class SeafarerDatabase {
     });
   }
 
-  // Generic CRUD operations
-  async create<T extends { id: string; createdAt: string; updatedAt: string }>(
-    storeName: string,
-    data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>,
-    transaction?: IDBTransaction
-  ): Promise<T> {
+  private async addTimestamps<T extends BaseEntity>(entity: Omit<T, 'id' | 'createdAt' | 'updatedAt'>): Promise<T> {
     const now = new Date().toISOString();
-    const newItem = {
-      ...data,
+    return {
+      ...entity,
       id: uuidv4(),
       createdAt: now,
       updatedAt: now,
     } as T;
+  }
 
-    if (transaction) {
-      const store = transaction.objectStore(storeName);
-      await new Promise<void>((resolve, reject) => {
-        const request = store.add(newItem);
-        request.onsuccess = () => resolve();
+  // Create
+  async create<T extends BaseEntity>(
+    storeName: string,
+    data: Omit<T, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<T> {
+    return this.withTransaction(storeName, 'readwrite', async (tx) => {
+      const store = tx.objectStore(storeName);
+      const entity = await this.addTimestamps<T>(data);
+
+      return new Promise((resolve, reject) => {
+        const request = store.add(entity);
+        request.onsuccess = () => resolve(entity);
         request.onerror = () => reject(request.error);
       });
-    } else {
-      await this.withTransaction(storeName, 'readwrite', (store) => {
-        return new Promise<void>((resolve, reject) => {
-          const request = store.add(newItem);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      });
+    });
+  }
+
+  /**
+   * Get an entity by its ID with proper type safety
+   * @param storeName - The name of the object store
+   * @param id - The ID of the entity to retrieve
+   * @returns A promise that resolves to the entity or null if not found
+   */
+  async getById<T extends BaseEntity>(storeName: string, id: string): Promise<T | null> {
+    if (!id) {
+      console.warn(`Attempted to get ${storeName} with empty ID`);
+      return null;
     }
 
-    return newItem;
+    try {
+      return await this.withTransaction<T | null>(storeName, 'readonly', (tx) => {
+        const store = tx.objectStore(storeName);
+
+        return new Promise((resolve, reject) => {
+          const request = store.get(id);
+
+          request.onsuccess = () => {
+            const result = request.result;
+            if (!result) {
+              resolve(null);
+              return;
+            }
+
+            // Ensure we have a valid ID and timestamps
+            const entity = {
+              ...result,
+              id: result.id || id,
+              createdAt: result.createdAt || new Date().toISOString(),
+              updatedAt: result.updatedAt || new Date().toISOString(),
+              companyId: result.companyId || '' // Ensure companyId exists for type safety
+            } as T;
+
+            resolve(entity);
+          };
+
+          request.onerror = () => {
+            console.error(`Error getting ${storeName} with id ${id}:`, request.error);
+            reject(request.error);
+          };
+        });
+      });
+    } catch (error) {
+      console.error(`Failed to get ${storeName} with id ${id}:`, error);
+      return null;
+    }
   }
 
-  async getById<T>(storeName: string, id: string): Promise<T | null> {
-    return this.withTransaction(storeName, 'readonly', (store) => {
-      return new Promise<T | null>((resolve, reject) => {
-        const request = (store as IDBObjectStore).get(id);
-        request.onsuccess = () => resolve(request.result || null);
+  async getAll<T extends BaseEntity>(storeName: string): Promise<T[]> {
+    return this.withTransaction(storeName, 'readonly', (tx) => {
+      const store = tx.objectStore(storeName);
+
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+        request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
     });
   }
 
-  async getAll<T>(storeName: string): Promise<T[]> {
-    return this.withTransaction(storeName, 'readonly', (store) => {
-      return new Promise<T[]>((resolve, reject) => {
-        const request = (store as IDBObjectStore).getAll();
-        request.onsuccess = () => resolve(request.result || []);
-        request.onerror = () => reject(request.error);
-      });
-    });
-  }
+  async getByIndex<T extends BaseEntity>(
+    storeName: string,
+    indexName: string,
+    value: any
+  ): Promise<T[]> {
+    return this.withTransaction(storeName, 'readonly', (tx) => {
+      const store = tx.objectStore(storeName);
+      const index = store.index(indexName);
 
-  async getByIndex<T>(storeName: string, indexName: string, value: any): Promise<T[]> {
-    return this.withTransaction(storeName, 'readonly', (store) => {
-      return new Promise<T[]>((resolve, reject) => {
-        const index = (store as IDBObjectStore).index(indexName);
+      return new Promise((resolve, reject) => {
         const request = index.getAll(value);
-        request.onsuccess = () => resolve(request.result || []);
+        request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
     });
   }
 
-  async update<T extends { id: string; updatedAt: string }>(
+  // Update
+  async update<T extends BaseEntity>(
     storeName: string,
     id: string,
-    updates: Partial<T>,
-    transaction?: IDBTransaction
+    updates: Partial<Omit<T, 'id' | 'createdAt' | 'updatedAt'>>
   ): Promise<T> {
-    const existing = await this.getById<T>(storeName, id);
-    if (!existing) {
-      throw new Error(`Item with id ${id} not found in ${storeName}`);
-    }
+    return this.withTransaction(storeName, 'readwrite', async (tx) => {
+      const store = tx.objectStore(storeName);
 
-    const updatedItem = {
-      ...existing,
-      ...updates,
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (transaction) {
-      const store = transaction.objectStore(storeName);
-      await new Promise<void>((resolve, reject) => {
-        const request = store.put(updatedItem);
-        request.onsuccess = () => resolve();
+      // Get the existing entity
+      const existing = await new Promise<T>((resolve, reject) => {
+        const request = store.get(id);
+        request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
-    } else {
-      await this.withTransaction(storeName, 'readwrite', (store) => {
-        return new Promise<void>((resolve, reject) => {
-          const request = store.put(updatedItem);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      });
-    }
 
-    return updatedItem;
+      if (!existing) {
+        throw new Error(`${storeName} with id ${id} not found`);
+      }
+
+      // Update the entity
+      const updated = {
+        ...existing,
+        ...updates,
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Save the updated entity
+      return new Promise((resolve, reject) => {
+        const request = store.put(updated);
+        request.onsuccess = () => resolve(updated);
+        request.onerror = () => reject(request.error);
+      });
+    });
   }
 
-  async delete(storeName: string, id: string, transaction?: IDBTransaction): Promise<void> {
-    if (transaction) {
-      const store = transaction.objectStore(storeName);
-      await new Promise<void>((resolve, reject) => {
+  // Delete
+  async delete(storeName: string, id: string): Promise<void> {
+    return this.withTransaction(storeName, 'readwrite', (tx) => {
+      const store = tx.objectStore(storeName);
+
+      return new Promise((resolve, reject) => {
         const request = store.delete(id);
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       });
-    } else {
-      await this.withTransaction(storeName, 'readwrite', (store) => {
-        return new Promise<void>((resolve, reject) => {
-          const request = store.delete(id);
-          request.onsuccess = () => resolve();
-          request.onerror = () => reject(request.error);
-        });
-      });
-    }
-  }
-
-  // Transaction support
-  transaction(storeNames: string | string[], mode: IDBTransactionMode = 'readonly'): {
-    objectStore: (name: string) => IDBObjectStore;
-    commit: () => Promise<void>;
-    abort: () => void;
-  } {
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
-    const tx = this.db.transaction(storeNames, mode);
-    const stores = new Map<string, IDBObjectStore>();
-    
-    (Array.isArray(storeNames) ? storeNames : [storeNames]).forEach(name => {
-      stores.set(name, tx.objectStore(name));
-    });
-
-    return {
-      objectStore: (name: string) => {
-        const store = stores.get(name);
-        if (!store) {
-          throw new Error(`Store ${name} not part of this transaction`);
-        }
-        return store;
-      },
-      commit: () => {
-        return new Promise<void>((resolve, reject) => {
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-          tx.onabort = () => reject(tx.error || new Error('Transaction aborted'));
-        });
-      },
-      abort: () => {
-        tx.abort();
-      },
-    };
-  }
-
-  // Notification methods
-  async createNotification(data: Omit<Notification, 'id' | 'createdAt' | 'updatedAt' | 'timestamp'> & { 
-    message: string;
-    metadata: NotificationMetadata;
-  }): Promise<Notification> {
-    const now = new Date().toISOString();
-    const notification: Notification = {
-      ...data,
-      id: uuidv4(),
-      timestamp: now,
-      createdAt: now,
-      updatedAt: now,
-      read: false,
-      badge: '',
-      body: data.message,
-      data: {},
-      dir: 'auto',
-      icon: '',
-      image: '',
-      lang: 'en',
-      renotify: false,
-      requireInteraction: false,
-      silent: false,
-      tag: '',
-      vibrate: [],
-      actions: [],
-    };
-    
-    await this.withTransaction('notifications', 'readwrite', (store) => {
-      return new Promise<void>((resolve, reject) => {
-        const request = store.add(notification);
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
-      });
-    });
-    
-    return notification;
-  }
-
-  async getNotification(id: string): Promise<Notification | null> {
-    return this.getById<Notification>('notifications', id);
-  }
-
-  async getNotificationsByCompany(companyId: string, options: { 
-    limit?: number; 
-    includeRead?: boolean;
-  } = {}): Promise<Notification[]> {
-    const { limit, includeRead = true } = options;
-    
-    return this.withTransaction('notifications', 'readonly', (store) => {
-      return new Promise<Notification[]>((resolve, reject) => {
-        const request = store.getAll();
-        request.onsuccess = () => {
-          try {
-            const notifications = request.result as Notification[];
-            const filtered = notifications
-              .filter(n => n.metadata?.companyId === companyId && (includeRead ? true : !n.read))
-              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-            
-            resolve(limit ? filtered.slice(0, limit) : filtered);
-          } catch (error) {
-            reject(error);
-          }
-        };
-        request.onerror = () => reject(request.error);
-      });
     });
   }
 
-  async getUnreadNotificationCount(companyId: string): Promise<number> {
-    const notifications = await this.getNotificationsByCompany(companyId, { includeRead: false });
-    return notifications.length;
-  }
-
-  async markNotificationAsRead(id: string): Promise<void> {
-    await this.withTransaction('notifications', 'readwrite', (store) => {
-      return new Promise<void>((resolve, reject) => {
-        const request = store.get(id);
-        request.onsuccess = () => {
-          const notification = request.result as Notification;
-          if (notification) {
-            notification.read = true;
-            notification.updatedAt = new Date().toISOString();
-            const updateRequest = store.put(notification);
-            updateRequest.onsuccess = () => resolve();
-            updateRequest.onerror = () => reject(updateRequest.error);
-          } else {
-            resolve();
-          }
-        };
-        request.onerror = () => reject(request.error);
-      });
-    });
-  }
-
-  async markAllNotificationsAsRead(companyId: string): Promise<void> {
-    const notifications = await this.getNotificationsByCompany(companyId, { includeRead: false });
-    
-    if (notifications.length === 0) return;
-    
-    await this.withTransaction('notifications', 'readwrite', (store) => {
-      return new Promise<void>((resolve, reject) => {
-        const now = new Date().toISOString();
-        const requests = notifications.map(notification => {
-          return new Promise<void>((innerResolve, innerReject) => {
-            const updated = { ...notification, read: true, updatedAt: now };
-            const request = store.put(updated);
-            request.onsuccess = () => innerResolve();
-            request.onerror = () => innerReject(request.error);
-          });
-        });
-        
-        Promise.all(requests)
-          .then(() => resolve())
-          .catch(error => reject(error));
-      });
-    });
-  }
-
+  // Type-safe methods for each entity type
   // Company methods
-  async createCompany(data: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<Company> {
-    return this.create<Company>('companies', data);
+  async createCompany(data: Omit<Company, keyof BaseEntity>): Promise<Company> {
+    return this.create<Company>(STORE_NAMES.COMPANIES, data);
   }
 
-  async updateCompany(id: string, updates: Partial<Company>): Promise<Company> {
-    return this.update<Company>('companies', id, {
-      ...updates,
-      updatedAt: new Date().toISOString()
-    });
+  async getCompany(id: string): Promise<Company | null> {
+    return this.getById<Company>(STORE_NAMES.COMPANIES, id);
   }
 
-  async getAllCompanies(): Promise<Company[]> {
-    return this.getAll<Company>('companies');
+  async updateCompany(id: string, updates: Partial<Omit<Company, keyof BaseEntity>>): Promise<Company> {
+    return this.update<Company>(STORE_NAMES.COMPANIES, id, updates);
   }
 
-  async getDashboardStats(): Promise<{
-    seafarers: { total: number; active: number; onboard: number; available: number };
-    vessels: { total: number; fullyManned: number; needCrew: number };
-    payroll: { monthlyTotal: number; recordsCount: number };
-  }> {
-    const [seafarers, vessels, payrolls, crewAssignments] = await Promise.all([
-      this.getAll<Seafarer>('seafarers'),
-      this.getAll<Vessel>('vessels'),
-      this.getAll<PayrollRecord>('payroll'),
-      this.getAll<CrewAssignment>('crew_assignments')
-    ]);
-
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    // Calculate monthly payroll
-    const monthlyPayroll = payrolls.reduce((total, record) => {
-      const recordDate = new Date(record.period.start);
-      if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
-        return total + record.netSalary;
-      }
-      return total;
-    }, 0);
-
-    // Calculate seafarer stats
-    const seafarerStats = {
-      total: seafarers.length,
-      active: seafarers.filter(s => s.employment.status === 'active').length,
-      onboard: seafarers.filter(s => s.employment.status === 'active' && s.employment.currentVessel).length,
-      available: seafarers.filter(s => s.employment.status === 'available').length
-    };
-
-    // Calculate vessel stats based on active crew assignments
-    const activeAssignmentsByVessel = new Map<string, number>();
-    crewAssignments
-      .filter(a => a.status === 'active')
-      .forEach(a => {
-        activeAssignmentsByVessel.set(
-          a.vesselId,
-          (activeAssignmentsByVessel.get(a.vesselId) || 0) + 1
-        );
-      });
-
-    // Consider vessels with 0 active assignments as needing crew
-    const needCrew = vessels.filter(v => (activeAssignmentsByVessel.get(v.id) || 0) === 0).length;
-    const vesselStats = {
-      total: vessels.length,
-      fullyManned: Math.max(0, vessels.length - needCrew),
-      needCrew,
-    };
-
-    return {
-      seafarers: seafarerStats,
-      vessels: vesselStats,
-      payroll: {
-        monthlyTotal: monthlyPayroll,
-        recordsCount: payrolls.length
-      }
-    };
-  }
-
-  // Seafarer methods
-  async createSeafarer(data: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'>): Promise<Seafarer> {
-    return this.create<Seafarer>('seafarers', data);
-  }
-
-  async updateSeafarer(id: string, updates: Partial<Seafarer>): Promise<Seafarer> {
-    return this.update<Seafarer>('seafarers', id, updates);
-  }
-
-  async getSeafarersByCompany(companyId: string): Promise<Seafarer[]> {
-    return this.getByIndex<Seafarer>('seafarers', 'companyId', companyId);
-  }
-
-  async getSeafarersByStatus(status: string): Promise<Seafarer[]> {
-    return this.getByIndex<Seafarer>('seafarers', 'status', status);
-  }
-
-  async getSeafarersByRank(rank: string): Promise<Seafarer[]> {
-    return this.getByIndex<Seafarer>('seafarers', 'rank', rank);
+  async deleteCompany(id: string): Promise<void> {
+    return this.delete(STORE_NAMES.COMPANIES, id);
   }
 
   // Vessel methods
-  async createVessel(data: Omit<Vessel, 'id' | 'createdAt' | 'updatedAt'>): Promise<Vessel> {
-    return this.create<Vessel>('vessels', data);
+  async createVessel(data: Omit<Vessel, keyof BaseEntity>): Promise<Vessel> {
+    return this.create<Vessel>(STORE_NAMES.VESSELS, data);
   }
 
-  async updateVessel(id: string, updates: Partial<Vessel>): Promise<Vessel> {
-    return this.update<Vessel>('vessels', id, updates);
+  async getVessel(id: string): Promise<Vessel | null> {
+    return this.getById<Vessel>(STORE_NAMES.VESSELS, id);
   }
 
   async getVesselsByCompany(companyId: string): Promise<Vessel[]> {
-    return this.getByIndex<Vessel>('vessels', 'companyId', companyId);
+    return this.getByIndex<Vessel>(
+      STORE_NAMES.VESSELS,
+      INDEX_NAMES.VESSEL_BY_COMPANY,
+      companyId
+    );
   }
 
-  // Payroll methods
-  async createPayrollRecord(data: Omit<PayrollRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<PayrollRecord> {
-    return this.create<PayrollRecord>('payroll', data);
+  // Seafarer methods
+  async createSeafarer(data: Omit<Seafarer, keyof BaseEntity>): Promise<Seafarer> {
+    return this.create<Seafarer>(STORE_NAMES.SEAFARERS, data);
   }
 
-  async getPayrollByCompany(companyId: string): Promise<PayrollRecord[]> {
-    return this.getByIndex<PayrollRecord>('payroll', 'companyId', companyId);
+  async getSeafarer(id: string): Promise<Seafarer | null> {
+    return this.getById<Seafarer>(STORE_NAMES.SEAFARERS, id);
   }
 
-  async getPayrollBySeafarer(seafarerId: string): Promise<PayrollRecord[]> {
-    return this.getByIndex<PayrollRecord>('payroll', 'seafarerId', seafarerId);
+  async getSeafarersByCompany(companyId: string): Promise<Seafarer[]> {
+    return this.getByIndex<Seafarer>(
+      STORE_NAMES.SEAFARERS,
+      INDEX_NAMES.SEAFARER_BY_COMPANY,
+      companyId
+    );
   }
 
-  // Crew assignment methods
-  async createCrewAssignment(data: Omit<CrewAssignment, 'id' | 'createdAt' | 'updatedAt'>): Promise<CrewAssignment> {
-    return this.create<CrewAssignment>('crew_assignments', data);
-  }
-
-  async getCrewAssignmentsByVessel(vesselId: string): Promise<CrewAssignment[]> {
-    return this.getByIndex<CrewAssignment>('crew_assignments', 'vesselId', vesselId);
+  // Crew Assignment methods
+  async createCrewAssignment(data: Omit<CrewAssignment, keyof BaseEntity>): Promise<CrewAssignment> {
+    return this.create<CrewAssignment>(STORE_NAMES.CREW_ASSIGNMENTS, data);
   }
 
   async getCrewAssignmentsBySeafarer(seafarerId: string): Promise<CrewAssignment[]> {
-    return this.getByIndex<CrewAssignment>('crew_assignments', 'seafarerId', seafarerId);
+    return this.getByIndex<CrewAssignment>(
+      STORE_NAMES.CREW_ASSIGNMENTS,
+      INDEX_NAMES.CREW_ASSIGNMENT_BY_SEAFARER,
+      seafarerId
+    );
   }
 
-  // Sample data generation
-  async generateSampleData(): Promise<void> {
-    const companies = await this.getAll<Company>('companies');
-    if (companies.length > 0) return; // Already has data
+  async getCrewAssignmentsByVessel(vesselId: string): Promise<CrewAssignment[]> {
+    return this.getByIndex<CrewAssignment>(
+      STORE_NAMES.CREW_ASSIGNMENTS,
+      INDEX_NAMES.CREW_ASSIGNMENT_BY_VESSEL,
+      vesselId
+    );
+  }
 
-    // Create sample companies
-    const sampleCompanies = [
-      {
-        name: 'Ocean Maritime Holdings',
-        code: 'OMH',
-        address: {
-          street: '123 Harbor Drive',
-          city: 'Singapore',
-          country: 'Singapore',
-          postalCode: '018956'
-        },
-        contact: {
-          email: 'info@oceanmaritime.com',
-          phone: '+65 6123 4567',
-          website: 'https://oceanmaritime.com'
-        },
-        settings: {
-          currency: 'USD',
-          timezone: 'Asia/Singapore',
-          fiscalYearStart: '01-01'
-        }
-      },
-      {
-        name: 'Pacific Shipping Corporation',
-        code: 'PSC',
-        address: {
-          street: '456 Port Boulevard',
-          city: 'Hong Kong',
-          country: 'Hong Kong',
-          postalCode: '000000'
-        },
-        contact: {
-          email: 'contact@pacificshipping.hk',
-          phone: '+852 2345 6789',
-          website: 'https://pacificshipping.hk'
-        },
-        settings: {
-          currency: 'USD',
-          timezone: 'Asia/Hong_Kong',
-          fiscalYearStart: '04-01'
-        }
-      }
-    ];
+  // Payroll methods
+  async createPayroll(data: Omit<Payroll, keyof BaseEntity>): Promise<Payroll> {
+    return this.create<Payroll>(STORE_NAMES.PAYROLLS, data);
+  }
 
-    const createdCompanies = await Promise.all(
-      sampleCompanies.map(company => this.createCompany(company))
+  // Document methods
+  async createDocument(data: Omit<Document, keyof BaseEntity>): Promise<Document> {
+    return this.create<Document>(STORE_NAMES.DOCUMENTS, data);
+  }
+
+  // Notification methods
+  async createNotification(data: Omit<Notification, keyof BaseEntity>): Promise<Notification> {
+    return this.create<Notification>(STORE_NAMES.NOTIFICATIONS, {
+      ...data,
+      read: false,
+    });
+  }
+
+  async getUnreadNotifications(companyId: string): Promise<Notification[]> {
+    const notifications = await this.getByIndex<Notification>(
+      STORE_NAMES.NOTIFICATIONS,
+      INDEX_NAMES.NOTIFICATION_BY_READ_STATUS,
+      false
     );
 
-    // Create sample vessels for each company
-    const sampleVessels = [
-      {
-        companyId: createdCompanies[0].id,
-        name: 'MV Ocean Pride',
-        type: 'Container Ship',
-        imoNumber: '9123456',
-        flag: 'Singapore',
-        yearBuilt: 2018,
-        grossTonnage: 50000,
-        netTonnage: 30000,
-        lengthOverall: 200,
-        beam: 32,
-        draft: 12,
-        dwt: 65000,
-        portOfRegistry: 'Singapore',
-        documents: []
-      },
-      {
-        companyId: createdCompanies[0].id,
-        name: 'MV Baltic Star',
-        type: 'Bulk Carrier',
-        imoNumber: '9123457',
-        flag: 'Panama',
-        yearBuilt: 2020,
-        grossTonnage: 45000,
-        netTonnage: 25000,
-        lengthOverall: 190,
-        beam: 30,
-        draft: 11,
-        dwt: 60000,
-        portOfRegistry: 'Panama',
-        documents: []
-      },
-      {
-        companyId: createdCompanies[1].id,
-        name: 'MV Pacific Dawn',
-        type: 'Tanker',
-        imoNumber: '9123458',
-        flag: 'Hong Kong',
-        yearBuilt: 2019,
-        grossTonnage: 55000,
-        netTonnage: 35000,
-        lengthOverall: 220,
-        beam: 35,
-        draft: 13,
-        dwt: 70000,
-        portOfRegistry: 'Hong Kong',
-        documents: []
-      }
-    ];
+    return notifications.filter(n => n.companyId === companyId);
+  }
 
-    await Promise.all(sampleVessels.map(vessel => this.createVessel(vessel)));
+  async markNotificationAsRead(id: string): Promise<void> {
+    await this.update<Notification>(STORE_NAMES.NOTIFICATIONS, id, { read: true });
+  }
 
-    // Create sample seafarers
-    const sampleSeafarers = [
-      {
-        companyId: createdCompanies[0].id,
-        personalInfo: {
-          firstName: 'John',
-          lastName: 'Smith',
-          email: 'john.smith@oceanmaritime.com',
-          phone: '+1234567890',
-          nationality: 'British',
-          dateOfBirth: '1985-03-15',
-          passportNumber: 'GB123456789',
-          seamanBook: 'SB123456'
-        },
-        qualifications: {
-          rank: 'Captain',
-          certificates: [
-            {
-              id: uuidv4(),
-              name: 'STCW Certificate',
-              number: 'STCW123456',
-              issuedDate: '2020-01-15',
-              expiryDate: '2025-01-15',
-              issuingAuthority: 'UK MCA'
-            }
-          ]
-        },
-        employment: {
-          status: 'active' as const,
-          currentVessel: 'MV Ocean Pride',
-          position: 'Captain',
-          contractStart: '2024-01-01',
-          contractEnd: '2024-06-30',
-          dayOffDue: 45
-        },
-        financial: {
-          bankName: 'HSBC Singapore',
-          accountNumber: '123456789',
-          iban: 'SG1234567890123456',
-          swiftCode: 'HSBCSGSG',
-          currency: 'USD',
-          basicWage: 12000,
-          overtimeRate: 25
-        }
-      },
-      {
-        companyId: createdCompanies[0].id,
-        personalInfo: {
-          firstName: 'Maria',
-          lastName: 'Garcia',
-          email: 'maria.garcia@oceanmaritime.com',
-          phone: '+1234567891',
-          nationality: 'Filipino',
-          dateOfBirth: '1990-07-22',
-          passportNumber: 'PH987654321',
-          seamanBook: 'SB789123'
-        },
-        qualifications: {
-          rank: 'Chief Engineer',
-          certificates: [
-            {
-              id: uuidv4(),
-              name: 'Engineering Watch Rating',
-              number: 'EWR789123',
-              issuedDate: '2019-03-10',
-              expiryDate: '2024-03-10',
-              issuingAuthority: 'MARINA Philippines'
-            }
-          ]
-        },
-        employment: {
-          status: 'available' as const,
-          position: 'Chief Engineer',
-          dayOffDue: 30
-        },
-        financial: {
-          bankName: 'BPI Philippines',
-          accountNumber: '987654321',
-          currency: 'USD',
-          basicWage: 8500,
-          overtimeRate: 20
-        }
-      }
-    ];
+  // Applicant methods
+  async createApplicant(data: Omit<Applicant, keyof BaseEntity>): Promise<Applicant> {
+    return this.create<Applicant>(STORE_NAMES.APPLICANTS, data);
+  }
 
-    await Promise.all(sampleSeafarers.map(seafarer => this.createSeafarer(seafarer)));
+  async getApplicantsByCompany(companyId: string): Promise<Applicant[]> {
+    return this.getByIndex<Applicant>(STORE_NAMES.APPLICANTS, INDEX_NAMES.APPLICANT_BY_COMPANY, companyId);
+  }
 
-    console.log('Sample data generated successfully');
+  async updateApplicant(id: string, updates: Partial<Omit<Applicant, keyof BaseEntity>>): Promise<Applicant> {
+    return this.update<Applicant>(STORE_NAMES.APPLICANTS, id, updates);
+  }
+
+  async deleteApplicant(id: string): Promise<void> {
+    return this.delete(STORE_NAMES.APPLICANTS, id);
   }
 }
 
-export const db = SeafarerDatabase.getInstance();
+// Export a singleton instance
+export const db = DatabaseService.getInstance();

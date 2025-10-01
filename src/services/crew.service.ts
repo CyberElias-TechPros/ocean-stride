@@ -1,5 +1,5 @@
-import { db } from '@/lib/database2';
-import { STORE_NAMES } from '@/lib/schemas';
+import { db } from '@/lib/database';
+import { STORE_NAMES } from '@/lib/schemas_v2';
 import { 
   CrewAssignment, 
   crewAssignmentSchema,

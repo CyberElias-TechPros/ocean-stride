@@ -6,7 +6,6 @@ import {
   type Company,
   type Vessel,
   type Seafarer,
-  type CrewChange,
   type Payroll,
   type Document,
   type Notification,
@@ -14,11 +13,11 @@ import {
   type Certificate,
   type Rank,
   type CrewAssignment,
-  type PayrollSettings,
   type CompanySettings
 } from './schemas_v2';
+import { CrewChange } from './schemas';
 
-class DatabaseServiceV2 {
+export class DatabaseServiceV2 {
   private static instance: DatabaseServiceV2;
   private db: IDBDatabase | null = null;
   private dbName = 'OceanStrideDB_v3'; // Incremented version
@@ -455,10 +454,18 @@ class DatabaseServiceV2 {
             level: 1,
             baseSalary: seafarer.employment.baseWage || 0,
             currency: seafarer.employment.wageCurrency || 'USD',
-            isOfficer: seafarer.employment.rank.toLowerCase().includes('officer') || 
-                       seafarer.employment.rank.toLowerCase().includes('captain') ||
-                       seafarer.employment.rank.toLowerCase().includes('chief'),
-            companyId: seafarer.companyId
+            isOfficer: seafarer.employment.rank.toLowerCase().includes('officer') ||
+              seafarer.employment.rank.toLowerCase().includes('captain') ||
+              seafarer.employment.rank.toLowerCase().includes('chief'),
+            companyId: seafarer.companyId,
+            code: '',
+            overtimeRates: {
+              regular: 0,
+              weekend: 0,
+              holiday: 0
+            },
+            allowances: [],
+            certificateRequirements: []
           };
           
           const newRank = await this.create(STORE_NAMES.RANKS, defaultRank);
@@ -578,10 +585,11 @@ class DatabaseServiceV2 {
       defaultVesselRotationDays: 30,
       defaultLeaveDays: 30,
       notificationSettings: {
-        certificateExpiryDays: 30,
-        contractExpiryDays: 30,
-        sendEmail: true,
-        sendSMS: false
+        certificateExpiryWarnings: 30,
+        contractExpiry: 30,
+        emailNotifications: true,
+        sendSMS: false,
+        pushNotifications: false
       },
       documentSettings: {
         requiredCertificates: [],

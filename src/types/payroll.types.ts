@@ -1,11 +1,11 @@
 import { BaseEntity } from '@/lib/schemas_v2';
 
-export type PayrollStatus = 'draft' | 'pending' | 'approved' | 'paid' | 'cancelled';
+export type PayrollStatus = 'draft' | 'pending_approval' | 'approved' | 'paid' | 'cancelled' | 'failed';
 export type PaymentMethod = 'bank_transfer' | 'cash' | 'check' | 'other';
 
 export interface PayrollItem {
   id?: string;
-  type: 'salary' | 'overtime' | 'bonus' | 'allowance' | 'deduction' | 'reimbursement' | 'other';
+  type: 'salary' | 'overtime' | 'bonus' | 'allowance' | 'deduction' | 'reimbursement' | 'other' | 'tax';
   description: string;
   amount: number;
   quantity?: number;

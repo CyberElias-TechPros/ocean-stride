@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/use-toast';
+import authService from '@/lib/api/authService';
 
 const ResetPasswordPage: React.FC = () => {
   const [password, setPassword] = useState('');
@@ -36,6 +37,25 @@ const ResetPasswordPage: React.FC = () => {
       return;
     }
 
+    // Password strength validation
+    if (password.length < 8) {
+      toast({
+        title: 'Error',
+        description: 'Password must be at least 8 characters long',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      toast({
+        title: 'Error',
+        description: 'Password must contain at least one uppercase letter, one lowercase letter, and one number',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (!token) {
       toast({
         title: 'Error',
@@ -47,19 +67,19 @@ const ResetPasswordPage: React.FC = () => {
 
     try {
       setIsLoading(true);
-      // TODO: Replace with actual API call to reset password
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+
+      await authService.resetPassword(token!, password);
+
       toast({
         title: 'Success',
         description: 'Your password has been reset successfully.',
       });
-      
+
       // Redirect to login after a short delay
       setTimeout(() => {
         navigate('/login');
       }, 1500);
-      
+
     } catch (error) {
       console.error('Password reset failed:', error);
       toast({

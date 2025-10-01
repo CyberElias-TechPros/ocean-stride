@@ -1,48 +1,158 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+
+// UI Components
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useToast } from '@/hooks/use-toast';
-import { 
-  Search, Plus, Users, MoreHorizontal, User, Mail, Phone, 
-  Edit, Trash2, Ship, Download, Briefcase, FileCheck, Wallet
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/components/ui/use-toast';
+
+// Icons
+import {
+  MoreHorizontal,
+  Plus,
+  Search,
+  User,
+  Briefcase,
+  FileText,
+  ArrowUpDown,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  AlertCircle,
+  Users,
+  Mail,
+  Phone,
+  Edit,
+  Trash2,
+  Ship,
+  Download,
+  FileCheck,
+  Wallet
 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { format, addDays } from 'date-fns';
-import { db } from '@/lib/database2';
-import type { Seafarer, Certificate, Vessel, BaseEntity } from '@/lib/schemas_v2';
-import { STORE_NAMES, INDEX_NAMES } from '@/lib/schemas_v2';
+
+// Context & Hooks
 import { useCompany } from '@/context/CompanyContext';
+import { usePersonnel } from '@/context/PersonnelContext';
+import { useNotifications } from '@/hooks/useNotifications';
+
+// Database
+import { db } from '@/lib/database';
+import { STORE_NAMES, INDEX_NAMES } from '@/lib/schemas_v2';
+
+// Types & Schemas
+import type {
+  CrewAssignment as Assignment,
+  Rank,
+  Payroll,
+  AssignmentStatus,
+  PayrollStatus,
+  PayrollItem,
+  Seafarer,
+  SeafarerWithDetails,
+  Vessel,
+  BaseEntity,
+  Certificate
+} from '@/types';
+
+// Utils & Constants
+import {
+  assignmentStatusOptions,
+  payrollStatusOptions,
+  formatCurrency,
+  formatDate,
+  formatDateTime,
+  AssignmentFormData,
+  PayrollFormData,
+  assignmentFormSchema,
+  payrollFormSchema,
+  prepareAssignmentForSubmission,
+  preparePayrollForSubmission,
+  defaultAssignmentFormData,
+  defaultPayrollFormData
+} from '@/lib/utils/formUtils';
+
+// Export utility
+import { exportToCSV } from '@/lib/utils/exportUtils';
+
+// Components
 import { AssignmentForm } from '@/components/assignment/AssignmentForm';
 import { PayrollForm } from '@/components/payroll/PayrollForm';
-import { z } from 'zod';
-import type { CrewAssignment, Payroll, AssignmentStatus, PayrollStatus, PayrollItem } from '@/types';
+import { CertificateForm } from '@/components/certificate/CertificateForm';
 
-type SeafarerWithDetails = Seafarer & BaseEntity & {
-  certificates?: Certificate[];
-  currentAssignment?: (CrewAssignment & BaseEntity) | null;
-  rankDetails?: (Rank & BaseEntity) | null;
-  vesselDetails?: (Vessel & BaseEntity) | null;
-  assignments?: (CrewAssignment & BaseEntity)[];
-  payrolls?: (Payroll & BaseEntity)[];
-  personalInfo?: {
-    firstName: string;
-    lastName: string;
-    email: string;
-    phone?: string;
-  };
+// Type definitions for the component props and state
+type PersonnelV2Props = {
+  // Add any props if needed
 };
 
-type AssignmentWithDetails = CrewAssignment & BaseEntity & {
-  seafarerDetails?: Seafarer & BaseEntity;
-  vesselDetails?: Vessel & BaseEntity;
-  rankDetails?: Rank & BaseEntity;
+type PersonnelV2State = {
+  searchQuery: string;
+  statusFilter: string;
+  activeTab: string;
+  showAssignmentDialog: boolean;
+  showPayrollDialog: boolean;
+  assignmentFormData: AssignmentFormData | null;
+  payrollFormData: PayrollFormData | null;
+  selectedSeafarer: SeafarerWithDetails | null;
+  selectedAssignment: Assignment | null;
+  selectedPayroll: Payroll | null;
+};
+
+// Status badge component for assignments
+const AssignmentStatusBadge = ({ status }: { status: AssignmentStatus }) => {
+  const statusMap = {
+    draft: { label: 'Draft', variant: 'outline' as const, icon: <FileText className="h-4 w-4" /> },
+    scheduled: { label: 'Scheduled', variant: 'outline' as const, icon: <FileText className="h-4 w-4" /> },
+    pending_approval: { label: 'Pending Approval', variant: 'secondary' as const, icon: <Clock className="h-4 w-4" /> },
+    approved: { label: 'Approved', variant: 'secondary' as const, icon: <CheckCircle2 className="h-4 w-4" /> },
+    active: { label: 'Active', variant: 'default' as const, icon: <CheckCircle2 className="h-4 w-4" /> },
+    completed: { label: 'Completed', variant: 'default' as const, icon: <CheckCircle2 className="h-4 w-4" /> },
+    cancelled: { label: 'Cancelled', variant: 'destructive' as const, icon: <XCircle className="h-4 w-4" /> },
+    terminated: { label: 'Terminated', variant: 'destructive' as const, icon: <XCircle className="h-4 w-4" /> },
+  };
+
+  const statusConfig = statusMap[status] || { label: status, variant: 'outline' as const };
+
+  return (
+    <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+      {statusConfig.icon}
+      {statusConfig.label}
+    </Badge>
+  );
+};
+
+// Status badge component for payrolls
+const PayrollStatusBadge = ({ status }: { status: PayrollStatus }) => {
+  const statusMap = {
+    draft: { label: 'Draft', variant: 'outline' as const, icon: <FileText className="h-4 w-4" /> },
+    pending_approval: { label: 'Pending Approval', variant: 'secondary' as const, icon: <Clock className="h-4 w-4" /> },
+    approved: { label: 'Approved', variant: 'secondary' as const, icon: <CheckCircle2 className="h-4 w-4" /> },
+    paid: { label: 'Paid', variant: 'default' as const, icon: <CheckCircle2 className="h-4 w-4" /> },
+    cancelled: { label: 'Cancelled', variant: 'destructive' as const, icon: <XCircle className="h-4 w-4" /> },
+    failed: { label: 'Failed', variant: 'destructive' as const, icon: <AlertCircle className="h-4 w-4" /> },
+  };
+
+  const statusConfig = statusMap[status] || { label: status, variant: 'outline' as const };
+
+  return (
+    <Badge variant={statusConfig.variant} className="flex items-center gap-1">
+      {statusConfig.icon}
+      {statusConfig.label}
+    </Badge>
+  );
+};
+
+type AssignmentWithDetails = Assignment & BaseEntity & {
+  seafarerDetails?: SeafarerWithDetails | null;
+  vesselDetails?: (Vessel & BaseEntity) | null;
+  rankDetails?: Rank | null;
   status: AssignmentStatus;
   startDate: string;
   endDate?: string;
@@ -55,11 +165,17 @@ type AssignmentWithDetails = CrewAssignment & BaseEntity & {
     daysOff: number;
   };
   notes?: string;
+  documents?: string[];
+  isActive?: boolean;
+  signedBySeafarer?: boolean;
+  signedByCompany?: boolean;
+  createdBy?: string;
+  updatedBy?: string;
 };
 
 type PayrollWithDetails = Payroll & BaseEntity & {
-  seafarerDetails?: Seafarer & BaseEntity;
-  vesselDetails?: Vessel & BaseEntity;
+  seafarerDetails?: SeafarerWithDetails | null;
+  vesselDetails?: (Vessel & BaseEntity) | null;
   status: PayrollStatus;
   periodStart: string;
   periodEnd: string;
@@ -74,6 +190,8 @@ type PayrollWithDetails = Payroll & BaseEntity & {
   paymentReference?: string;
   notes?: string;
   documents: string[];
+  createdBy?: string;
+  updatedBy?: string;
 };
 
 // Helper type to create new entities with optional base fields
@@ -102,20 +220,41 @@ export default function PersonnelV2() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [seafarers, setSeafarers] = useState<SeafarerWithDetails[]>([]);
-  const [vessels, setVessels] = useState<Vessel[]>([]);
+  const [vessels, setVessels] = useState<(Vessel & BaseEntity)[]>([]);
   const [ranks, setRanks] = useState<Rank[]>([]);
   const [assignments, setAssignments] = useState<AssignmentWithDetails[]>([]);
   const [payrolls, setPayrolls] = useState<PayrollWithDetails[]>([]);
+  const [certificates, setCertificates] = useState<any[]>([]); // TODO: define Certificate type
   
   // Dialog states
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(false);
   const [showPayrollDialog, setShowPayrollDialog] = useState(false);
+  const [showCertificateDialog, setShowCertificateDialog] = useState(false);
   const [selectedSeafarer, setSelectedSeafarer] = useState<SeafarerWithDetails | null>(null);
   const [selectedAssignment, setSelectedAssignment] = useState<AssignmentWithDetails | null>(null);
   const [selectedPayroll, setSelectedPayroll] = useState<PayrollWithDetails | null>(null);
-  const [assignmentFormData, setAssignmentFormData] = useState<Partial<CrewAssignment> | null>(null);
+  const [selectedCertificate, setSelectedCertificate] = useState<any>(null);
+  const [assignmentFormData, setAssignmentFormData] = useState<Partial<Assignment> | null>(null);
   const [payrollFormData, setPayrollFormData] = useState<Partial<Payroll> | null>(null);
+  const [certificateFormData, setCertificateFormData] = useState<any>(null);
+  const [seafarerFormData, setSeafarerFormData] = useState<any>({
+    personalInfo: {
+      firstName: '',
+      lastName: '',
+      nationality: '',
+      contact: {
+        email: '',
+        phone: ''
+      }
+    },
+    employment: {
+      rank: '',
+      status: 'on_leave',
+      baseWage: 0,
+      wageCurrency: 'USD'
+    }
+  });
   
   // Load data
   useEffect(() => {
@@ -128,17 +267,19 @@ export default function PersonnelV2() {
         
         // Load all data in parallel
         const [
-          seafarersData, 
-          vesselsData, 
-          ranksData, 
-          assignmentsData, 
-          payrollsData
+          seafarersData,
+          vesselsData,
+          ranksData,
+          assignmentsData,
+          payrollsData,
+          certificatesData
         ] = await Promise.all([
           db.getByIndex<Seafarer & BaseEntity>(STORE_NAMES.SEAFARERS, 'by_company', selectedCompany.id),
           db.getByIndex<Vessel & BaseEntity>(STORE_NAMES.VESSELS, 'by_company', selectedCompany.id),
-          db.getByIndex<Rank & BaseEntity>(STORE_NAMES.RANKS, 'by_company', selectedCompany.id),
-          db.getByIndex<CrewAssignment & BaseEntity>(STORE_NAMES.CREW_ASSIGNMENTS, 'by_company', selectedCompany.id),
-          db.getByIndex<Payroll & BaseEntity>(STORE_NAMES.PAYROLLS, 'by_company', selectedCompany.id)
+          db.getByIndex<Rank>(STORE_NAMES.RANKS, 'by_company', selectedCompany.id),
+          db.getByIndex<Assignment & BaseEntity>(STORE_NAMES.CREW_ASSIGNMENTS, 'by_company', selectedCompany.id),
+          db.getByIndex<Payroll & BaseEntity>(STORE_NAMES.PAYROLLS, 'by_company', selectedCompany.id),
+          db.getByIndex<Certificate & BaseEntity>(STORE_NAMES.CERTIFICATES, 'by_company', selectedCompany.id)
         ]);
 
         // Enrich assignments with related data
@@ -146,7 +287,7 @@ export default function PersonnelV2() {
           ...assignment,
           seafarerDetails: seafarersData.find(s => s.id === assignment.seafarerId),
           vesselDetails: vesselsData.find(v => v.id === assignment.vesselId),
-          rankDetails: ranksData.find(r => r.id === assignment.rankId)
+          rankDetails: null
         } as AssignmentWithDetails));
 
         // Enrich payrolls with related data
@@ -168,7 +309,7 @@ export default function PersonnelV2() {
             .map(assignment => ({
               ...assignment,
               vesselDetails: vesselsData.find(v => v.id === assignment.vesselId),
-              rankDetails: ranksData.find(r => r.id === assignment.rankId)
+              rankDetails: null
             } as AssignmentWithDetails));
 
           // Get all payrolls for this seafarer
@@ -182,20 +323,22 @@ export default function PersonnelV2() {
           return {
             ...seafarer,
             currentAssignment: activeAssignment || null,
-            rankDetails: ranksData.find(r => r.id === seafarer.rankId),
-            vesselDetails: activeAssignment 
+            rankDetails: null,
+            vesselDetails: activeAssignment
               ? vesselsData.find(v => v.id === activeAssignment.vesselId)
               : undefined,
             assignments: seafarerAssignments,
-            payrolls: seafarerPayrolls
+            payrolls: seafarerPayrolls,
+            certificates: certificatesData.filter(c => c.seafarerId === seafarer.id)
           } as SeafarerWithDetails;
         });
 
         setSeafarers(enrichedSeafarers);
         setVessels(vesselsData as (Vessel & BaseEntity)[]);
-        setRanks(ranksData as (Rank & BaseEntity)[]);
+        setRanks(ranksData);
         setAssignments(enrichedAssignments);
         setPayrolls(enrichedPayrolls);
+        setCertificates(certificatesData);
       } catch (error) {
         console.error('Error loading data:', error);
         toast({
@@ -210,6 +353,22 @@ export default function PersonnelV2() {
 
     loadData();
   }, [selectedCompany, toast]);
+
+  // Check for expiring certificates and add notifications
+  useEffect(() => {
+    if (!certificates.length) return;
+
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+    certificates.forEach(certificate => {
+      const expiryDate = new Date(certificate.expiryDate);
+      if (expiryDate <= thirtyDaysFromNow && expiryDate > now) {
+        // Add notification
+        // TODO: Use notification system
+      }
+    });
+  }, [certificates]);
   
   // Filter seafarers
   const filteredSeafarers = seafarers.filter(seafarer => {
@@ -242,21 +401,21 @@ export default function PersonnelV2() {
   // Handle form submissions
   const handleAddSeafarer = async (seafarerData: Partial<Seafarer>) => {
     if (!selectedCompany) return;
-    
+
     try {
       const newSeafarer = await db.create<Seafarer>(STORE_NAMES.SEAFARERS, {
         ...seafarerData,
         companyId: selectedCompany.id,
       } as Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt'>);
-      
+
       setSeafarers(prev => [...prev, newSeafarer as SeafarerWithDetails]);
       setShowAddDialog(false);
-      
+
       toast({
         title: 'Success',
         description: 'Seafarer added successfully'
       });
-      
+
     } catch (error) {
       console.error('Error adding seafarer:', error);
       toast({
@@ -266,13 +425,45 @@ export default function PersonnelV2() {
       });
     }
   };
+
+  const handleExportSeafarers = () => {
+    try {
+      const exportData = filteredSeafarers.map((seafarer) => ({
+        'First Name': seafarer.personalInfo.firstName,
+        'Last Name': seafarer.personalInfo.lastName,
+        'Email': seafarer.personalInfo.contact?.email || '',
+        'Phone': seafarer.personalInfo.contact?.phone || '',
+        'Nationality': seafarer.personalInfo.nationality,
+        'Rank': seafarer.employment.rank,
+        'Status': seafarer.employment.status,
+        'Base Wage': seafarer.employment.baseWage,
+        'Currency': seafarer.employment.wageCurrency,
+        'Joined Date': seafarer.employment.joinedDate,
+        'Contract End Date': seafarer.employment.contractEndDate || '',
+        'Current Vessel': seafarer.employment.currentVesselName || ''
+      }));
+
+      exportToCSV(exportData, undefined, `seafarers_${new Date().toISOString().split('T')[0]}.csv`);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported ${filteredSeafarers.length} seafarers to CSV`
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export seafarers data",
+        variant: "destructive"
+      });
+    }
+  };
   
-  const handleAddAssignment = async (assignmentData: Omit<CrewAssignment, 'id' | 'createdAt' | 'updatedAt' | 'companyId'>) => {
+  const handleAddAssignment = async (assignmentData: Omit<Assignment, 'id' | 'createdAt' | 'updatedAt' | 'companyId'>) => {
     if (!selectedCompany || !selectedSeafarer) return;
     
     try {
       const now = new Date().toISOString();
-      const newAssignment = await db.create<CrewAssignment & BaseEntity>(STORE_NAMES.CREW_ASSIGNMENTS, {
+      const newAssignment = await db.create<Assignment & BaseEntity>(STORE_NAMES.CREW_ASSIGNMENTS, {
         ...assignmentData,
         seafarerId: selectedSeafarer.id,
         companyId: selectedCompany.id,
@@ -285,54 +476,94 @@ export default function PersonnelV2() {
         signedByCompany: false,
         createdBy: 'system', // TODO: Replace with actual user ID
         updatedBy: 'system'  // TODO: Replace with actual user ID
-      } as CrewAssignment & BaseEntity);
+      } as Assignment & BaseEntity);
       
-      // Update local state
+      // Find the vessel and rank details
+      const vesselDetails = vessels.find(v => v.id === assignmentData.vesselId) || null;
+      const rankDetails = ranks.find(r => r.id === assignmentData.rankId) || null;
+      
+      // Create the enriched assignment with all required properties
       const enrichedAssignment: AssignmentWithDetails = {
         ...newAssignment,
         seafarerDetails: selectedSeafarer,
-        vesselDetails: vessels.find(v => v.id === assignmentData.vesselId),
-        rankDetails: ranks.find(r => r.id === assignmentData.rankId)
+        vesselDetails,
+        rankDetails,
+        salary: assignmentData.salary || 0,
+        currency: assignmentData.currency || 'USD',
+        rotationType: assignmentData.rotationType || 'fixed_term',
+        frequency: assignmentData.frequency || 'monthly',
+        status: assignmentData.status || 'scheduled',
+        startDate: assignmentData.startDate || now,
+        endDate: assignmentData.endDate,
+        documents: assignmentData.documents || [],
+        isActive: assignmentData.status === 'active',
+        signedBySeafarer: false,
+        signedByCompany: false,
+        createdBy: 'system',
+        updatedBy: 'system'
       };
       
+      // Update local state
       setAssignments(prev => [...prev, enrichedAssignment]);
       
       // If this is an active assignment, update the seafarer's current assignment
-      if (newAssignment.status === 'active') {
+      if (newAssignment.status === 'active' && selectedSeafarer) {
+        const updateData: Partial<Seafarer> = {
+          employment: {
+            ...selectedSeafarer.employment,
+            currentAssignmentId: newAssignment.id,
+            currentVesselId: newAssignment.vesselId,
+            rank: rankDetails?.name || selectedSeafarer.employment?.rank || '',
+            status: 'onboard',
+            baseWage: assignmentData.salary,
+            wageCurrency: assignmentData.currency
+          },
+          updatedAt: now
+        };
+
         const updatedSeafarer = await db.update<Seafarer & BaseEntity>(
           STORE_NAMES.SEAFARERS, 
           selectedSeafarer.id,
-          { 
-            'employment.currentAssignmentId': newAssignment.id,
-            'employment.currentVesselId': newAssignment.vesselId,
-            'employment.rank': newAssignment.rankId,
-            'employment.status': 'onboard',
-            'updatedAt': now
-          }
+          updateData
         );
         
+        // Update the local seafarer state
         setSeafarers(prev => 
-          prev.map(s => 
-            s.id === selectedSeafarer.id 
-              ? { 
-                  ...s, 
-                  ...updatedSeafarer, 
-                  currentAssignment: enrichedAssignment,
-                  vesselDetails: enrichedAssignment.vesselDetails
-                }
-              : s
-          )
+          prev.map(s => {
+            if (s.id === selectedSeafarer.id) {
+              const updatedSeafarerData: SeafarerWithDetails = {
+                ...s,
+                ...updatedSeafarer,
+                currentAssignment: enrichedAssignment,
+                vesselDetails,
+                rankDetails,
+                employment: {
+                  ...s.employment,
+                  ...updateData.employment,
+                  currentVesselId: newAssignment.vesselId,
+                  currentAssignmentId: newAssignment.id,
+                  status: 'onboard'
+                },
+                updatedAt: now
+              };
+              return updatedSeafarerData;
+            }
+            return s;
+          })
         );
       }
       
+      // Show success message
       toast({
         title: 'Success',
         description: 'Assignment created successfully',
         variant: 'default'
       });
       
+      // Reset form and close dialog
       setShowAssignmentDialog(false);
       setSelectedAssignment(null);
+      
     } catch (error) {
       console.error('Error creating assignment:', error);
       toast({
@@ -552,6 +783,9 @@ export default function PersonnelV2() {
         .filter(item => item.type === 'deduction')
         .reduce((sum, item) => sum + (item.amount || 0), 0);
       
+      const netPay = totalEarnings - totalDeductions;
+      
+      // Create the new payroll
       const newPayroll = await db.create<Payroll & BaseEntity>(STORE_NAMES.PAYROLLS, {
         ...payrollData,
         seafarerId: selectedSeafarer.id,
@@ -559,46 +793,75 @@ export default function PersonnelV2() {
         status: 'draft',
         totalEarnings,
         totalDeductions,
-        netPay: totalEarnings - totalDeductions,
+        netPay,
         items: items.map(item => ({
           ...item,
           amount: item.amount || 0,
           taxable: item.taxable !== undefined ? item.taxable : true
         })),
         documents: payrollData.documents || [],
+        paymentMethod: payrollData.paymentMethod || 'bank_transfer',
+        currency: payrollData.currency || 'USD',
+        periodStart: payrollData.periodStart || now,
+        periodEnd: payrollData.periodEnd || now,
+        paymentDate: payrollData.paymentDate || now,
+        basicSalary: payrollData.basicSalary || 0,
         createdAt: now,
-        updatedAt: now
+        updatedAt: now,
+        createdBy: 'system', // TODO: Replace with actual user ID
+        updatedBy: 'system'  // TODO: Replace with actual user ID
       } as Payroll & BaseEntity);
       
-      // Update local state
+      // Find the vessel details
+      const vesselDetails = vessels.find(v => v.id === payrollData.vesselId) || null;
+      
+      // Create the enriched payroll with all required properties
       const enrichedPayroll: PayrollWithDetails = {
         ...newPayroll,
         seafarerDetails: selectedSeafarer,
-        vesselDetails: vessels.find(v => v.id === payrollData.vesselId)
+        vesselDetails,
+        status: 'draft',
+        periodStart: payrollData.periodStart || now,
+        periodEnd: payrollData.periodEnd || now,
+        paymentDate: payrollData.paymentDate || now,
+        basicSalary: payrollData.basicSalary || 0,
+        items: newPayroll.items || [],
+        totalEarnings,
+        totalDeductions,
+        netPay,
+        currency: payrollData.currency || 'USD',
+        paymentMethod: payrollData.paymentMethod || 'bank_transfer',
+        documents: payrollData.documents || []
       };
       
+      // Update local state
       setPayrolls(prev => [...prev, enrichedPayroll]);
       
       // Update seafarer's payrolls
       setSeafarers(prev => 
-        prev.map(s => 
-          s.id === selectedSeafarer.id
-            ? { 
-                ...s, 
-                payrolls: [...(s.payrolls || []), enrichedPayroll] 
-              }
-            : s
-        )
+        prev.map(s => {
+          if (s.id === selectedSeafarer.id) {
+            const updatedSeafarer: SeafarerWithDetails = {
+              ...s,
+              payrolls: [...(s.payrolls || []), enrichedPayroll]
+            };
+            return updatedSeafarer;
+          }
+          return s;
+        })
       );
       
+      // Show success message
       toast({
         title: 'Success',
         description: 'Payroll created successfully',
         variant: 'default'
       });
       
+      // Reset form and close dialog
       setShowPayrollDialog(false);
       setSelectedPayroll(null);
+      
     } catch (error) {
       console.error('Error creating payroll:', error);
       toast({
@@ -630,14 +893,31 @@ export default function PersonnelV2() {
           <p className="text-muted-foreground">Manage your seafarer database</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportSeafarers}>
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          <Button 
+          <Button
             className="ocean-gradient shadow-ocean"
             onClick={() => {
               setSelectedSeafarer(null);
+              setSeafarerFormData({
+                personalInfo: {
+                  firstName: '',
+                  lastName: '',
+                  nationality: '',
+                  contact: {
+                    email: '',
+                    phone: ''
+                  }
+                },
+                employment: {
+                  rank: '',
+                  status: 'on_leave',
+                  baseWage: 0,
+                  wageCurrency: 'USD'
+                }
+              });
               setShowAddDialog(true);
             }}
           >
@@ -700,7 +980,13 @@ export default function PersonnelV2() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredSeafarers.length > 0 ? (
               filteredSeafarers.map((seafarer) => (
-                <Card key={seafarer.id} className="transition-smooth hover:shadow-lg">
+                <Card
+                  key={seafarer.id}
+                  className={`transition-smooth hover:shadow-lg cursor-pointer ${
+                    selectedSeafarer?.id === seafarer.id ? 'ring-2 ring-primary' : ''
+                  }`}
+                  onClick={() => setSelectedSeafarer(seafarer)}
+                >
                   <CardHeader className="pb-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center space-x-3">
@@ -806,32 +1092,261 @@ export default function PersonnelV2() {
           </div>
         </TabsContent>
         
-        {/* Placeholder for other tabs */}
-        <TabsContent value="assignments" className="text-center py-12">
-          <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Crew Assignments</h3>
-          <p className="text-muted-foreground mb-4">
-            Manage crew assignments to vessels with rotation schedules
-          </p>
-          <Button disabled>Coming Soon</Button>
+        {/* Assignments Tab */}
+        <TabsContent value="assignments" className="space-y-4">
+          {!selectedSeafarer ? (
+            <div className="text-center py-12">
+              <Briefcase className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Crew Assignments</h3>
+              <p className="text-muted-foreground mb-4">
+                Please select a seafarer from the Seafarers tab to view their assignments
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Assignments for {selectedSeafarer.personalInfo.firstName} {selectedSeafarer.personalInfo.lastName}</h3>
+                  <p className="text-muted-foreground">Manage crew assignments to vessels</p>
+                </div>
+                <Button
+                  className="ocean-gradient shadow-ocean"
+                  onClick={() => {
+                    setSelectedAssignment(null);
+                    setAssignmentFormData(null);
+                    setShowAssignmentDialog(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Assignment
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {selectedSeafarer.assignments?.length ? (
+                  selectedSeafarer.assignments.map((assignment) => (
+                    <Card key={assignment.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{assignment.vesselDetails?.name || 'Unknown Vessel'}</h4>
+                            <AssignmentStatusBadge status={assignment.status} />
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {formatDate(assignment.startDate)} - {assignment.endDate ? formatDate(assignment.endDate) : 'Ongoing'}
+                          </p>
+                          <p className="text-sm">Salary: {formatCurrency(assignment.salary, assignment.currency)}</p>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedAssignment(assignment);
+                                setShowAssignmentDialog(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => handleDeleteAssignment(assignment.id)}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 border rounded-lg">
+                    <Briefcase className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">No assignments found</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </TabsContent>
         
-        <TabsContent value="certificates" className="text-center py-12">
-          <FileCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Certificates</h3>
-          <p className="text-muted-foreground mb-4">
-            Track and manage seafarer certificates and documents
-          </p>
-          <Button disabled>Coming Soon</Button>
+        {/* Certificates Tab */}
+        <TabsContent value="certificates" className="space-y-4">
+          {!selectedSeafarer ? (
+            <div className="text-center py-12">
+              <FileCheck className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Certificates</h3>
+              <p className="text-muted-foreground mb-4">
+                Please select a seafarer from the Seafarers tab to view their certificates
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Certificates for {selectedSeafarer.personalInfo.firstName} {selectedSeafarer.personalInfo.lastName}</h3>
+                  <p className="text-muted-foreground">Track and manage seafarer certificates</p>
+                </div>
+                <Button
+                  className="ocean-gradient shadow-ocean"
+                  onClick={() => {
+                    setSelectedCertificate(null);
+                    setCertificateFormData(null);
+                    setShowCertificateDialog(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Add Certificate
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {selectedSeafarer.certificates?.length ? (
+                  selectedSeafarer.certificates.map((certificate) => {
+                    const expiryDate = new Date(certificate.expiryDate);
+                    const now = new Date();
+                    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                    const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+                    const isExpired = daysUntilExpiry <= 0;
+
+                    return (
+                      <Card key={certificate.id} className={`p-4 ${isExpired ? 'border-destructive' : isExpiringSoon ? 'border-yellow-500' : ''}`}>
+                        <div className="flex justify-between items-start">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-medium">{certificate.type}</h4>
+                              <Badge variant={certificate.status === 'valid' ? 'default' : certificate.status === 'expired' ? 'destructive' : 'secondary'}>
+                                {certificate.status}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground">Number: {certificate.number}</p>
+                            <p className="text-sm text-muted-foreground">Issued by: {certificate.issuedBy}</p>
+                            <p className="text-sm">Expiry: {formatDate(certificate.expiryDate)}</p>
+                            {isExpiringSoon && (
+                              <p className="text-sm text-yellow-600">Expires in {daysUntilExpiry} days</p>
+                            )}
+                            {isExpired && (
+                              <p className="text-sm text-destructive">Expired {Math.abs(daysUntilExpiry)} days ago</p>
+                            )}
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>
+                                <Edit className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-destructive">
+                                <Trash2 className="w-4 h-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <div className="text-center py-8 border rounded-lg">
+                    <FileCheck className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">No certificates found</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </TabsContent>
         
-        <TabsContent value="payroll" className="text-center py-12">
-          <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-semibold mb-2">Payroll</h3>
-          <p className="text-muted-foreground mb-4">
-            Process and manage seafarer payroll and payments
-          </p>
-          <Button disabled>Coming Soon</Button>
+        {/* Payroll Tab */}
+        <TabsContent value="payroll" className="space-y-4">
+          {!selectedSeafarer ? (
+            <div className="text-center py-12">
+              <Wallet className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">Payroll</h3>
+              <p className="text-muted-foreground mb-4">
+                Please select a seafarer from the Seafarers tab to view their payroll
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Payroll for {selectedSeafarer.personalInfo.firstName} {selectedSeafarer.personalInfo.lastName}</h3>
+                  <p className="text-muted-foreground">Process and manage seafarer payroll</p>
+                </div>
+                <Button
+                  className="ocean-gradient shadow-ocean"
+                  onClick={() => {
+                    setSelectedPayroll(null);
+                    setPayrollFormData(null);
+                    setShowPayrollDialog(true);
+                  }}
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  Create Payroll
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                {selectedSeafarer.payrolls?.length ? (
+                  selectedSeafarer.payrolls.map((payroll) => (
+                    <Card key={payroll.id} className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-medium">{payroll.vesselDetails?.name || 'Unknown Vessel'}</h4>
+                            <PayrollStatusBadge status={payroll.status} />
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            Period: {formatDate(payroll.periodStart)} - {formatDate(payroll.periodEnd)}
+                          </p>
+                          <p className="text-sm">Net Pay: {formatCurrency(payroll.netPay, payroll.currency)}</p>
+                          <p className="text-sm text-muted-foreground">Payment Date: {formatDate(payroll.paymentDate)}</p>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm">
+                              <MoreHorizontal className="w-4 h-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedPayroll(payroll);
+                                setShowPayrollDialog(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive">
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <div className="text-center py-8 border rounded-lg">
+                    <Wallet className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground">No payroll records found</p>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
         </TabsContent>
       </Tabs>
       
@@ -848,18 +1363,40 @@ export default function PersonnelV2() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="firstName">First Name</Label>
-                <Input id="firstName" placeholder="John" />
+                <Input
+                  id="firstName"
+                  placeholder="John"
+                  value={seafarerFormData.personalInfo?.firstName || ''}
+                  onChange={(e) => setSeafarerFormData((prev: any) => ({
+                    ...prev,
+                    personalInfo: { ...prev.personalInfo, firstName: e.target.value }
+                  }))}
+                />
               </div>
               <div>
                 <Label htmlFor="lastName">Last Name</Label>
-                <Input id="lastName" placeholder="Doe" />
+                <Input
+                  id="lastName"
+                  placeholder="Doe"
+                  value={seafarerFormData.personalInfo?.lastName || ''}
+                  onChange={(e) => setSeafarerFormData((prev: any) => ({
+                    ...prev,
+                    personalInfo: { ...prev.personalInfo, lastName: e.target.value }
+                  }))}
+                />
               </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="rank">Rank</Label>
-                <Select>
+                <Select
+                  value={seafarerFormData.employment?.rank || ''}
+                  onValueChange={(value) => setSeafarerFormData((prev: any) => ({
+                    ...prev,
+                    employment: { ...prev.employment, rank: value }
+                  }))}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select rank" />
                   </SelectTrigger>
@@ -872,7 +1409,13 @@ export default function PersonnelV2() {
               </div>
               <div>
                 <Label htmlFor="status">Status</Label>
-                <Select defaultValue="on_leave">
+                <Select
+                  value={seafarerFormData.employment?.status || 'on_leave'}
+                  onValueChange={(value) => setSeafarerFormData((prev: any) => ({
+                    ...prev,
+                    employment: { ...prev.employment, status: value }
+                  }))}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -887,18 +1430,49 @@ export default function PersonnelV2() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="john.doe@example.com" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="john.doe@example.com"
+                  value={seafarerFormData.personalInfo?.contact?.email || ''}
+                  onChange={(e) => setSeafarerFormData((prev: any) => ({
+                    ...prev,
+                    personalInfo: {
+                      ...prev.personalInfo,
+                      contact: { ...prev.personalInfo.contact, email: e.target.value }
+                    }
+                  }))}
+                />
               </div>
               <div>
                 <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" placeholder="+1 (555) 000-0000" />
+                <Input
+                  id="phone"
+                  placeholder="+1 (555) 000-0000"
+                  value={seafarerFormData.personalInfo?.contact?.phone || ''}
+                  onChange={(e) => setSeafarerFormData((prev: any) => ({
+                    ...prev,
+                    personalInfo: {
+                      ...prev.personalInfo,
+                      contact: { ...prev.personalInfo.contact, phone: e.target.value }
+                    }
+                  }))}
+                />
               </div>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="nationality">Nationality</Label>
-                <Input id="nationality" placeholder="Nationality" />
+                <Input
+                  id="nationality"
+                  placeholder="Nationality"
+                  value={seafarerFormData.personalInfo?.nationality || ''}
+                  onChange={(e) => setSeafarerFormData((prev: any) => ({
+                    ...prev,
+                    personalInfo: { ...prev.personalInfo, nationality: e.target.value }
+                  }))}
+                />
               </div>
               <div>
                 <Label htmlFor="baseWage">Base Wage</Label>
@@ -906,11 +1480,16 @@ export default function PersonnelV2() {
                   <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground text-sm">
                     $
                   </span>
-                  <Input 
-                    id="baseWage" 
-                    type="number" 
-                    placeholder="0.00" 
+                  <Input
+                    id="baseWage"
+                    type="number"
+                    placeholder="0.00"
                     className="rounded-l-none"
+                    value={seafarerFormData.employment?.baseWage || ''}
+                    onChange={(e) => setSeafarerFormData((prev: any) => ({
+                      ...prev,
+                      employment: { ...prev.employment, baseWage: Number(e.target.value) }
+                    }))}
                   />
                 </div>
               </div>
@@ -924,17 +1503,10 @@ export default function PersonnelV2() {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               className="ocean-gradient shadow-ocean"
               onClick={() => {
-                // Handle form submission
-                setShowAddDialog(false);
-                toast({
-                  title: 'Success',
-                  description: selectedSeafarer 
-                    ? 'Seafarer updated successfully' 
-                    : 'Seafarer added successfully'
-                });
+                handleAddSeafarer(seafarerFormData);
               }}
             >
               {selectedSeafarer ? 'Update' : 'Add'} Seafarer

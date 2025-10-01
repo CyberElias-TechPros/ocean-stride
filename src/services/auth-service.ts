@@ -29,6 +29,7 @@ export interface AuthResponse {
 }
 
 export class AuthService extends BaseApi {
+  [x: string]: any;
   constructor() {
     super(getApiUrl(''));
   }

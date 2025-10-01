@@ -43,20 +43,22 @@ type PayrollFormValues = z.infer<typeof payrollFormSchema>;
 
 interface PayrollFormProps {
   initialData?: Payroll;
-  seafarers: Seafarer[];
+  seafarers?: Seafarer[];
+  seafarer?: Seafarer;
   vessels: Vessel[];
   onSubmit: (data: PayrollFormValues) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }
 
-export function PayrollForm({ 
-  initialData, 
-  seafarers, 
-  vessels, 
-  onSubmit, 
-  onCancel, 
-  isSubmitting = false 
+export function PayrollForm({
+  initialData,
+  seafarers,
+  seafarer,
+  vessels,
+  onSubmit,
+  onCancel,
+  isSubmitting = false
 }: PayrollFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   
@@ -77,7 +79,7 @@ export function PayrollForm({
       paymentDate: initialData.paymentDate ? new Date(initialData.paymentDate) : new Date(),
       items: initialData.items || [],
     } : {
-      seafarerId: '',
+      seafarerId: seafarer?.id || '',
       vesselId: '',
       periodStart: new Date(),
       periodEnd: new Date(),
@@ -137,29 +139,31 @@ export function PayrollForm({
         <h3 className="text-lg font-medium">Payroll Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Seafarer Selection */}
-          <div>
-            <Label htmlFor="seafarerId">Seafarer *</Label>
-            <Select
-              onValueChange={(value) => setValue('seafarerId', value)}
-              value={watch('seafarerId')}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select seafarer" />
-              </SelectTrigger>
-              <SelectContent>
-                {seafarers.map((seafarer) => (
-                  <SelectItem key={seafarer.id} value={seafarer.id}>
-                    {`${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.seafarerId?.message && (
-              <p className="text-sm font-medium text-destructive mt-1">
-                {errors.seafarerId.message}
-              </p>
-            )}
-          </div>
+          {!seafarer && (
+            <div>
+              <Label htmlFor="seafarerId">Seafarer *</Label>
+              <Select
+                onValueChange={(value) => setValue('seafarerId', value)}
+                value={watch('seafarerId')}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select seafarer" />
+                </SelectTrigger>
+                <SelectContent>
+                  {seafarers?.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {`${s.personalInfo.firstName} ${s.personalInfo.lastName}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {errors.seafarerId?.message && (
+                <p className="text-sm font-medium text-destructive mt-1">
+                  {errors.seafarerId.message}
+                </p>
+              )}
+            </div>
+          )}
 
           {/* Vessel Selection */}
           <div>

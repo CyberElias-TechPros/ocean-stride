@@ -19,6 +19,9 @@ const UserListPage = React.lazy(() => import('@/pages/users/UserListPage'));
 const UserDetailPage = React.lazy(() => import('@/pages/users/UserDetailPage'));
 const UserEditPage = React.lazy(() => import('@/pages/users/UserEditPage'));
 const UserCreatePage = React.lazy(() => import('@/pages/users/UserCreatePage'));
+const CompaniesPage = React.lazy(() => import('@/pages/Companies'));
+const CompanyDetailPage = React.lazy(() => import('@/pages/companies/CompanyDetailPage'));
+const SeafarerDetailPage = React.lazy(() => import('@/pages/personnel/SeafarerDetailPage'));
 
 // Route paths
 export const ROUTES = {
@@ -29,7 +32,14 @@ export const ROUTES = {
   
   // App routes
   DASHBOARD: '/',
-  PERSONNEL: '/personnel',
+  COMPANIES: {
+    LIST: '/companies',
+    DETAILS: (id: string) => `/companies/${id}`,
+  },
+  PERSONNEL: {
+    LIST: '/personnel',
+    DETAILS: (id: string) => `/personnel/${id}`,
+  },
   USERS: {
     LIST: '/users',
     CREATE: '/users/new',
@@ -58,15 +68,20 @@ export const NAV_ITEMS = [
     icon: 'dashboard',
   },
   {
+    title: 'Companies',
+    href: ROUTES.COMPANIES.LIST,
+    icon: 'building',
+  },
+  {
+    title: 'Personnel',
+    href: ROUTES.PERSONNEL.LIST,
+    icon: 'users',
+  },
+  {
     title: 'Users',
     href: ROUTES.USERS.LIST,
     icon: 'users',
     adminOnly: true,
-  },
-  {
-    title: 'Personnel',
-    href: ROUTES.PERSONNEL,
-    icon: 'users',
   },
   {
     title: 'Fleet',
@@ -122,15 +137,27 @@ export const routes: RouteObject[] = [
   
   // Protected routes
   {
-    element: <ProtectedRoute />,
+    element: <ProtectedRoute children={undefined} />,
     children: [
       {
         path: ROUTES.DASHBOARD,
         element: <DashboardPage />,
       },
       {
-        path: ROUTES.PERSONNEL,
+        path: ROUTES.COMPANIES.LIST,
+        element: <CompaniesPage />,
+      },
+      {
+        path: ROUTES.COMPANIES.DETAILS(':id'),
+        element: <CompanyDetailPage />,
+      },
+      {
+        path: ROUTES.PERSONNEL.LIST,
         element: <PersonnelPage />,
+      },
+      {
+        path: ROUTES.PERSONNEL.DETAILS(':id'),
+        element: <SeafarerDetailPage />,
       },
       // User management routes
       {

@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { VesselDetailsDialog } from '@/components/fleet/VesselDetailsDialog';
-import { 
-  Ship, 
-  Plus, 
-  Users, 
+import { AddVesselDialog } from '@/components/fleet/AddVesselDialog';
+import { RosterPlannerModal } from '@/components/roster/RosterPlannerModal';
+import {
+  Ship,
+  Plus,
+  Users,
   MapPin,
   Calendar,
   AlertTriangle,
@@ -18,6 +20,7 @@ import { db } from '@/lib/database2';
 import type { Vessel, Seafarer } from '@/lib/schemas';
 import { INDEX_NAMES } from '@/lib/schemas';
 import { useCompany } from '@/context/CompanyContext';
+import { useToast } from '@/hooks/use-toast';
 
 interface VesselWithDetails extends Vessel {
   crewDetails: {
@@ -26,55 +29,122 @@ interface VesselWithDetails extends Vessel {
     nextCrewChange: string;
     upcomingChanges: number;
   };
+  maintenanceSchedule: {
+    lastMaintenance: string;
+    nextMaintenance: string;
+    status: 'due' | 'overdue' | 'scheduled' | 'completed';
+  };
+  voyageInfo: {
+    currentPort: string;
+    nextPort: string;
+    eta: string;
+    cargo: string;
+  };
 }
 
 export default function Fleet() {
-  const [vessels, setVessels] = useState<VesselWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedVessel, setSelectedVessel] = useState<VesselWithDetails | null>(null);
-  const [showVesselDialog, setShowVesselDialog] = useState(false);
-  const { selectedCompany } = useCompany();
+   const [vessels, setVessels] = useState<VesselWithDetails[]>([]);
+   const [loading, setLoading] = useState(true);
+   const [selectedVessel, setSelectedVessel] = useState<VesselWithDetails | null>(null);
+   const [showVesselDialog, setShowVesselDialog] = useState(false);
+   const [showAddVesselDialog, setShowAddVesselDialog] = useState(false);
+   const [showRosterPlanner, setShowRosterPlanner] = useState(false);
+   const [isAddingVessel, setIsAddingVessel] = useState(false);
+   const { selectedCompany } = useCompany();
+   const { toast } = useToast();
 
-  useEffect(() => {
-    const loadFleetData = async () => {
-      if (!selectedCompany) return;
-      
-      try {
-        await db.init();
-        const allVessels = await db.getVesselsByCompany(selectedCompany.id);
-        // Enhance vessels with crew details computed from seafarers assigned to the vessel
-        const vesselsWithDetails: VesselWithDetails[] = await Promise.all(
-          allVessels.map(async (vessel) => {
-            const onboardCrew: Seafarer[] = await db.getByIndex(
-              'seafarers',
-              INDEX_NAMES.SEAFARER_BY_VESSEL,
-              vessel.id
-            );
-            const requiredCrew = getRequiredCrewByType(vessel.type);
-            return {
-              ...vessel,
-              crewDetails: {
-                current: onboardCrew.length,
-                required: requiredCrew,
-                nextCrewChange: '', // not modeled yet
-                upcomingChanges: 0, // not modeled yet
-              }
-            };
-          })
-        );
-        
-        setVessels(vesselsWithDetails);
-      } catch (error) {
-        console.error('Failed to load fleet data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+   const loadFleetData = async () => {
+     if (!selectedCompany) return;
 
-    loadFleetData();
-  }, [selectedCompany]);
+     try {
+       await db.init();
+       const allVessels = await db.getVesselsByCompany(selectedCompany.id);
+       // Enhance vessels with crew details computed from seafarers assigned to the vessel
+       const vesselsWithDetails: VesselWithDetails[] = await Promise.all(
+         allVessels.map(async (vessel) => {
+           const onboardCrew: Seafarer[] = await db.getByIndex(
+             'seafarers',
+             INDEX_NAMES.SEAFARER_BY_VESSEL,
+             vessel.id
+           );
+           const requiredCrew = getRequiredCrewByType(vessel.type);
 
-  const getRequiredCrewByType = (type: string): number => {
+           // Mock maintenance and voyage data
+           const lastMaintenance = new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString();
+           const nextMaintenance = new Date(Date.now() + Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString();
+           const maintenanceStatus = new Date(nextMaintenance) < new Date() ? 'overdue' : 'scheduled';
+
+           return {
+             ...vessel,
+             crewDetails: {
+               current: onboardCrew.length,
+               required: requiredCrew,
+               nextCrewChange: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+               upcomingChanges: Math.floor(Math.random() * 3),
+             },
+             maintenanceSchedule: {
+               lastMaintenance,
+               nextMaintenance,
+               status: maintenanceStatus as 'due' | 'overdue' | 'scheduled' | 'completed'
+             },
+             voyageInfo: {
+               currentPort: ['Rotterdam', 'Singapore', 'Houston', 'Dubai'][Math.floor(Math.random() * 4)],
+               nextPort: ['London', 'Shanghai', 'New York', 'Abu Dhabi'][Math.floor(Math.random() * 4)],
+               eta: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+               cargo: ['Containers', 'Oil', 'Grain', 'Coal'][Math.floor(Math.random() * 4)]
+             }
+           };
+         })
+       );
+
+       setVessels(vesselsWithDetails);
+     } catch (error) {
+       console.error('Failed to load fleet data:', error);
+     } finally {
+       setLoading(false);
+     }
+   };
+
+   useEffect(() => {
+     loadFleetData();
+   }, [selectedCompany]);
+
+   const handleAddVessel = async (data: any) => {
+     console.log('handleAddVessel called with data:', data);
+     console.log('selectedCompany:', selectedCompany);
+     if (!selectedCompany) {
+       console.error('No company selected');
+       toast({
+         title: "Error",
+         description: "No company selected",
+         variant: "destructive",
+       });
+       return;
+     }
+     setIsAddingVessel(true);
+     try {
+       const vesselData = { ...data, companyId: selectedCompany.id };
+       console.log('Calling db.createVessel with:', vesselData);
+       await db.createVessel(vesselData);
+       await loadFleetData();
+       setShowAddVesselDialog(false);
+       toast({
+         title: "Success",
+         description: "Vessel added successfully",
+       });
+     } catch (error) {
+       console.error('Failed to add vessel:', error);
+       toast({
+         title: "Error",
+         description: "Failed to add vessel",
+         variant: "destructive",
+       });
+     } finally {
+       setIsAddingVessel(false);
+     }
+   };
+
+   const getRequiredCrewByType = (type: string): number => {
     switch (type.toLowerCase()) {
       case 'container ship': return 24;
       case 'bulk carrier': return 20;
@@ -116,11 +186,11 @@ export default function Fleet() {
             <p className="text-muted-foreground">Manage vessel crews and roster planning</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setShowRosterPlanner(true)}>
               <Calendar className="w-4 h-4 mr-2" />
               Roster Planner
             </Button>
-            <Button className="ocean-gradient shadow-ocean">
+            <Button className="ocean-gradient shadow-ocean" onClick={() => setShowAddVesselDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Vessel
             </Button>
@@ -164,6 +234,20 @@ export default function Fleet() {
                     {vessels.filter(v => getDaysUntilCrewChange(v.crewDetails.nextCrewChange) <= 14).length}
                   </p>
                   <p className="text-sm text-muted-foreground">Crew Changes Due</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-success" />
+                <div>
+                  <p className="text-2xl font-bold">
+                    {vessels.filter(v => v.maintenanceSchedule.status === 'scheduled').length}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Maintenance Due</p>
                 </div>
               </div>
             </CardContent>
@@ -238,7 +322,7 @@ export default function Fleet() {
                   {/* Upcoming Events */}
                   <div className="space-y-3">
                     <h4 className="text-sm font-medium">Upcoming Events</h4>
-                    
+
                     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                       <div className="flex items-center space-x-2">
                         <Calendar className="w-4 h-4 text-primary" />
@@ -257,6 +341,32 @@ export default function Fleet() {
                           {vessel.crewDetails.upcomingChanges || 0} crew changes
                         </p>
                       </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <AlertTriangle className="w-4 h-4 text-warning" />
+                        <div>
+                          <p className="text-sm font-medium">Next Maintenance</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(vessel.maintenanceSchedule.nextMaintenance).toLocaleDateString()}
+                          </p>
+                        </div>
+                      </div>
+                      <Badge variant={vessel.maintenanceSchedule.status === 'overdue' ? "destructive" : "outline"}>
+                        {vessel.maintenanceSchedule.status}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Voyage Information */}
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Current Voyage</h4>
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p>From: {vessel.voyageInfo.currentPort}</p>
+                      <p>To: {vessel.voyageInfo.nextPort}</p>
+                      <p>ETA: {new Date(vessel.voyageInfo.eta).toLocaleDateString()}</p>
+                      <p>Cargo: {vessel.voyageInfo.cargo}</p>
                     </div>
                   </div>
 
@@ -302,7 +412,7 @@ export default function Fleet() {
               <p className="text-muted-foreground mb-4">
                 Start by adding your first vessel to the fleet
               </p>
-              <Button className="ocean-gradient">
+              <Button className="ocean-gradient" onClick={() => setShowAddVesselDialog(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add First Vessel
               </Button>
@@ -316,6 +426,20 @@ export default function Fleet() {
           open={showVesselDialog}
           onOpenChange={setShowVesselDialog}
         />
+
+        {/* Add Vessel Dialog */}
+        <AddVesselDialog
+          open={showAddVesselDialog}
+          onOpenChange={setShowAddVesselDialog}
+          onSubmit={handleAddVessel}
+          isLoading={isAddingVessel}
+        />
+
+        {/* Roster Planner Modal */}
+        <RosterPlannerModal
+          open={showRosterPlanner}
+          onOpenChange={setShowRosterPlanner}
+        />
       </div>
     );
-}
+  }

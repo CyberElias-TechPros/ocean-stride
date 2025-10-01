@@ -13,6 +13,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
 };
@@ -53,7 +54,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string) => {
     try {
       setIsLoading(true);
-      
+
       // Validate credentials
       if (!email || !password) {
         throw new Error('Email and password are required');
@@ -80,10 +81,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       setUser(user);
       localStorage.setItem('user', JSON.stringify(user));
-      console.log('User logged in:', email);
-      
+
     } catch (error) {
       console.error('Login failed:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithGoogle = async (credential: string) => {
+    try {
+      setIsLoading(true);
+
+      // Decode the JWT credential to get user info
+      const payload = JSON.parse(atob(credential.split('.')[1]));
+
+      // Validate the credential structure
+      if (!payload.email || !payload.name) {
+        throw new Error('Invalid Google credential');
+      }
+
+      // Create user from Google profile
+      const user: User = {
+        id: payload.sub, // Use Google's unique user ID
+        email: payload.email,
+        role: payload.email.includes('admin') ? 'admin' : 'manager', // Same logic as regular login
+        name: payload.name,
+      };
+
+      setUser(user);
+      localStorage.setItem('user', JSON.stringify(user));
+
+    } catch (error) {
+      console.error('Google login failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -93,7 +124,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
-    console.log('User logged out');
     // The actual navigation will be handled by the ProtectedRoute component
   };
 
@@ -103,7 +133,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const updatedUser = { ...user, ...userData };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
-    console.log('User updated:', user.id);
   };
 
   return (
@@ -113,6 +142,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         isLoading,
         login,
+        loginWithGoogle,
         logout,
         updateUser,
       }}

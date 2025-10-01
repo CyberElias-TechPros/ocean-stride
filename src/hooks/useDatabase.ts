@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { db } from '@/lib/database2';
-import type { Company, Seafarer, Vessel } from '@/lib/schemas';
-import { STORE_NAMES } from '@/lib/schemas';
+import { db } from '@/lib/database';
+import type { Company, Seafarer, Vessel } from '@/lib/schemas_v2';
+import { STORE_NAMES } from '@/lib/schemas_v2';
 
 import { useToast } from '@/hooks/use-toast';
 

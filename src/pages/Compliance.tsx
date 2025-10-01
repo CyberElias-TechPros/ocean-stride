@@ -3,21 +3,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useCompany } from '@/context/CompanyContext';
 import { db } from '@/lib/database2';
 import type { Seafarer, Document } from '@/lib/schemas';
-import { INDEX_NAMES } from '@/lib/schemas';
+import { INDEX_NAMES, STORE_NAMES } from '@/lib/schemas';
 
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Progress } from '@/components/ui/progress';
-import { 
-  Search, 
-  Download, 
-  Shield, 
+import { DataTable, ColumnConfig } from '@/components/ui/data-table';
+import { exportToCSV } from '@/lib/utils/exportUtils';
+import {
+  Download,
+  Shield,
   AlertTriangle,
   CheckCircle,
   XCircle,
@@ -57,12 +58,134 @@ interface ComplianceRecord {
 }
 
 export default function Compliance() {
-  const [certificates, setCertificates] = useState<Certificate[]>([]);
-  const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>([]);
-  const [seafarers, setSeafarers] = useState<Seafarer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { selectedCompany } = useCompany();
-  const { toast } = useToast();
+   const [certificates, setCertificates] = useState<Certificate[]>([]);
+   const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>([]);
+   const [seafarers, setSeafarers] = useState<Seafarer[]>([]);
+   const [loading, setLoading] = useState(true);
+   const { selectedCompany } = useCompany();
+   const { toast } = useToast();
+
+   const certificateColumns: ColumnConfig<Certificate>[] = [
+     {
+       id: 'seafarerName',
+       header: 'Seafarer',
+       accessor: 'seafarerName',
+       sortable: true,
+     },
+     {
+       id: 'type',
+       header: 'Certificate Type',
+       accessor: 'type',
+       sortable: true,
+       filterable: true,
+     },
+     {
+       id: 'number',
+       header: 'Number',
+       accessor: 'number',
+       cell: (value) => value || '—',
+     },
+     {
+       id: 'issuingAuthority',
+       header: 'Issuing Authority',
+       accessor: 'issuingAuthority',
+     },
+     {
+       id: 'issueDate',
+       header: 'Issue Date',
+       accessor: 'issueDate',
+       sortable: true,
+       cell: (value) => value ? new Date(value).toLocaleDateString() : '—',
+     },
+     {
+       id: 'expiryDate',
+       header: 'Expiry Date',
+       accessor: 'expiryDate',
+       sortable: true,
+       sortKey: 'daysUntilExpiry',
+       cell: (value, row) => (
+         <div>
+           <div>{value ? new Date(value).toLocaleDateString() : '—'}</div>
+           {row.status === 'expiring' && (
+             <div className="text-xs text-warning">
+               {row.daysUntilExpiry} days left
+             </div>
+           )}
+           {row.status === 'expired' && (
+             <div className="text-xs text-destructive">
+               {Math.abs(row.daysUntilExpiry)} days overdue
+             </div>
+           )}
+         </div>
+       ),
+     },
+     {
+       id: 'status',
+       header: 'Status',
+       accessor: 'status',
+       sortable: true,
+       filterable: true,
+       cell: (value) => getStatusBadge(value),
+     },
+     {
+       id: 'actions',
+       header: 'Actions',
+       cell: (_, row) => (
+         <div className="flex gap-2">
+           <Button variant="outline" size="sm">
+             <FileText className="w-4 h-4 mr-1" />
+             View
+           </Button>
+           {row.status === 'expiring' && (
+             <Button
+               variant="outline"
+               size="sm"
+               className="ocean-gradient"
+               onClick={() => handleRenewCertificate(row.id)}
+             >
+               <RefreshCw className="w-4 h-4 mr-1" />
+               Renew
+             </Button>
+           )}
+           {(row.status === 'expiring' || row.status === 'expired') && (
+             <Button
+               variant="outline"
+               size="sm"
+               onClick={() => handleGenerateAlert(row.id)}
+             >
+               <Bell className="w-4 h-4 mr-1" />
+               Alert
+             </Button>
+           )}
+         </div>
+       ),
+     },
+   ];
+
+  // Certificate form state
+  const [certificateForm, setCertificateForm] = useState({
+    seafarerId: '',
+    type: '',
+    number: '',
+    issueDate: '',
+    expiryDate: '',
+    issuingAuthority: ''
+  });
+  const [isSubmittingCertificate, setIsSubmittingCertificate] = useState(false);
+
+  // Alert configuration state
+  const [alertConfig, setAlertConfig] = useState({
+    enableExpiryAlerts: true,
+    expiryThresholdDays: 60,
+    notificationMethods: ['email'] as string[],
+    alertRecipients: ['compliance_officer', 'captain'] as string[],
+    enableThresholdAlerts: true,
+    complianceThreshold: 90,
+    enableWorkHourAlerts: true,
+    maxWorkHoursPerWeek: 72
+  });
+  const [showAlertDialog, setShowAlertDialog] = useState(false);
+  const [isSavingAlerts, setIsSavingAlerts] = useState(false);
 
   useEffect(() => {
     const loadComplianceData = async () => {
@@ -149,9 +272,7 @@ export default function Compliance() {
 
     loadComplianceData();
   }, [selectedCompany, toast]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
+  // Removed search and filter states - handled by DataTable
 
   const handleRenewCertificate = (certId: string) => {
     // Simulate certificate renewal
@@ -175,6 +296,207 @@ export default function Compliance() {
         description: `${cert.type} for ${cert.seafarerName} expires in ${cert.daysUntilExpiry} days`,
         variant: cert.daysUntilExpiry < 30 ? "destructive" : "default"
       });
+    }
+  };
+
+  const handleExportComplianceReport = () => {
+    try {
+      const exportData = complianceRecords.map(record => ({
+        'Seafarer Name': record.seafarerName,
+        'Vessel': record.vessel,
+        'Compliance Score': record.complianceScore,
+        'Certificates Count': record.certificates.length,
+        'Valid Certificates': record.certificates.filter(c => c.status === 'valid').length,
+        'Expiring Certificates': record.certificates.filter(c => c.status === 'expiring').length,
+        'Expired Certificates': record.certificates.filter(c => c.status === 'expired').length,
+        'This Week Hours': record.workHours.thisWeek,
+        'This Month Hours': record.workHours.thisMonth,
+        'Rest Violations': record.workHours.restViolations,
+        'Last Audit': record.lastAudit
+      }));
+
+      exportToCSV(exportData, undefined, `compliance_report_${new Date().toISOString().split('T')[0]}.csv`);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported compliance report for ${complianceRecords.length} seafarers`
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export compliance report",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleAddCertificate = async () => {
+    if (!certificateForm.seafarerId || !certificateForm.type || !certificateForm.issueDate || !certificateForm.expiryDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please fill in all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSubmittingCertificate(true);
+    try {
+      const seafarer = seafarers.find(s => s.id === certificateForm.seafarerId);
+      if (!seafarer) {
+        throw new Error('Seafarer not found');
+      }
+
+      const documentData: Omit<Document, 'id' | 'createdAt' | 'updatedAt'> = {
+        type: 'certificate',
+        name: certificateForm.type,
+        description: certificateForm.issuingAuthority,
+        issueDate: certificateForm.issueDate,
+        expiryDate: certificateForm.expiryDate,
+        fileUrl: '', // No file upload in this simple form
+        fileType: 'application/pdf', // Default
+        fileSize: 0,
+        relatedTo: {
+          entityType: 'seafarer',
+          entityId: seafarer.id,
+          entityName: `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`
+        },
+        status: 'valid',
+        companyId: selectedCompany?.id,
+        notes: `Certificate Number: ${certificateForm.number}`
+      };
+
+      await db.add<Document>(STORE_NAMES.DOCUMENTS, documentData);
+
+      // Reset form
+      setCertificateForm({
+        seafarerId: '',
+        type: '',
+        number: '',
+        issueDate: '',
+        expiryDate: '',
+        issuingAuthority: ''
+      });
+
+      // Refresh compliance data
+      const loadComplianceData = async () => {
+        if (!selectedCompany) return;
+
+        try {
+          await db.init();
+          const companySeafarers = await db.getSeafarersByCompany(selectedCompany.id);
+          setSeafarers(companySeafarers);
+
+          const certs: Certificate[] = [];
+          const records: ComplianceRecord[] = [];
+
+          for (const s of companySeafarers) {
+            const docs = await db.getByIndex<Document>(
+              'documents',
+              INDEX_NAMES.DOCUMENT_BY_ENTITY,
+              ['seafarer', s.id]
+            );
+
+            const seafarerCerts = (docs || [])
+              .filter(d => d.type === 'certificate')
+              .map((d, idx): Certificate => {
+                const issueDate = d.issueDate || '';
+                const expiryDate = d.expiryDate || '';
+                const daysUntilExpiry = expiryDate
+                  ? Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  : 0;
+                const status: Certificate['status'] = expiryDate
+                  ? (daysUntilExpiry < 0 ? 'expired' : daysUntilExpiry <= 60 ? 'expiring' : 'valid')
+                  : 'valid';
+                return {
+                  id: d.id || `${s.id}-doc-${idx}`,
+                  seafarerId: s.id,
+                  seafarerName: `${s.personalInfo.firstName} ${s.personalInfo.lastName}`,
+                  type: d.name,
+                  number: certificateForm.number || '-',
+                  issueDate,
+                  expiryDate,
+                  issuingAuthority: d.description || '—',
+                  status,
+                  daysUntilExpiry,
+                };
+              });
+
+            certs.push(...seafarerCerts);
+
+            const expiredCount = seafarerCerts.filter(c => c.status === 'expired').length;
+            const expiringCount = seafarerCerts.filter(c => c.status === 'expiring').length;
+            const score = Math.max(0, 100 - expiredCount * 20 - expiringCount * 5);
+
+            records.push({
+              id: s.id,
+              seafarerId: s.id,
+              seafarerName: `${s.personalInfo.firstName} ${s.personalInfo.lastName}`,
+              vessel: s.employment.currentVesselName || 'Not Assigned',
+              workHours: {
+                thisWeek: 0,
+                thisMonth: 0,
+                restViolations: 0,
+              },
+              certificates: seafarerCerts,
+              complianceScore: score,
+              lastAudit: '-',
+            });
+          }
+
+          setCertificates(certs);
+          setComplianceRecords(records);
+        } catch (error) {
+          console.error('Failed to refresh compliance data:', error);
+        }
+      };
+
+      await loadComplianceData();
+
+      toast({
+        title: "Certificate Added",
+        description: `Certificate has been successfully added for ${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`
+      });
+    } catch (error) {
+      console.error('Failed to add certificate:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add certificate. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmittingCertificate(false);
+    }
+  };
+
+  const handleSaveAlertConfig = async () => {
+    setIsSavingAlerts(true);
+    try {
+      // Save alert configuration to database (mock implementation)
+      const alertConfigData = {
+        ...alertConfig,
+        companyId: selectedCompany?.id,
+        updatedAt: new Date().toISOString()
+      };
+
+      // In a real implementation, this would save to a settings store
+      localStorage.setItem(`alert_config_${selectedCompany?.id}`, JSON.stringify(alertConfigData));
+
+      toast({
+        title: "Alert Configuration Saved",
+        description: "Compliance alert settings have been updated successfully"
+      });
+
+      setShowAlertDialog(false);
+    } catch (error) {
+      console.error('Failed to save alert configuration:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save alert configuration. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSavingAlerts(false);
     }
   };
 
@@ -215,16 +537,7 @@ export default function Compliance() {
     return 'text-destructive';
   };
 
-  const filteredCertificates = certificates.filter(cert => {
-    const matchesSearch = cert.seafarerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cert.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cert.number.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || cert.status === statusFilter;
-    const matchesType = typeFilter === 'all' || cert.type.includes(typeFilter);
-    
-    return matchesSearch && matchesStatus && matchesType;
-  });
+  // Removed filteredCertificates - handled by DataTable
 
   const expiringCerts = certificates.filter(c => c.status === 'expiring').length;
   const expiredCerts = certificates.filter(c => c.status === 'expired').length;
@@ -241,14 +554,186 @@ export default function Compliance() {
           </div>
           
           <div className="flex gap-3">
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportComplianceReport}>
               <Download className="w-4 h-4 mr-2" />
               Compliance Report
             </Button>
-            <Button variant="outline">
-              <Bell className="w-4 h-4 mr-2" />
-              Setup Alerts
-            </Button>
+            <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <Bell className="w-4 h-4 mr-2" />
+                  Setup Alerts
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Compliance Alert Configuration</DialogTitle>
+                  <DialogDescription>
+                    Configure automatic alerts for certificate expiry, compliance thresholds, and work hour violations
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6">
+                  {/* Certificate Expiry Alerts */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium">Certificate Expiry Alerts</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="enableExpiryAlerts"
+                          checked={alertConfig.enableExpiryAlerts}
+                          onChange={(e) => setAlertConfig(prev => ({ ...prev, enableExpiryAlerts: e.target.checked }))}
+                          className="rounded"
+                        />
+                        <Label htmlFor="enableExpiryAlerts">Enable certificate expiry alerts</Label>
+                      </div>
+                      <div className="ml-6">
+                        <Label htmlFor="expiryThreshold">Alert threshold (days before expiry)</Label>
+                        <Input
+                          id="expiryThreshold"
+                          type="number"
+                          value={alertConfig.expiryThresholdDays}
+                          onChange={(e) => setAlertConfig(prev => ({ ...prev, expiryThresholdDays: parseInt(e.target.value) }))}
+                          className="mt-1"
+                          min="1"
+                          max="365"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Notification Preferences */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium">Notification Methods</h4>
+                    <div className="space-y-2">
+                      {[
+                        { id: 'email', label: 'Email Notifications' },
+                        { id: 'sms', label: 'SMS Alerts' },
+                        { id: 'dashboard', label: 'Dashboard Notifications' },
+                        { id: 'mobile', label: 'Mobile Push Notifications' }
+                      ].map(method => (
+                        <div key={method.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={method.id}
+                            checked={alertConfig.notificationMethods.includes(method.id)}
+                            onChange={(e) => {
+                              const methods = e.target.checked
+                                ? [...alertConfig.notificationMethods, method.id]
+                                : alertConfig.notificationMethods.filter(m => m !== method.id);
+                              setAlertConfig(prev => ({ ...prev, notificationMethods: methods }));
+                            }}
+                            className="rounded"
+                          />
+                          <Label htmlFor={method.id}>{method.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Alert Recipients */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium">Alert Recipients</h4>
+                    <div className="space-y-2">
+                      {[
+                        { id: 'compliance_officer', label: 'Compliance Officer' },
+                        { id: 'captain', label: 'Vessel Captain' },
+                        { id: 'hr_manager', label: 'HR Manager' },
+                        { id: 'safety_officer', label: 'Safety Officer' },
+                        { id: 'management', label: 'Senior Management' }
+                      ].map(recipient => (
+                        <div key={recipient.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={recipient.id}
+                            checked={alertConfig.alertRecipients.includes(recipient.id)}
+                            onChange={(e) => {
+                              const recipients = e.target.checked
+                                ? [...alertConfig.alertRecipients, recipient.id]
+                                : alertConfig.alertRecipients.filter(r => r !== recipient.id);
+                              setAlertConfig(prev => ({ ...prev, alertRecipients: recipients }));
+                            }}
+                            className="rounded"
+                          />
+                          <Label htmlFor={recipient.id}>{recipient.label}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Compliance Threshold Alerts */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium">Compliance Threshold Alerts</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="enableThresholdAlerts"
+                          checked={alertConfig.enableThresholdAlerts}
+                          onChange={(e) => setAlertConfig(prev => ({ ...prev, enableThresholdAlerts: e.target.checked }))}
+                          className="rounded"
+                        />
+                        <Label htmlFor="enableThresholdAlerts">Enable compliance threshold alerts</Label>
+                      </div>
+                      <div className="ml-6">
+                        <Label htmlFor="complianceThreshold">Compliance threshold (%)</Label>
+                        <Input
+                          id="complianceThreshold"
+                          type="number"
+                          value={alertConfig.complianceThreshold}
+                          onChange={(e) => setAlertConfig(prev => ({ ...prev, complianceThreshold: parseInt(e.target.value) }))}
+                          className="mt-1"
+                          min="0"
+                          max="100"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Work Hour Alerts */}
+                  <div className="space-y-4">
+                    <h4 className="text-sm font-medium">Work Hour Violation Alerts</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id="enableWorkHourAlerts"
+                          checked={alertConfig.enableWorkHourAlerts}
+                          onChange={(e) => setAlertConfig(prev => ({ ...prev, enableWorkHourAlerts: e.target.checked }))}
+                          className="rounded"
+                        />
+                        <Label htmlFor="enableWorkHourAlerts">Enable work hour violation alerts</Label>
+                      </div>
+                      <div className="ml-6">
+                        <Label htmlFor="maxWorkHours">Maximum hours per week</Label>
+                        <Input
+                          id="maxWorkHours"
+                          type="number"
+                          value={alertConfig.maxWorkHoursPerWeek}
+                          onChange={(e) => setAlertConfig(prev => ({ ...prev, maxWorkHoursPerWeek: parseInt(e.target.value) }))}
+                          className="mt-1"
+                          min="1"
+                          max="168"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2 pt-4">
+                    <Button variant="outline" className="flex-1" onClick={() => setShowAlertDialog(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1 ocean-gradient"
+                      onClick={handleSaveAlertConfig}
+                      disabled={isSavingAlerts}
+                    >
+                      {isSavingAlerts ? 'Saving...' : 'Save Configuration'}
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
             <Dialog>
               <DialogTrigger asChild>
                 <Button className="ocean-gradient">
@@ -264,36 +749,83 @@ export default function Compliance() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <Select>
+                  <Select
+                    value={certificateForm.seafarerId}
+                    onValueChange={(value) => setCertificateForm(prev => ({ ...prev, seafarerId: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select seafarer" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="john">John Smith</SelectItem>
-                      <SelectItem value="maria">Maria Rodriguez</SelectItem>
-                      <SelectItem value="erik">Erik Olsen</SelectItem>
+                      {seafarers.map(seafarer => (
+                        <SelectItem key={seafarer.id} value={seafarer.id}>
+                          {seafarer.personalInfo.firstName} {seafarer.personalInfo.lastName}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <Select>
+                  <Select
+                    value={certificateForm.type}
+                    onValueChange={(value) => setCertificateForm(prev => ({ ...prev, type: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Certificate type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="stcw">STCW Basic Safety Training</SelectItem>
-                      <SelectItem value="medical">Medical Certificate</SelectItem>
-                      <SelectItem value="watch">Officer of the Watch</SelectItem>
-                      <SelectItem value="engine">Engine Management</SelectItem>
+                      <SelectItem value="STCW Basic Safety Training">STCW Basic Safety Training</SelectItem>
+                      <SelectItem value="Medical Certificate">Medical Certificate</SelectItem>
+                      <SelectItem value="Officer of the Watch">Officer of the Watch</SelectItem>
+                      <SelectItem value="Engine Management">Engine Management</SelectItem>
+                      <SelectItem value="Security Training">Security Training</SelectItem>
+                      <SelectItem value="Proficiency in Survival Craft">Proficiency in Survival Craft</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Input placeholder="Certificate number" />
+                  <Input
+                    placeholder="Certificate number"
+                    value={certificateForm.number}
+                    onChange={(e) => setCertificateForm(prev => ({ ...prev, number: e.target.value }))}
+                  />
                   <div className="grid grid-cols-2 gap-4">
-                    <Input type="date" placeholder="Issue date" />
-                    <Input type="date" placeholder="Expiry date" />
+                    <Input
+                      type="date"
+                      placeholder="Issue date"
+                      value={certificateForm.issueDate}
+                      onChange={(e) => setCertificateForm(prev => ({ ...prev, issueDate: e.target.value }))}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="Expiry date"
+                      value={certificateForm.expiryDate}
+                      onChange={(e) => setCertificateForm(prev => ({ ...prev, expiryDate: e.target.value }))}
+                    />
                   </div>
-                  <Input placeholder="Issuing authority" />
+                  <Input
+                    placeholder="Issuing authority"
+                    value={certificateForm.issuingAuthority}
+                    onChange={(e) => setCertificateForm(prev => ({ ...prev, issuingAuthority: e.target.value }))}
+                  />
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1">Cancel</Button>
-                    <Button className="flex-1 ocean-gradient">Add Certificate</Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setCertificateForm({
+                        seafarerId: '',
+                        type: '',
+                        number: '',
+                        issueDate: '',
+                        expiryDate: '',
+                        issuingAuthority: ''
+                      })}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1 ocean-gradient"
+                      onClick={handleAddCertificate}
+                      disabled={isSubmittingCertificate}
+                    >
+                      {isSubmittingCertificate ? 'Adding...' : 'Add Certificate'}
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
@@ -360,136 +892,18 @@ export default function Compliance() {
           </TabsList>
 
           <TabsContent value="certificates" className="space-y-4">
-            {/* Filters */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search certificates, seafarers, or numbers..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-                  
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="valid">Valid</SelectItem>
-                      <SelectItem value="expiring">Expiring</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Types</SelectItem>
-                      <SelectItem value="STCW">STCW Certificates</SelectItem>
-                      <SelectItem value="Medical">Medical Certificates</SelectItem>
-                      <SelectItem value="Officer">Officer Certificates</SelectItem>
-                      <SelectItem value="Engine">Engine Certificates</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Certificates Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Certificate Registry</CardTitle>
-                <CardDescription>
-                  All seafarer certificates and their expiry status
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Seafarer</TableHead>
-                      <TableHead>Certificate Type</TableHead>
-                      <TableHead>Number</TableHead>
-                      <TableHead>Issuing Authority</TableHead>
-                      <TableHead>Issue Date</TableHead>
-                      <TableHead>Expiry Date</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredCertificates.map((cert) => (
-                      <TableRow key={cert.id}>
-                        <TableCell className="font-medium">{cert.seafarerName}</TableCell>
-                        <TableCell>{cert.type}</TableCell>
-                        <TableCell className="font-mono text-sm">{cert.number}</TableCell>
-                        <TableCell>{cert.issuingAuthority}</TableCell>
-                        <TableCell>{new Date(cert.issueDate).toLocaleDateString()}</TableCell>
-                        <TableCell>
-                          <div>
-                            <div>{new Date(cert.expiryDate).toLocaleDateString()}</div>
-                            {cert.status === 'expiring' && (
-                              <div className="text-xs text-warning">
-                                {cert.daysUntilExpiry} days left
-                              </div>
-                            )}
-                            {cert.status === 'expired' && (
-                              <div className="text-xs text-destructive">
-                                {Math.abs(cert.daysUntilExpiry)} days overdue
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(cert.status)}
-                            {getStatusBadge(cert.status)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button variant="outline" size="sm">
-                              <FileText className="w-4 h-4 mr-1" />
-                              View
-                            </Button>
-                            {cert.status === 'expiring' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                className="ocean-gradient"
-                                onClick={() => handleRenewCertificate(cert.id)}
-                              >
-                                <RefreshCw className="w-4 h-4 mr-1" />
-                                Renew
-                              </Button>
-                            )}
-                            {(cert.status === 'expiring' || cert.status === 'expired') && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleGenerateAlert(cert.id)}
-                              >
-                                <Bell className="w-4 h-4 mr-1" />
-                                Alert
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <DataTable
+              data={certificates}
+              columns={certificateColumns}
+              loading={loading}
+              emptyMessage="No certificates found. Add certificates to track compliance."
+              pageSize={10}
+              searchable
+              searchPlaceholder="Search certificates, seafarers, or numbers..."
+              filterable
+              sortable
+            />
           </TabsContent>
 
           <TabsContent value="workhours" className="space-y-4">

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCompany } from '@/context/CompanyContext';
 import { db } from '@/lib/database2';
-import type { Payroll } from '@/lib/schemas';
+import type { Payroll, Vessel } from '@/lib/schemas';
 import { INDEX_NAMES, STORE_NAMES } from '@/lib/schemas';
 
 import { useToast } from '@/hooks/use-toast';
@@ -10,13 +10,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  Search, 
-  Download, 
-  DollarSign, 
+import { DataTable, ColumnConfig } from '@/components/ui/data-table';
+import {
+  Download,
+  DollarSign,
   CreditCard,
   Calculator,
   TrendingUp,
@@ -28,6 +27,7 @@ import {
   Users,
   Globe
 } from 'lucide-react';
+import { exportToCSV } from '@/lib/utils/exportUtils';
 
 interface PayrollRecord {
   id: string;
@@ -63,16 +63,26 @@ export default function Payroll() {
   const { selectedCompany } = useCompany();
   const { toast } = useToast();
 
+  // Payroll processing form state
+  const [payrollForm, setPayrollForm] = useState({
+    vesselId: '',
+    startDate: '',
+    endDate: ''
+  });
+  const [isProcessingPayroll, setIsProcessingPayroll] = useState(false);
+  const [vessels, setVessels] = useState<Vessel[]>([]);
+
   useEffect(() => {
     const loadPayrollData = async () => {
       if (!selectedCompany) return;
-      
+
       try {
         await db.init();
         const [companySeafarers, companyVessels] = await Promise.all([
           db.getSeafarersByCompany(selectedCompany.id),
           db.getVesselsByCompany(selectedCompany.id)
         ]);
+        setVessels(companyVessels);
         // No need to persist seafarers/vessels in state; we use locals only
 
         // Fetch payrolls for all seafarers of this company
@@ -136,16 +146,22 @@ export default function Payroll() {
     loadPayrollData();
   }, [selectedCompany, toast]);
 
-  const handleProcessPayroll = async (recordId: string) => {
+  const handleProcessRecord = async (recordId: string) => {
     try {
+      // Update status in database
+      await db.update<Payroll>(STORE_NAMES.PAYROLLS, recordId, {
+        status: 'pending'
+      });
+
+      // Update local state
       const record = payrollRecords.find(r => r.id === recordId);
       if (record) {
         const updatedRecord = { ...record, status: 'processed' as const };
         setPayrollRecords(prev => prev.map(r => r.id === recordId ? updatedRecord : r));
-        
+
         toast({
           title: "Payroll Processed",
-          description: `Payroll for ${record.seafarerName} has been processed`
+          description: `Payroll for ${record.seafarerName} has been submitted for approval`
         });
       }
     } catch (error) {
@@ -157,21 +173,140 @@ export default function Payroll() {
     }
   };
 
-  // Removed unused payment completion handler
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [currencyFilter, setCurrencyFilter] = useState<string>('all');
   const [selectedRecord, setSelectedRecord] = useState<PayrollRecord | null>(null);
-  
-  const currencies = ['USD', 'EUR', 'GBP', 'PHP'];
+
+  const payrollColumns: ColumnConfig<PayrollRecord>[] = [
+    {
+      id: 'seafarerName',
+      header: 'Seafarer',
+      accessor: 'seafarerName',
+      sortable: true,
+      cell: (value, row) => (
+        <div>
+          <div className="font-medium">{value}</div>
+          <div className="text-sm text-muted-foreground">{row.rank}</div>
+        </div>
+      ),
+    },
+    {
+      id: 'vessel',
+      header: 'Vessel',
+      accessor: 'vessel',
+      sortable: true,
+      filterable: true,
+    },
+    {
+      id: 'period',
+      header: 'Period',
+      accessor: (row) => row.period,
+      sortable: true,
+      sortKey: (row) => new Date(row.period.start).getTime(),
+      cell: (value) => (
+        <div className="text-sm">
+          {new Date(value.start).toLocaleDateString()} -<br/>
+          {new Date(value.end).toLocaleDateString()}
+        </div>
+      ),
+    },
+    {
+      id: 'grossPay',
+      header: 'Gross Pay',
+      accessor: (row) => Object.values(row.earnings).reduce((sum, val) => sum + val, 0),
+      sortable: true,
+      cell: (value, row) => `${value.toLocaleString()} ${row.currency}`,
+    },
+    {
+      id: 'deductions',
+      header: 'Deductions',
+      accessor: (row) => Object.values(row.deductions).reduce((sum, val) => sum + val, 0),
+      sortable: true,
+      cell: (value, row) => `${value.toLocaleString()} ${row.currency}`,
+    },
+    {
+      id: 'netPay',
+      header: 'Net Pay',
+      accessor: 'netPay',
+      sortable: true,
+      cell: (value, row) => (
+        <div className="font-medium">
+          {value.toLocaleString()} {row.currency}
+        </div>
+      ),
+    },
+    {
+      id: 'currency',
+      header: 'Currency',
+      accessor: 'currency',
+      filterable: true,
+      cell: (value) => <Badge variant="outline">{value}</Badge>,
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      accessor: 'status',
+      sortable: true,
+      filterable: true,
+      cell: (value) => (
+        <div className="flex items-center gap-2">
+          {getStatusIcon(value)}
+          {getStatusBadge(value)}
+        </div>
+      ),
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      cell: (_, row) => (
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedRecord(row)}
+          >
+            <FileSpreadsheet className="w-4 h-4 mr-1" />
+            Details
+          </Button>
+          {row.status === 'draft' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ocean-gradient"
+              onClick={() => handleProcessRecord(row.id)}
+            >
+              <Calculator className="w-4 h-4 mr-1" />
+              Process
+            </Button>
+          )}
+          {row.status === 'processed' && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="ocean-gradient"
+              onClick={() => handlePayRecord(row.id)}
+            >
+              <CreditCard className="w-4 h-4 mr-1" />
+              Pay Now
+            </Button>
+          )}
+        </div>
+      ),
+    },
+  ];
 
   const handlePayRecord = async (recordId: string) => {
     try {
+      // Update status in database
+      await db.update<Payroll>(STORE_NAMES.PAYROLLS, recordId, {
+        status: 'paid',
+        paymentDate: new Date().toISOString()
+      });
+
+      // Update local state
       const record = payrollRecords.find(r => r.id === recordId);
       if (record) {
         const updatedRecord = { ...record, status: 'paid' as const };
         setPayrollRecords(prev => prev.map(r => r.id === recordId ? updatedRecord : r));
-        
+
         toast({
           title: "Payment Complete",
           description: `Payment to ${record.seafarerName} has been completed`
@@ -181,6 +316,239 @@ export default function Payroll() {
       toast({
         title: "Error",
         description: "Failed to complete payment",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleBulkProcessPayroll = async () => {
+    if (!payrollForm.vesselId || !payrollForm.startDate || !payrollForm.endDate) {
+      toast({
+        title: "Validation Error",
+        description: "Please select a vessel and date range",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!selectedCompany) return;
+
+    setIsProcessingPayroll(true);
+    try {
+      const vessel = vessels.find(v => v.id === payrollForm.vesselId);
+      if (!vessel) {
+        throw new Error('Vessel not found');
+      }
+
+      // Get seafarers assigned to this vessel
+      const companySeafarers = await db.getSeafarersByCompany(selectedCompany.id);
+      const assignedSeafarers = companySeafarers.filter(s => s.employment.currentVesselId === payrollForm.vesselId);
+
+      if (assignedSeafarers.length === 0) {
+        toast({
+          title: "No Seafarers Found",
+          description: `No seafarers are currently assigned to ${vessel.name}`,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Create payroll records for each seafarer
+      const payrollPromises = assignedSeafarers.map(async (seafarer) => {
+        const payrollData: Omit<Payroll, 'id' | 'createdAt' | 'updatedAt'> = {
+          seafarerId: seafarer.id,
+          seafarerName: `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}`,
+          vesselId: vessel.id,
+          vesselName: vessel.name,
+          periodStart: payrollForm.startDate,
+          periodEnd: payrollForm.endDate,
+          basicSalary: seafarer.employment.baseWage,
+          overtimeHours: 0, // Could be calculated based on work hours
+          overtimeRate: seafarer.employment.baseWage * 0.5, // 50% overtime rate
+          bonuses: [],
+          deductions: [],
+          netSalary: seafarer.employment.baseWage, // Simplified, no deductions
+          currency: seafarer.employment.wageCurrency,
+          paymentDate: '', // Will be set when paid
+          paymentMethod: 'bank_transfer',
+          status: 'draft',
+          companyId: selectedCompany?.id
+        };
+
+        return db.add<Payroll>(STORE_NAMES.PAYROLLS, payrollData);
+      });
+
+      await Promise.all(payrollPromises);
+
+      // Reset form
+      setPayrollForm({
+        vesselId: '',
+        startDate: '',
+        endDate: ''
+      });
+
+      // Refresh payroll data
+      const loadPayrollData = async () => {
+        if (!selectedCompany) return;
+
+        try {
+          await db.init();
+          const [companySeafarers, companyVessels] = await Promise.all([
+            db.getSeafarersByCompany(selectedCompany.id),
+            db.getVesselsByCompany(selectedCompany.id)
+          ]);
+          setVessels(companyVessels);
+
+          const payrolls: Payroll[] = (
+            await Promise.all(
+              companySeafarers.map(s => db.getByIndex<Payroll>(STORE_NAMES.PAYROLLS, INDEX_NAMES.PAYROLL_BY_SEAFARER, s.id))
+            )
+          ).flat();
+
+          const records: PayrollRecord[] = payrolls.map(p => {
+            const seafarer = companySeafarers.find(s => s.id === p.seafarerId);
+            const vesselName = p.vesselName || companyVessels.find(v => v.id === p.vesselId)?.name || 'Not Assigned';
+
+            const bonusesTotal = (p.bonuses || []).reduce((sum, b) => sum + (b.amount || 0), 0);
+            const deductionsTotal = (p.deductions || []).reduce((sum, d) => sum + (d.amount || 0), 0);
+            const overtimeAmount = (p.overtimeHours || 0) * (p.overtimeRate || 0);
+
+            const earnings = {
+              basicWage: p.basicSalary || 0,
+              overtime: overtimeAmount,
+              allowances: 0,
+              bonuses: bonusesTotal,
+            };
+            const deductions = {
+              taxes: 0,
+              insurance: 0,
+              allotments: 0,
+              other: deductionsTotal,
+            };
+
+            return {
+              id: p.id,
+              seafarerId: p.seafarerId,
+              seafarerName: seafarer ? `${seafarer.personalInfo.firstName} ${seafarer.personalInfo.lastName}` : p.seafarerName || p.seafarerId,
+              rank: seafarer?.employment.rank || '—',
+              vessel: vesselName,
+              period: { start: p.periodStart, end: p.periodEnd },
+              earnings,
+              deductions,
+              netPay: p.netSalary || 0,
+              currency: p.currency || 'USD',
+              status: p.status === 'paid' ? 'paid' : p.status === 'pending' ? 'processed' : 'draft',
+              exchangeRate: 1,
+            };
+          });
+
+          setPayrollRecords(records);
+        } catch (error) {
+          console.error('Failed to refresh payroll data:', error);
+        }
+      };
+
+      await loadPayrollData();
+
+      toast({
+        title: "Payroll Processed",
+        description: `Payroll records created for ${assignedSeafarers.length} seafarers on ${vessel.name}`
+      });
+    } catch (error) {
+      console.error('Failed to process payroll:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process payroll. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessingPayroll(false);
+    }
+  };
+
+  const generatePayslip = (record: PayrollRecord) => {
+    const grossPay = Object.values(record.earnings).reduce((sum, val) => sum + val, 0);
+    const totalDeductions = Object.values(record.deductions).reduce((sum, val) => sum + val, 0);
+
+    const payslipContent = `
+PAYSLIP
+========
+
+Seafarer: ${record.seafarerName}
+Rank: ${record.rank}
+Vessel: ${record.vessel}
+Period: ${new Date(record.period.start).toLocaleDateString()} - ${new Date(record.period.end).toLocaleDateString()}
+
+EARNINGS:
+---------
+Basic Wage: ${record.earnings.basicWage.toLocaleString()} ${record.currency}
+Overtime: ${record.earnings.overtime.toLocaleString()} ${record.currency}
+Allowances: ${record.earnings.allowances.toLocaleString()} ${record.currency}
+Bonuses: ${record.earnings.bonuses.toLocaleString()} ${record.currency}
+Gross Pay: ${grossPay.toLocaleString()} ${record.currency}
+
+DEDUCTIONS:
+-----------
+Taxes: ${record.deductions.taxes.toLocaleString()} ${record.currency}
+Insurance: ${record.deductions.insurance.toLocaleString()} ${record.currency}
+Allotments: ${record.deductions.allotments.toLocaleString()} ${record.currency}
+Other: ${record.deductions.other.toLocaleString()} ${record.currency}
+Total Deductions: ${totalDeductions.toLocaleString()} ${record.currency}
+
+NET PAY: ${record.netPay.toLocaleString()} ${record.currency}
+
+Generated on: ${new Date().toLocaleString()}
+    `.trim();
+
+    const blob = new Blob([payslipContent], { type: 'text/plain;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `payslip_${record.seafarerName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.txt`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Payslip Downloaded",
+      description: `Payslip for ${record.seafarerName} has been downloaded`
+    });
+  };
+
+  const handleExportPayroll = () => {
+    try {
+      const exportData = payrollRecords.map(record => ({
+        'Seafarer Name': record.seafarerName,
+        'Rank': record.rank,
+        'Vessel': record.vessel,
+        'Period Start': record.period.start,
+        'Period End': record.period.end,
+        'Basic Wage': record.earnings.basicWage,
+        'Overtime': record.earnings.overtime,
+        'Allowances': record.earnings.allowances,
+        'Bonuses': record.earnings.bonuses,
+        'Gross Pay': Object.values(record.earnings).reduce((sum, val) => sum + val, 0),
+        'Taxes': record.deductions.taxes,
+        'Insurance': record.deductions.insurance,
+        'Allotments': record.deductions.allotments,
+        'Other Deductions': record.deductions.other,
+        'Total Deductions': Object.values(record.deductions).reduce((sum, val) => sum + val, 0),
+        'Net Pay': record.netPay,
+        'Currency': record.currency,
+        'Status': record.status
+      }));
+
+      exportToCSV(exportData, undefined, `payroll_data_${new Date().toISOString().split('T')[0]}.csv`);
+
+      toast({
+        title: "Export Successful",
+        description: `Exported payroll data for ${payrollRecords.length} records`
+      });
+    } catch (error) {
+      toast({
+        title: "Export Failed",
+        description: "Failed to export payroll data",
         variant: "destructive"
       });
     }
@@ -215,16 +583,7 @@ export default function Payroll() {
     );
   };
 
-  const filteredRecords = payrollRecords.filter(record => {
-    const matchesSearch = record.seafarerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.vessel.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.rank.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || record.status === statusFilter;
-    const matchesCurrency = currencyFilter === 'all' || record.currency === currencyFilter;
-    
-    return matchesSearch && matchesStatus && matchesCurrency;
-  });
+  // Removed filteredRecords - handled by DataTable
 
   const totalPayroll = payrollRecords.reduce((sum, record) => sum + record.netPay, 0);
   const monthlyAverage = totalPayroll / 12;
@@ -240,7 +599,7 @@ export default function Payroll() {
           </div>
           
           <div className="flex gap-3">
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportPayroll}>
               <Download className="w-4 h-4 mr-2" />
               Export Payroll
             </Button>
@@ -259,23 +618,48 @@ export default function Payroll() {
                   </DialogDescription>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <Select>
+                  <Select
+                    value={payrollForm.vesselId}
+                    onValueChange={(value) => setPayrollForm(prev => ({ ...prev, vesselId: value }))}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select vessel" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="mv-atlantic">MV Atlantic Star</SelectItem>
-                      <SelectItem value="mv-mediterranean">MV Mediterranean</SelectItem>
-                      <SelectItem value="mv-arctic">MV Arctic Explorer</SelectItem>
+                      {vessels.map(vessel => (
+                        <SelectItem key={vessel.id} value={vessel.id}>{vessel.name}</SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <div className="grid grid-cols-2 gap-4">
-                    <Input type="date" placeholder="Start date" />
-                    <Input type="date" placeholder="End date" />
+                    <Input
+                      type="date"
+                      placeholder="Start date"
+                      value={payrollForm.startDate}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, startDate: e.target.value }))}
+                    />
+                    <Input
+                      type="date"
+                      placeholder="End date"
+                      value={payrollForm.endDate}
+                      onChange={(e) => setPayrollForm(prev => ({ ...prev, endDate: e.target.value }))}
+                    />
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="outline" className="flex-1">Cancel</Button>
-                    <Button className="flex-1 ocean-gradient">Process</Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setPayrollForm({ vesselId: '', startDate: '', endDate: '' })}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1 ocean-gradient"
+                      onClick={handleBulkProcessPayroll}
+                      disabled={isProcessingPayroll}
+                    >
+                      {isProcessingPayroll ? 'Processing...' : 'Process'}
+                    </Button>
                   </div>
                 </div>
               </DialogContent>
@@ -340,147 +724,18 @@ export default function Payroll() {
           </TabsList>
 
           <TabsContent value="records" className="space-y-4">
-            {/* Filters */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col lg:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input
-                        placeholder="Search seafarers, vessels, or ranks..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="pl-9"
-                      />
-                    </div>
-                  </div>
-                  
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="processed">Processed</SelectItem>
-                      <SelectItem value="paid">Paid</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <Select value={currencyFilter} onValueChange={setCurrencyFilter}>
-                    <SelectTrigger className="w-48">
-                      <SelectValue placeholder="Filter by currency" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Currencies</SelectItem>
-                      {currencies.map(currency => (
-                        <SelectItem key={currency} value={currency}>{currency}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Payroll Records Table */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Payroll Records</CardTitle>
-                <CardDescription>
-                  Monthly payroll records for all seafarers
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Seafarer</TableHead>
-                      <TableHead>Vessel</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Gross Pay</TableHead>
-                      <TableHead>Deductions</TableHead>
-                      <TableHead>Net Pay</TableHead>
-                      <TableHead>Currency</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRecords.map((record) => {
-                      const grossPay = Object.values(record.earnings).reduce((sum, val) => sum + val, 0);
-                      const totalDeductions = Object.values(record.deductions).reduce((sum, val) => sum + val, 0);
-                      
-                      return (
-                        <TableRow key={record.id}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{record.seafarerName}</div>
-                              <div className="text-sm text-muted-foreground">{record.rank}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{record.vessel}</TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {new Date(record.period.start).toLocaleDateString()} -<br/>
-                              {new Date(record.period.end).toLocaleDateString()}
-                            </div>
-                          </TableCell>
-                          <TableCell>{grossPay.toLocaleString()} {record.currency}</TableCell>
-                          <TableCell>{totalDeductions.toLocaleString()} {record.currency}</TableCell>
-                          <TableCell className="font-medium">
-                            {record.netPay.toLocaleString()} {record.currency}
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{record.currency}</Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {getStatusIcon(record.status)}
-                              {getStatusBadge(record.status)}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => setSelectedRecord(record)}
-                              >
-                                <FileSpreadsheet className="w-4 h-4 mr-1" />
-                                Details
-                              </Button>
-                              {record.status === 'draft' && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="ocean-gradient"
-                                  onClick={() => handleProcessPayroll(record.id)}
-                                >
-                                  <Calculator className="w-4 h-4 mr-1" />
-                                  Process
-                                </Button>
-                              )}
-                              {record.status === 'processed' && (
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="ocean-gradient"
-                                  onClick={() => handlePayRecord(record.id)}
-                                >
-                                  <CreditCard className="w-4 h-4 mr-1" />
-                                  Pay Now
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
+            <DataTable
+              data={payrollRecords}
+              columns={payrollColumns}
+              loading={loading}
+              emptyMessage="No payroll records found. Process payroll to get started."
+              pageSize={10}
+              searchable
+              searchPlaceholder="Search seafarers, vessels, or ranks..."
+              filterable
+              sortable
+            />
           </TabsContent>
 
           <TabsContent value="allotments" className="space-y-4">
@@ -673,12 +928,12 @@ export default function Payroll() {
                 </div>
                 
                 <div className="flex gap-2 pt-4">
-                  <Button variant="outline" className="flex-1">
+                  <Button variant="outline" className="flex-1" onClick={() => generatePayslip(selectedRecord)}>
                     <Download className="w-4 h-4 mr-2" />
                     Download Payslip
                   </Button>
                   {selectedRecord.status === 'draft' && (
-                    <Button className="flex-1 ocean-gradient">
+                    <Button className="flex-1 ocean-gradient" onClick={() => handleProcessRecord(selectedRecord.id)}>
                       <Calculator className="w-4 h-4 mr-2" />
                       Process Payment
                     </Button>
