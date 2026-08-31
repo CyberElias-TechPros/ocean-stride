@@ -72,13 +72,21 @@ export function PayrollForm({
     watch,
   } = useForm<PayrollFormValues>({
     resolver: zodResolver(payrollFormSchema),
-    defaultValues: initialData ? {
+    defaultValues: initialData ? ({
       ...initialData,
+      status: (initialData.status === 'pending_approval' || initialData.status === 'failed' ? 'pending' : initialData.status) as PayrollFormValues['status'],
       periodStart: new Date(initialData.periodStart),
       periodEnd: new Date(initialData.periodEnd),
       paymentDate: initialData.paymentDate ? new Date(initialData.paymentDate) : new Date(),
-      items: initialData.items || [],
-    } : {
+      items: initialData.items.map((item) => ({
+        type: item.type === 'salary' ? 'regular' : item.type === 'other' ? 'allowance' : item.type,
+        description: item.description,
+        amount: item.amount,
+        rate: item.rate,
+        quantity: item.quantity,
+        taxable: item.taxable,
+      })),
+    } as PayrollFormValues) : {
       seafarerId: seafarer?.id || '',
       vesselId: '',
       periodStart: new Date(),
@@ -134,7 +142,7 @@ export function PayrollForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmitHandler as any)} className="space-y-6">
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Payroll Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

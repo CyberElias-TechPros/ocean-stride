@@ -13,13 +13,7 @@
   "categories": ["business", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/cea.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "/cea.png",
+      "src": "/ocean-stride-icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
@@ -33,7 +27,7 @@
       "url": "/",
       "icons": [
         {
-          "src": "/cea.png",
+          "src": "/ocean-stride-icon.png",
           "sizes": "96x96"
         }
       ]
@@ -45,7 +39,7 @@
       "url": "/personnel",
       "icons": [
         {
-          "src": "/cea.png",
+          "src": "/ocean-stride-icon.png",
           "sizes": "96x96"
         }
       ]
@@ -57,26 +51,12 @@
       "url": "/fleet",
       "icons": [
         {
-          "src": "/cea.png",
+          "src": "/ocean-stride-icon.png",
           "sizes": "96x96"
         }
       ]
     }
   ],
   "related_applications": [],
-  "prefer_related_applications": false,
-  "screenshots": [
-    {
-      "src": "/screenshots/dashboard.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "label": "Dashboard view showing key metrics and charts"
-    },
-    {
-      "src": "/screenshots/personnel.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "label": "Personnel management interface"
-    }
-  ]
+  "prefer_related_applications": false
 }

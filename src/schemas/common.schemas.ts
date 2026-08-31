@@ -14,7 +14,7 @@ export const passwordSchema = z
   .min(8, 'Password must be at least 8 characters')
   .max(100, 'Password is too long')
   .regex(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]).*$/,
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).*$/,
     'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
   );
 
@@ -26,7 +26,7 @@ export const nameSchema = z
 export const phoneSchema = z
   .string()
   .regex(
-    /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$/,
+    /^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s./0-9]*$/,
     'Invalid phone number format'
   )
   .optional()

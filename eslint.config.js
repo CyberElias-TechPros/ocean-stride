@@ -21,6 +21,14 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      // The codebase has a large volume of legacy `any` usages; keep them as
+      // warnings so the build can gate on real issues without forcing a
+      // full rewrite in this pass.  New code should aim to avoid `any`.
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-require-imports": "warn",
     },
+  },
+  {
+    ignores: ["dist", "worker/dist"],
   },
 );

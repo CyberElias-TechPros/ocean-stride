@@ -6,6 +6,7 @@ import apiClient from './apiClient';
  */
 class BaseService<T, CreateDto = Partial<T>, UpdateDto = Partial<T>> {
   protected endpoint: string;
+  protected apiClient = apiClient;
 
   constructor(endpoint: string) {
     this.endpoint = endpoint;

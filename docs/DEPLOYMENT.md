@@ -1,371 +1,165 @@
-# Ocean Stride Deployment Guide
+# Ocean Stride Production Deployment
 
-This guide provides comprehensive instructions for deploying the Ocean Stride Seafarer Management System to production environments.
+Ocean Stride is deployed as two independently hosted parts:
 
-## Prerequisites
+| Part | Host | Output |
+| --- | --- | --- |
+| Frontend | Vercel | `dist/` from `npm run build` |
+| Backend API | Cloudflare Workers | `worker/src/index.ts` with D1, R2, KV, Cron |
 
-- Node.js 18+ and npm
-- Docker and Docker Compose (recommended)
-- Nginx or Apache web server
-- SSL certificate (recommended for production)
+There is no AWS, Firebase, Supabase, or Heroku dependency.
 
-## Quick Deployment Options
+---
 
-### Option 1: Docker Compose (Recommended)
+## 1. Backend: Cloudflare Worker
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd ocean-stride
-   ```
+### 1.1 Create Cloudflare resources
 
-2. **Build and run with Docker Compose**
-   ```bash
-   docker-compose up -d --build
-   ```
-
-3. **Access the application**
-   - Open http://localhost:8080 in your browser
-   - The application will be available at your configured domain
-
-### Option 2: Manual Deployment
-
-1. **Build the application**
-   ```bash
-   npm install
-   npm run build
-   ```
-
-2. **Serve static files**
-   ```bash
-   # Using a simple HTTP server
-   npx serve -s dist -l 3000
-
-   # Or using nginx (recommended for production)
-   ```
-
-## Production Configuration
-
-### Environment Variables
-
-Create a `.env.production` file in the root directory:
-
-```env
-# API Configuration
-VITE_API_BASE_URL=/api
-
-# Application Settings
-VITE_APP_NAME=Ocean Stride
-VITE_APP_VERSION=1.0.0
-
-# Feature Flags
-VITE_ENABLE_ANALYTICS=true
-VITE_ENABLE_ERROR_REPORTING=true
-```
-
-### Nginx Configuration
-
-Create `/etc/nginx/sites-available/ocean-stride`:
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$server_name$request_uri;
-}
-
-server {
-    listen 443 ssl http2;
-    server_name your-domain.com;
-
-    # SSL Configuration
-    ssl_certificate /path/to/ssl/cert.pem;
-    ssl_certificate_key /path/to/ssl/private.key;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384;
-
-    # Security headers
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header Referrer-Policy "strict-origin-when-cross-origin";
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';";
-
-    # Root directory
-    root /var/www/ocean-stride/dist;
-    index index.html;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # Handle client-side routing
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # API proxy (if you have a backend)
-    location /api/ {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        access_log off;
-    }
-
-    # Service worker
-    location /sw.js {
-        add_header Cache-Control "no-cache";
-        expires off;
-    }
-
-    # Security: Don't serve dotfiles
-    location ~ /\. {
-        deny all;
-    }
-}
-```
-
-Enable the site:
 ```bash
-sudo ln -s /etc/nginx/sites-available/ocean-stride /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
+cd worker
+npm install
+
+# D1 database
+npx wrangler d1 create ocean-stride
+
+# KV namespace (rate limiting / cache)
+npx wrangler kv namespace create KV
+
+# R2 bucket (uploads)
+npx wrangler r2 bucket create ocean-stride-assets
 ```
 
-### Apache Configuration
+Take the printed `database_id` and `id` and paste them into `worker/wrangler.toml`.
 
-Create `/etc/apache2/sites-available/ocean-stride.conf`:
+### 1.2 Set secrets
 
-```apache
-<VirtualHost *:80>
-    ServerName your-domain.com
-    Redirect permanent / https://your-domain.com/
-</VirtualHost>
-
-<VirtualHost *:443>
-    ServerName your-domain.com
-
-    # SSL Configuration
-    SSLEngine on
-    SSLCertificateFile /path/to/ssl/cert.pem
-    SSLCertificateKeyFile /path/to/ssl/private.key
-
-    # Security headers
-    Header always set X-Frame-Options DENY
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';"
-
-    DocumentRoot /var/www/ocean-stride/dist
-
-    # Enable rewrite engine for SPA routing
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule . /index.html [L]
-
-    # Cache static assets
-    <LocationMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
-        ExpiresActive On
-        ExpiresDefault "access plus 1 year"
-        Header append Cache-Control "public, immutable"
-    </LocationMatch>
-
-    # API proxy (if you have a backend)
-    ProxyPass /api http://localhost:3001
-    ProxyPassReverse /api http://localhost:3001
-
-    # Security: Don't serve dotfiles
-    RedirectMatch 404 /\..*$
-</VirtualHost>
-```
-
-Enable the site and required modules:
 ```bash
-sudo a2ensite ocean-stride
-sudo a2enmod rewrite proxy proxy_http ssl headers
-sudo systemctl reload apache2
+# At least 32 random bytes
+npx wrangler secret put AUTH_SECRET
+
+# Optional, used for password reset tokens. Falls back to AUTH_SECRET.
+npx wrangler secret put RESET_SECRET
 ```
 
-## Docker Configuration
+`AUTH_SECRET` is the HMAC signing secret for access tokens. Rotate it in an
+emergency; rotating it will invalidate all current sessions.
 
-### Dockerfile
+### 1.3 Apply migrations
 
-```dockerfile
-FROM node:18-alpine AS builder
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM nginx:alpine
-
-# Copy built application
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Expose port
-EXPOSE 80
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-### docker-compose.yml
-
-```yaml
-version: '3.8'
-
-services:
-  ocean-stride:
-    build: .
-    ports:
-      - "8080:80"
-    environment:
-      - NODE_ENV=production
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Optional: Backend API service
-  # api:
-  #   image: your-api-image
-  #   ports:
-  #     - "3001:3001"
-  #   environment:
-  #     - NODE_ENV=production
-  #   restart: unless-stopped
-```
-
-## Performance Optimization
-
-### Build Optimization
-
-The application is already optimized with:
-- Code splitting and lazy loading
-- Minification and compression
-- Tree shaking
-- Asset optimization
-
-### Runtime Optimization
-
-1. **Service Worker**: Enables offline functionality and caching
-2. **Memory Management**: Automatic cleanup of unused resources
-3. **Image Optimization**: Lazy loading and responsive images
-4. **Database Optimization**: IndexedDB with efficient queries
-
-## Monitoring and Maintenance
-
-### Health Checks
-
-The application includes built-in health monitoring:
-- Network connectivity checks
-- Storage availability
-- Memory usage monitoring
-- Performance metrics
-
-### Logs
-
-Monitor application logs:
+Local:
 ```bash
-# Docker logs
-docker-compose logs -f ocean-stride
-
-# Nginx access logs
-tail -f /var/log/nginx/access.log
-
-# Nginx error logs
-tail -f /var/log/nginx/error.log
+npm run worker:migrate:local   # or cd worker && npx wrangler d1 migrations apply DB --local
 ```
 
-### Backups
-
-Regular backups of user data:
+Production:
 ```bash
-# The application stores data locally in IndexedDB
-# Implement automated export/import features for data backup
+npm run worker:migrate:remote  # or cd worker && npx wrangler d1 migrations apply DB --remote
 ```
 
-## Security Considerations
+### 1.4 Configure CORS
 
-1. **HTTPS Only**: Always use SSL/TLS in production
-2. **Content Security Policy**: Configured to prevent XSS attacks
-3. **Data Encryption**: Sensitive data is encrypted at rest
-4. **Access Control**: Implement proper authentication and authorization
-5. **Regular Updates**: Keep dependencies updated for security patches
+`worker/wrangler.toml`:
 
-## Troubleshooting
+```toml
+[vars]
+ENVIRONMENT = "production"
+ALLOWED_ORIGINS = "https://your-frontend.vercel.app"
+```
 
-### Common Issues
+Add every frontend origin that should be allowed to call the API.
 
-1. **Blank page after deployment**
-   - Check that all assets are served correctly
-   - Verify that client-side routing is configured properly
-   - Check browser console for JavaScript errors
+### 1.5 Deploy
 
-2. **Service worker issues**
-   - Clear browser cache and service worker
-   - Check that service worker is registered correctly
+```bash
+npm run worker:deploy   # or cd worker && npx wrangler deploy
+```
 
-3. **Database issues**
-   - Clear IndexedDB data if corrupted
-   - Check for migration errors in console
+The Worker exposes:
 
-### Performance Issues
+- `GET /api/health`
+- `POST /api/auth/register | login | refresh | logout | forgot-password | reset-password`
+- `GET /api/auth/me`
+- `GET/POST /api/users`, `GET/PATCH/DELETE /api/users/:id`
+- `GET/POST /api/db/:store`, `GET/PATCH/PUT/DELETE /api/db/:store/:id`
+- `POST /api/upload`, `GET /api/upload/:key`
 
-1. **Slow loading**
-   - Enable gzip compression
-   - Configure proper caching headers
-   - Optimize bundle size
+### 1.6 Cron
 
-2. **Memory issues**
-   - Monitor memory usage
-   - Implement proper cleanup routines
-   - Consider data pagination for large datasets
+A scheduled handler runs automatically to purge expired/revoked sessions.
+Configure a Cron Trigger in the Cloudflare dashboard or in `wrangler.toml`:
 
-## Support
+```toml
+[triggers]
+crons = ["0 3 * * *"]
+```
 
-For deployment issues or questions:
-1. Check the application logs
-2. Review nginx/apache error logs
-3. Verify configuration files
-4. Contact the development team
+---
 
-## Version History
+## 2. Frontend: Vercel
 
-- v1.0.0: Initial production release
-  - Multi-company support
-  - Complete personnel management
-  - Payroll system
-  - Vessel management
-  - Certificate tracking
-  - PWA capabilities
+1. Import the repository into a new Vercel project.
+2. Root directory: repo root.
+3. Framework preset: Vite.
+4. Build command: `npm run build`.
+5. Output directory: `dist`.
+6. Environment variables:
+   - `VITE_API_BASE_URL=https://ocean-stride-api.your-subdomain.workers.dev`
+   - `VITE_REMOTE_DB=true`
+   - `VITE_ENABLE_DEMO_MODE=false`
+
+The frontend never stores authoritative business data in browser-only storage
+in production; it routes reads/writes through the Worker-backed data layer.
+
+---
+
+## 3. Local development
+
+### 3.1 Worker
+
+```bash
+cd worker
+npm install
+npx wrangler d1 migrations apply DB --local
+npm run dev
+```
+
+The local Worker listens on `http://localhost:8787`.
+
+### 3.2 Vite dev server
+
+The Vite config proxies `/api` to the local Worker. Copy `.env.example` to
+`.env`; leave `VITE_API_BASE_URL` unset so Vite uses the proxy.
+
+```bash
+npm install
+npm run dev
+```
+
+---
+
+## 4. Release validation
+
+Run these from the repository root before merging to production:
+
+```bash
+npm install
+npm run type-check
+npm run lint
+npm run build
+npm run worker:typecheck
+```
+
+Expected result: typecheck 0 errors, lint 0 errors (warnings are accepted and
+tracked), Vite build succeeds, Worker typecheck 0 errors.
+
+---
+
+## 5. Operational notes
+
+- The Worker uses PBKDF2 (100k iterations) for password hashing.
+- Refresh tokens are stored hashed in the D1 `sessions` table and rotated on
+  every refresh.
+- Access tokens are short-lived (1h, HS256) and signed with `AUTH_SECRET`.
+- Rate limiting uses KV; uploads are capped at 10 MB.
+- Audit logs are written to the D1 `audit_logs` table for admin/auth actions.
+- The scheduled Cron job deletes expired/revoked sessions.

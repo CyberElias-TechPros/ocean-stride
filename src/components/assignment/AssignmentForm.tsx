@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,11 +66,15 @@ export function AssignmentForm({
     reset
   } = useForm<AssignmentFormValues>({
     resolver: zodResolver(assignmentFormSchema),
-    defaultValues: initialData ? {
+    defaultValues: initialData ? ({
       ...initialData,
+      status: (initialData.status === 'draft' || initialData.status === 'pending_approval' || initialData.status === 'approved' || initialData.status === 'terminated' ? 'scheduled' : initialData.status) as AssignmentFormValues['status'],
+      rotationType: initialData.rotationType === 'rotation' ? 'rotating' : 'fixed',
+      rotationDays: initialData.customFrequency?.daysOn ?? 30,
+      leaveDays: initialData.customFrequency?.daysOff ?? 30,
       startDate: new Date(initialData.startDate),
       endDate: initialData.endDate ? new Date(initialData.endDate) : undefined
-    } : {
+    } as AssignmentFormValues) : {
       seafarerId: seafarer?.id || '',
       vesselId: '',
       rankId: '',
@@ -95,7 +100,7 @@ export function AssignmentForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmitHandler)} className="space-y-6">
+    <form onSubmit={handleSubmit(onSubmitHandler as any)} className="space-y-6">
       <div className="space-y-4">
         <h3 className="text-lg font-medium">Assignment Details</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -250,7 +255,7 @@ export function AssignmentForm({
                 >
                   <CalendarIcon className="mr-2 h-4 w-4" />
                   {watch('endDate') ? (
-                    format(watch('endDate'), 'PPP')
+                    format(watch('endDate') as Date, 'PPP')
                   ) : (
                     <span>Pick a date</span>
                   )}

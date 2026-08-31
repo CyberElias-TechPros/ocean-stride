@@ -44,8 +44,6 @@ export function DashboardStats({ data }: DashboardStatsProps) {
       value: data.seafarers.total.toLocaleString(),
       subtitle: `${data.seafarers.active} active`,
       icon: Users,
-      trend: '+12%',
-      trendUp: true,
       color: 'text-primary',
       bgColor: 'bg-primary/10',
     },
@@ -54,8 +52,6 @@ export function DashboardStats({ data }: DashboardStatsProps) {
       value: data.vessels.total.toString(),
       subtitle: `${data.vessels.fullyManned} fully manned`,
       icon: Ship,
-      trend: `${crewingEfficiency}%`,
-      trendUp: crewingEfficiency > 80,
       color: 'text-accent',
       bgColor: 'bg-accent/10',
     },
@@ -64,8 +60,6 @@ export function DashboardStats({ data }: DashboardStatsProps) {
       value: `$${(data.payroll.monthlyTotal / 1000).toFixed(0)}K`,
       subtitle: `${data.payroll.recordsCount} records`,
       icon: DollarSign,
-      trend: '+8%',
-      trendUp: true,
       color: 'text-success',
       bgColor: 'bg-success/10',
     },
@@ -74,8 +68,6 @@ export function DashboardStats({ data }: DashboardStatsProps) {
       value: `${activeCrewPercentage}%`,
       subtitle: 'Crew utilization',
       icon: TrendingUp,
-      trend: '+5%',
-      trendUp: true,
       color: 'text-warning',
       bgColor: 'bg-warning/10',
     },
@@ -104,12 +96,6 @@ export function DashboardStats({ data }: DashboardStatsProps) {
                 <p className="text-xs text-muted-foreground">
                   {stat.subtitle}
                 </p>
-                <Badge 
-                  variant="outline" 
-                  className={stat.trendUp ? 'text-success border-success/30' : 'text-destructive border-destructive/30'}
-                >
-                  {stat.trend}
-                </Badge>
               </div>
             </CardContent>
           </Card>
@@ -190,34 +176,14 @@ export function QuickActions() {
   );
 }
 
-export function RecentActivity() {
-  const activities = [
-    {
-      action: 'Crew Change Completed',
-      details: 'MV Ocean Pride - 8 crew members',
-      time: '2 hours ago',
-      type: 'success',
-    },
-    {
-      action: 'New Seafarer Registered',
-      details: 'John Martinez - Chief Engineer',
-      time: '4 hours ago',
-      type: 'info',
-    },
-    {
-      action: 'Certificate Expiry Alert',
-      details: 'Sarah Chen - STCW Basic Safety',
-      time: '6 hours ago',
-      type: 'warning',
-    },
-    {
-      action: 'Payroll Processed',
-      details: 'March 2024 - 156 seafarers',
-      time: '1 day ago',
-      type: 'success',
-    },
-  ];
+export interface RecentActivityItem {
+  action: string;
+  details: string;
+  time: string;
+  type: 'success' | 'warning' | 'info' | 'error';
+}
 
+export function RecentActivity({ activities }: { activities: RecentActivityItem[] }) {
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'success': return 'text-success';
@@ -236,16 +202,20 @@ export function RecentActivity() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {activities.map((activity, index) => (
-          <div key={index} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-smooth">
-            <div className={`w-2 h-2 rounded-full mt-2 ${getActivityColor(activity.type).replace('text-', 'bg-')}`} />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{activity.action}</p>
-              <p className="text-xs text-muted-foreground">{activity.details}</p>
-              <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+        {activities.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-4">No recent activity yet.</p>
+        ) : (
+          activities.map((activity, index) => (
+            <div key={`${activity.time}-${index}`} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted/50 transition-smooth">
+              <div className={`w-2 h-2 rounded-full mt-2 ${getActivityColor(activity.type).replace('text-', 'bg-')}`} />
+              <div className="flex-1">
+                <p className="text-sm font-medium">{activity.action}</p>
+                <p className="text-xs text-muted-foreground">{activity.details}</p>
+                <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </CardContent>
     </Card>
   );

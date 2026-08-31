@@ -10,6 +10,7 @@ import { AnalyticsCharts } from '@/components/analytics/AnalyticsCharts';
 import { useCompany } from '@/context/CompanyContext';
 import { db } from '@/lib/database2';
 import type { Seafarer, Vessel, Payroll } from '@/lib/schemas';
+import { STORE_NAMES } from '@/lib/schemas';
 import { useToast } from '@/hooks/use-toast';
 import {
   TrendingUp,
@@ -83,14 +84,14 @@ export default function Analytics() {
           {
             title: 'Fleet Utilization',
             value: `${Math.round((seafarers.filter(s => s.employment.status === 'onboard').length / seafarers.length) * 100)}%`,
-            change: '+5%',
+            change: '—',
             trend: 'up',
             target: '90%'
           },
           {
             title: 'Crew Retention Rate',
             value: `${Math.round((seafarers.filter(s => s.employment.employmentStatus === 'active').length / seafarers.length) * 100)}%`,
-            change: '+12%',
+            change: '—',
             trend: 'up',
             target: '95%'
           },
@@ -101,26 +102,26 @@ export default function Analytics() {
               const end = s.employment.contractEndDate ? new Date(s.employment.contractEndDate) : new Date();
               return sum + (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30);
             }, 0) / seafarers.length).toFixed(1)} months`,
-            change: '+0.8',
+            change: '—',
             trend: 'up'
           },
           {
             title: 'Compliance Score',
             value: `${Math.round((seafarers.filter(s => s.documents.length > 0 && s.trainings.length > 0).length / seafarers.length) * 100)}%`,
-            change: '-1%',
+            change: '—',
             trend: 'down',
             target: '98%'
           },
           {
             title: 'Total Payroll',
             value: `$${payrolls.reduce((sum, p) => sum + (p.netSalary || 0), 0).toLocaleString()}`,
-            change: '+8%',
+            change: '—',
             trend: 'up'
           },
           {
             title: 'Active Seafarers',
             value: seafarers.filter(s => s.employment.status === 'onboard').length.toString(),
-            change: '+2',
+            change: '—',
             trend: 'up'
           }
         ];
@@ -206,15 +207,18 @@ export default function Analytics() {
         }));
         setCrewNationalityData(crewNationalityData);
 
-        // Payroll over time (mock data since no historical)
-        const payrollTimeData = [
-          { month: 'Jan', amount: 45000 },
-          { month: 'Feb', amount: 52000 },
-          { month: 'Mar', amount: 48000 },
-          { month: 'Apr', amount: 55000 },
-          { month: 'May', amount: 47000 },
-          { month: 'Jun', amount: 53000 }
-        ];
+        // Payroll totals by payroll period. If there are no historical
+        // payroll records the chart intentionally renders empty.
+        const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const monthBuckets = payrolls.reduce<Record<number, number>>((acc, p) => {
+          const month = new Date(p.periodStart).getMonth();
+          acc[month] = (acc[month] || 0) + (p.netSalary || 0);
+          return acc;
+        }, {});
+        const payrollTimeData = monthNames.map((month, index) => ({
+          month,
+          amount: monthBuckets[index] || 0,
+        }));
         setPayrollTimeData(payrollTimeData);
 
         // Cost per department
@@ -242,36 +246,47 @@ export default function Analytics() {
         }));
         setCurrencyData(currencyData);
 
-        // Certificate expiry timeline (mock)
-        const certificateExpiryData = [
-          { month: 'Jul', expiring: 5 },
-          { month: 'Aug', expiring: 8 },
-          { month: 'Sep', expiring: 12 },
-          { month: 'Oct', expiring: 6 },
-          { month: 'Nov', expiring: 9 },
-          { month: 'Dec', expiring: 4 }
-        ];
+        // Certificate expiry timeline computed from actual records.
+        const expiryBuckets = seafarers.reduce<Record<number, number>>((acc, s) => {
+          for (const doc of s.documents || []) {
+            if (!doc.expiryDate) continue;
+            const month = new Date(doc.expiryDate).getMonth();
+            acc[month] = (acc[month] || 0) + 1;
+          }
+          return acc;
+        }, {});
+        const certificateExpiryData = monthNames.map((month, index) => ({
+          month,
+          expiring: expiryBuckets[index] || 0,
+        }));
         setCertificateExpiryData(certificateExpiryData);
 
-        // Recruitment pipeline (mock)
-        const recruitmentPipelineData = [
-          { stage: 'Applied', count: 150 },
-          { stage: 'Screening', count: 80 },
-          { stage: 'Interview', count: 40 },
-          { stage: 'Offer', count: 15 },
-          { stage: 'Hired', count: 8 }
-        ];
+        // Recruitment pipeline computed from applicants.
+        const applicants = await db.getAll<any>(STORE_NAMES.APPLICANTS);
+        const stageCounts = applicants.reduce<Record<string, number>>((acc, a) => {
+          const stage = a.status || 'Applied';
+          acc[stage] = (acc[stage] || 0) + 1;
+          return acc;
+        }, {});
+        const recruitmentPipelineData = Object.entries(stageCounts).map(([stage, count]) => ({
+          stage,
+          count,
+        }));
         setRecruitmentPipelineData(recruitmentPipelineData);
 
-        // Performance trends (mock)
-        const performanceTrendsData = [
-          { month: 'Jan', utilization: 82, retention: 91, compliance: 94 },
-          { month: 'Feb', utilization: 85, retention: 92, compliance: 95 },
-          { month: 'Mar', utilization: 87, retention: 93, compliance: 96 },
-          { month: 'Apr', utilization: 89, retention: 94, compliance: 95 },
-          { month: 'May', utilization: 86, retention: 93, compliance: 97 },
-          { month: 'Jun', utilization: 88, retention: 95, compliance: 96 }
-        ];
+        // Performance trends computed from current roster and payroll months.
+        const performanceTrendsData = monthNames.map((month, index) => {
+          const monthPayroll = payrolls.filter((p) => new Date(p.periodStart).getMonth() === index);
+          const total = seafarers.length || 1;
+          const onboard = seafarers.filter((s) => s.employment.status === 'onboard').length;
+          const compliant = seafarers.filter((s) => s.documents.length > 0 && s.trainings.length > 0).length;
+          return {
+            month,
+            utilization: monthPayroll.length ? Math.round((onboard / total) * 100) : 0,
+            retention: Math.round((seafarers.filter((s) => s.employment.employmentStatus === 'active').length / total) * 100),
+            compliance: Math.round((compliant / total) * 100),
+          };
+        });
         setPerformanceTrendsData(performanceTrendsData);
       } catch (error) {
         console.error('Failed to load analytics data:', error);

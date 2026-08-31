@@ -21,6 +21,23 @@ const authService = {
   },
 
   /**
+   * Register a new user.  The Worker allows the first account as an admin and
+   * requires an already-authenticated admin for every later account.
+   */
+  async register(data: { email: string; name: string; password: string; companyId?: string }): Promise<AuthResponse> {
+    try {
+      const response = await apiClient.post<AuthResponse>('/auth/register', data);
+      localStorage.setItem('authToken', response.data.accessToken);
+      localStorage.setItem('refreshToken', response.data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+      return response.data;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Logout the current user
    */
   async logout(): Promise<void> {
@@ -47,7 +64,7 @@ const authService = {
         throw new Error('No refresh token available');
       }
 
-      const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh-token', {
+      const response = await apiClient.post<RefreshTokenResponse>('/auth/refresh', {
         refreshToken,
       });
 
@@ -109,5 +126,7 @@ const authService = {
     }
   },
 };
+
+export type { LoginCredentials, AuthResponse, RefreshTokenResponse };
 
 export default authService;

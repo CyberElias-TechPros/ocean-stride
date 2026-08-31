@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosProgressEvent, AxiosRequestConfig } from 'axios';
 import { handleError } from '@/lib/error-handler';
 import { getAuthToken } from '@/lib/auth';
 
@@ -80,7 +80,7 @@ export class BaseApi {
   protected async upload<T>(
     url: string,
     file: File,
-    onUploadProgress?: (progressEvent: ProgressEvent) => void
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
   ): Promise<T> {
     const formData = new FormData();
     formData.append('file', file);

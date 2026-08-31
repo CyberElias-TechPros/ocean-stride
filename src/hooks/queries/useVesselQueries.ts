@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { vesselService } from '@/services';
 import { QUERY_KEYS } from '@/lib/query-client';
 import { Vessel, PaginatedResponse, VesselStatus } from '@/types';
@@ -19,7 +19,7 @@ export const useVessels = (
   return useQuery<PaginatedResponse<Vessel>, Error>({
     queryKey: QUERY_KEYS.VESSELS.LISTS(filters),
     queryFn: () => vesselService.getVessels(page, limit, rest.search, rest.status),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     ...options,
   });
 };
@@ -77,7 +77,7 @@ export const useVesselCrew = (vesselId: string, page = 1, limit = 10) => {
   return useQuery({
     queryKey: [...QUERY_KEYS.VESSELS.CREW(vesselId), { page, limit }],
     queryFn: () => vesselService.getVesselCrew(vesselId, page, limit),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     enabled: !!vesselId,
   });
 };

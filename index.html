@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
     <!-- Primary Meta Tags -->
-    <title>Seafarer Management System - Ocean Stride</title>
-    <meta name="title" content="Seafarer Management System - Ocean Stride" />
+    <title>Ocean Stride - Seafarer Management</title>
+    <meta name="title" content="Ocean Stride - Seafarer Management" />
     <meta name="description" content="Comprehensive seafarer management system for maritime companies. Manage crew assignments, payroll, compliance, and vessel operations with advanced analytics and reporting." />
     <meta name="keywords" content="seafarer management, maritime, crew management, vessel operations, payroll, compliance, shipping" />
-    <meta name="author" content="Cyber Elias Academy" />
+    <meta name="author" content="Ocean Stride" />
     <meta name="robots" content="index, follow" />
     <meta name="language" content="English" />
     <meta name="revisit-after" content="7 days" />
@@ -18,36 +18,34 @@
     <link rel="canonical" href="https://ocean-stride.com" />
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/cea.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/cea.png" />
-    <link rel="apple-touch-icon" href="/cea.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/ocean-stride-icon.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/ocean-stride-icon.png" />
+    <link rel="apple-touch-icon" href="/ocean-stride-icon.png" />
 
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://ocean-stride.com" />
-    <meta property="og:title" content="Seafarer Management System - Ocean Stride" />
+    <meta property="og:title" content="Ocean Stride - Seafarer Management" />
     <meta property="og:description" content="Comprehensive seafarer management system for maritime companies. Manage crew assignments, payroll, compliance, and vessel operations." />
-    <meta property="og:image" content="https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:image" content="/ocean-stride-icon.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
     <meta property="og:site_name" content="Ocean Stride" />
     <meta property="og:locale" content="en_US" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:url" content="https://ocean-stride.com" />
-    <meta name="twitter:title" content="Seafarer Management System - Ocean Stride" />
+    <meta name="twitter:title" content="Ocean Stride - Seafarer Management" />
     <meta name="twitter:description" content="Comprehensive seafarer management system for maritime companies. Manage crew assignments, payroll, compliance, and vessel operations." />
-    <meta name="twitter:image" content="https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png" />
-    <meta name="twitter:site" content="@cybeliasacademy" />
-    <meta name="twitter:creator" content="@cybeliasacademy" />
+    <meta name="twitter:image" content="/ocean-stride-icon.png" />
 
     <!-- Structured Data (JSON-LD) -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebApplication",
-      "name": "Ocean Stride - Seafarer Management System",
+      "name": "Ocean Stride - Seafarer Management",
       "description": "Comprehensive seafarer management system for maritime companies",
       "url": "https://ocean-stride.com",
       "applicationCategory": "BusinessApplication",
@@ -59,8 +57,8 @@
       },
       "creator": {
         "@type": "Organization",
-        "name": "Cyber Elias Academy",
-        "url": "https://techpros.com.ng"
+        "name": "Ocean Stride",
+        "url": "https://ocean-stride.com"
       },
       "featureList": [
         "Crew Management",
@@ -70,7 +68,7 @@
         "Analytics & Reporting",
         "Document Management"
       ],
-      "screenshot": "https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png"
+      "screenshot": "/ocean-stride-icon.png"
     }
     </script>
 
@@ -81,8 +79,9 @@
     <meta name="theme-color" content="#0f172a" />
     <meta name="msapplication-TileColor" content="#0f172a" />
 
-    <!-- Security Headers (CSP) -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; media-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';" />
+    <!-- Security Headers (CSP). https: is included in connect-src so the
+         deployed Cloudflare Worker origin is reachable from the Vercel page. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https:; media-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';" />
 
     <!-- Preload critical resources -->
     <link rel="preload" href="/src/main.tsx" as="script" />
@@ -99,7 +98,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- Google Identity Services -->
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </body>
 </html>

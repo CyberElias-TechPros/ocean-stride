@@ -1,5 +1,5 @@
 import { db } from './database2_fixed';
-import { STORE_NAMES, type Company } from './schemas';
+import { STORE_NAMES, type Company, type BaseEntity } from './schemas';
 
 class MultiCompanyService {
   private static instance: MultiCompanyService;
@@ -80,14 +80,12 @@ class MultiCompanyService {
 
   async createCompany(companyData: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<Company> {
     try {
+      const settings = {
+        ...companyData.settings,
+      };
       const company = await db.create<Company>(STORE_NAMES.COMPANIES, {
         ...companyData,
-        settings: {
-          currency: 'USD',
-          dateFormat: 'MM/dd/yyyy',
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          ...companyData.settings,
-        },
+        settings,
       });
       
       if (!this.currentCompanyId) {
@@ -102,7 +100,7 @@ class MultiCompanyService {
   }
 
   // Add company-scoped query methods
-  async queryByCompany<T extends { companyId: string }>(
+  async queryByCompany<T extends BaseEntity>(
     storeName: string,
     companyId?: string
   ): Promise<T[]> {

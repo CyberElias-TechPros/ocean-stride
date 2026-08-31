@@ -304,6 +304,16 @@ export interface CompanySettings extends BaseEntity {
     twoFactorAuth: boolean;
     sessionTimeout: number;
   };
+  complianceSettings?: {
+    enableExpiryAlerts: boolean;
+    expiryThresholdDays: number;
+    enableThresholdAlerts: boolean;
+    complianceThreshold: number;
+    enableWorkHourAlerts: boolean;
+    maxWorkHoursPerWeek: number;
+    notificationMethods: string[];
+    alertRecipients: string[];
+  };
 }
 
 // System Settings interfaces

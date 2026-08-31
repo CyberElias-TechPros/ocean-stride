@@ -52,15 +52,16 @@ A comprehensive web-based application for managing seafarer personnel, vessel op
 
 ## Technology Stack
 
-- **Frontend**: React 18, TypeScript, Vite
+- **Frontend**: React 18, TypeScript, Vite (deployed on Vercel)
 - **UI Framework**: ShadCN/UI, Tailwind CSS
 - **State Management**: Zustand, React Query
-- **Database**: IndexedDB (client-side)
+- **Backend**: Cloudflare Workers + D1 + R2 + KV + Cron
+- **Data layer**: Canonical IndexedDB/Worker transport (`src/lib/database-service.ts`)
 - **Forms**: React Hook Form, Zod validation
 - **Internationalization**: i18next
 - **Charts**: Recharts
 - **Build Tool**: Vite
-- **Deployment**: Docker, Nginx
+- **Deployment**: Vercel (frontend) + Cloudflare (backend)
 
 ## Quick Start
 
@@ -114,48 +115,41 @@ src/
 
 ## Environment Configuration
 
-The application uses the following environment variables:
+Copy `.env.example` to `.env` and set:
 
-- `VITE_API_BASE_URL`: API base URL (defaults to '/api' for client-side operation)
+- `VITE_API_BASE_URL`: absolute URL of the deployed Cloudflare Worker (e.g. `https://ocean-stride-api.your-subdomain.workers.dev`). During local development it can remain unset and the Vite dev server proxies `/api` to the local Worker.
+- `VITE_REMOTE_DB`: set to `true` in production so all reads/writes use the Worker.
+- `VITE_ENABLE_DEMO_MODE`: keep `false` in production. The app does not ship mock/demo accounts.
 
 ## Deployment
 
-### Docker Deployment
+### Backend (Cloudflare)
 
 ```bash
-# Build Docker image
-docker build -t ocean-stride .
-
-# Run with Docker Compose
-docker-compose up -d
+cd worker
+npm install
+npx wrangler d1 create ocean-stride
+npx wrangler kv namespace create KV
+npx wrangler r2 bucket create ocean-stride-assets
+npx wrangler secret put AUTH_SECRET
+npx wrangler secret put RESET_SECRET   # optional
 ```
 
-### Manual Deployment
+Update `worker/wrangler.toml` with the D1 database id and KV namespace id, then:
 
-1. Build the application: `npm run build`
-2. Serve the `dist/` folder with a static server
-3. Configure your web server (Nginx/Apache) to serve the static files
-
-### Nginx Configuration Example
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    root /path/to/ocean-stride/dist;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
+```bash
+npm run worker:migrate:remote   # or: cd worker && npx wrangler d1 migrations apply DB --remote
+npm run worker:deploy
 ```
+
+### Frontend (Vercel)
+
+1. Import the repository into Vercel.
+2. Set `VITE_API_BASE_URL` to the deployed Worker URL.
+3. Add `VITE_REMOTE_DB=true`.
+4. Build command: `npm run build`; output directory: `dist`.
+
+See `docs/DEPLOYMENT.md` for the full production checklist.
 
 ## Development
 

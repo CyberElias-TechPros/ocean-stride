@@ -1,0 +1,2 @@
+AUTH_SECRET="replace-with-a-random-32-byte-secret"
+RESET_SECRET="replace-with-a-random-32-byte-secret-optional"

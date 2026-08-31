@@ -13,12 +13,18 @@ const roleVariantMap: Record<UserRole, 'default' | 'secondary' | 'destructive'> 
   admin: 'destructive',
   manager: 'secondary',
   seafarer: 'default',
+  captain: 'secondary',
+  officer: 'default',
+  crew: 'default',
 };
 
 const roleLabelMap: Record<UserRole, string> = {
   admin: 'Admin',
   manager: 'Manager',
   seafarer: 'Seafarer',
+  captain: 'Captain',
+  officer: 'Officer',
+  crew: 'Crew',
 };
 
 export function UserList() {
@@ -95,8 +101,8 @@ export function UserList() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={user.status === 'active' ? 'default' : 'outline'}>
-                      {user.status}
+                    <Badge variant={user.role === 'admin' ? 'default' : 'outline'}>
+                      {user.role === 'admin' ? 'Active' : 'Member'}
                     </Badge>
                   </TableCell>
                   <TableCell>

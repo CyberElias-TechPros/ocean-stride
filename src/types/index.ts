@@ -1,49 +1,45 @@
-// Export all types
-export * from './assignment.types';
-export * from './payroll.types';
+// Core domain types come from the canonical schema module.
 export * from '../lib/schemas_v2';
 
-// User Types
+// Assignment / payroll aliases (kept outside the star-export to avoid name
+// clashes with the canonical schemas_v2 exports).
+export type { CrewAssignment as Assignment } from './assignment.types';
+export type { AssignmentStatus, AssignmentFrequency, AssignmentCreateDto, AssignmentUpdateDto } from './assignment.types';
+export type { PayrollStatus, PaymentMethod } from './payroll.types';
+
+// User / auth types
 export interface User {
-  status: ReactI18NextChildren | Iterable<ReactI18NextChildren>;
   id: string;
   email: string;
   name: string;
-  role: 'admin' | 'manager' | 'seafarer';
+  role: 'admin' | 'manager' | 'seafarer' | 'captain' | 'officer' | 'crew';
   avatar?: string;
-  createdAt: string;
-  updatedAt: string;
+  status?: string;
+  companyId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface UserCreateDto {
   email: string;
   name: string;
   password: string;
-  role?: 'admin' | 'manager' | 'seafarer';
+  role?: 'admin' | 'manager' | 'seafarer' | 'captain' | 'officer' | 'crew';
 }
 
 export interface UserUpdateDto {
   email?: string;
   name?: string;
   avatar?: string;
+  role?: 'admin' | 'manager' | 'seafarer' | 'captain' | 'officer' | 'crew';
 }
 
-// Vessel Types
-export interface Vessel {
-  id: string;
-  name: string;
-  imoNumber: string;
-  type: string;
-  flag: string;
-  grossTonnage: number;
-  yearBuilt: number;
-  status: 'active' | 'maintenance' | 'inactive';
-  lastInspectionDate?: string;
-  nextInspectionDate?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// Legacy aliases used by the user service layer.
+export type CreateUserDto = UserCreateDto;
+export type UpdateUserDto = UserUpdateDto;
 
+// Vessel types
+export type VesselStatus = 'active' | 'maintenance' | 'inactive' | 'dry_dock' | 'chartered';
 export interface VesselCreateDto {
   name: string;
   imoNumber: string;
@@ -51,9 +47,8 @@ export interface VesselCreateDto {
   flag: string;
   grossTonnage: number;
   yearBuilt: number;
-  status: 'active' | 'maintenance' | 'inactive';
+  status: VesselStatus;
 }
-
 export interface VesselUpdateDto {
   name?: string;
   imoNumber?: string;
@@ -61,12 +56,12 @@ export interface VesselUpdateDto {
   flag?: string;
   grossTonnage?: number;
   yearBuilt?: number;
-  status?: 'active' | 'maintenance' | 'inactive';
+  status?: VesselStatus;
   lastInspectionDate?: string;
   nextInspectionDate?: string;
 }
 
-// API Response Types
+// API response types
 export interface ApiResponse<T> {
   data: T;
   message?: string;
@@ -81,7 +76,7 @@ export interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-// Auth Types
+// Auth types
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -98,9 +93,8 @@ export interface RefreshTokenResponse {
   refreshToken: string;
 }
 
-// Crew Member Types
+// Crew member API types
 export type CrewStatus = 'active' | 'on_leave' | 'inactive' | 'on_vacation' | 'sick_leave';
-
 export interface Certification {
   id: string;
   name: string;
@@ -111,7 +105,6 @@ export interface Certification {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface CrewMember {
   id: string;
   firstName: string;
@@ -127,7 +120,6 @@ export interface CrewMember {
   createdAt: string;
   updatedAt: string;
 }
-
 export interface CreateCrewMemberDto {
   firstName: string;
   lastName: string;
@@ -138,7 +130,6 @@ export interface CreateCrewMemberDto {
   rank: string;
   status?: CrewStatus;
 }
-
 export interface UpdateCrewMemberDto {
   firstName?: string;
   lastName?: string;
@@ -151,13 +142,8 @@ export interface UpdateCrewMemberDto {
   vesselId?: string | null;
 }
 
-// Vessel Status Types
-export type VesselStatus = 'active' | 'maintenance' | 'inactive' | 'dry_dock' | 'chartered';
-
-// User Role Types
+// Role / error types
 export type UserRole = 'admin' | 'manager' | 'seafarer' | 'captain' | 'officer' | 'crew';
-
-// Error Types
 export interface ApiError {
   message: string;
   statusCode: number;

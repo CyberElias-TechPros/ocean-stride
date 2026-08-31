@@ -10,7 +10,7 @@ const STATIC_ASSETS = [
   '/index.html',
   '/manifest.json',
   '/favicon.ico',
-  '/cea.png',
+  '/ocean-stride-icon.png',
   // Add other static assets as needed
 ];
 

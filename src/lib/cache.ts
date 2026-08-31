@@ -107,7 +107,7 @@ class Cache<T> {
     let keyToEvict: string | null = null;
 
     switch (this.config.strategy) {
-      case 'LRU':
+      case 'LRU': {
         let oldestAccess = Date.now();
         for (const [key, accessTime] of this.accessOrder) {
           if (accessTime < oldestAccess) {
@@ -116,7 +116,8 @@ class Cache<T> {
           }
         }
         break;
-      case 'LFU':
+      }
+      case 'LFU': {
         let lowestCount = Infinity;
         for (const [key, count] of this.accessCount) {
           if (count < lowestCount) {
@@ -125,6 +126,7 @@ class Cache<T> {
           }
         }
         break;
+      }
       case 'FIFO':
         keyToEvict = this.insertionOrder[0];
         break;

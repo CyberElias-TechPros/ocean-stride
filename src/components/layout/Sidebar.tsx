@@ -59,7 +59,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <Ship className="w-5 h-5 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-sm font-semibold text-foreground">SeaManager</h1>
+            <h1 className="text-sm font-semibold text-foreground">Ocean Stride</h1>
             <p className="text-xs text-muted-foreground">Crew Management</p>
           </div>
         </div>

@@ -51,7 +51,7 @@ export const validatePassword = (password: string): { isValid: boolean; errors: 
   if (!/[A-Z]/.test(password)) errors.push('Password must contain at least one uppercase letter');
   if (!/[a-z]/.test(password)) errors.push('Password must contain at least one lowercase letter');
   if (!/\d/.test(password)) errors.push('Password must contain at least one number');
-  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) errors.push('Password must contain at least one special character');
+  if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password)) errors.push('Password must contain at least one special character');
 
   return { isValid: errors.length === 0, errors };
 };
@@ -370,20 +370,7 @@ export const getSecurityHeaders = () => ({
 
 // Initialize security features
 export const initializeSecurity = (): void => {
-  // Set up CSP if supported
-  if ('csp' in document) {
-    // Note: CSP should be set via meta tag or HTTP headers
-  }
-
-  // Prevent common security issues
-  document.addEventListener('contextmenu', (e) => {
-    // Allow context menu in development
-    if (process.env.NODE_ENV === 'production') {
-      e.preventDefault();
-    }
-  });
-
-  // Prevent drag and drop of external content
-  document.addEventListener('dragover', (e) => e.preventDefault());
-  document.addEventListener('drop', (e) => e.preventDefault());
+  // CSP is enforced by the meta tag in index.html and by the Worker's
+  // response headers. Client-side "security" (blocking context menus and
+  // drag-and-drop) only harms usability and is intentionally omitted.
 };

@@ -2,7 +2,7 @@ import React, { createContext, useContext, ReactNode } from 'react';
 import { db } from '@/lib/database';
 import type { Applicant } from '@/lib/schemas_v2';
 import { runMigrationIfNeeded } from '@/lib/migrate';
-import { useAuth } from '@/hooks/use-auth';
+import { useAuth } from '@/contexts/AuthContext';
 
 type DatabaseContextType = {
   isInitialized: boolean;
