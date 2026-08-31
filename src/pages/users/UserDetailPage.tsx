@@ -69,7 +69,7 @@ export default function UserDetailPage() {
         <div className="flex space-x-2">
           <Button
             variant="outline"
-            onClick={() => navigate(ROUTES.USERS.EDIT(id))}
+            onClick={() => navigate(ROUTES.USERS.EDIT(id!))}
           >
             <Edit className="mr-2 h-4 w-4" /> Edit
           </Button>
@@ -129,18 +129,18 @@ export default function UserDetailPage() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Status</span>
-                  <span className="text-sm font-medium capitalize">{user.status}</span>
+                  <span className="text-sm font-medium capitalize">{user.status || 'active'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Member Since</span>
                   <span className="text-sm font-medium">
-                    {format(new Date(user.createdAt), 'MMM d, yyyy')}
+                    {user.createdAt ? format(new Date(user.createdAt), 'MMM d, yyyy') : '—'}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Last Updated</span>
                   <span className="text-sm font-medium">
-                    {format(new Date(user.updatedAt), 'MMM d, yyyy')}
+                    {user.updatedAt ? format(new Date(user.updatedAt), 'MMM d, yyyy') : '—'}
                   </span>
                 </div>
               </div>
@@ -171,7 +171,7 @@ export default function UserDetailPage() {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Status</p>
-                    <p className="font-medium capitalize">{user.status}</p>
+                    <p className="font-medium capitalize">{user.status || 'active'}</p>
                   </div>
                 </div>
               </div>

@@ -1,14 +1,16 @@
-import { db as newDb } from './database2';
+import { db as newDb, isRemoteEnabled } from './database2';
 import { db as oldDb } from './database';
-import { 
-  Company, 
-  Vessel, 
-  Seafarer, 
-  CrewChange, 
+import {
+  Company,
+  Vessel,
+  CrewChange,
   Payroll,
-  Document,
-  BaseEntity 
+  STORE_NAMES,
 } from './schemas';
+import {
+  Seafarer,
+  Document,
+} from './schemas_v2';
 
 // Type guards
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -208,7 +210,7 @@ class DatabaseMigrator {
         }
 
         // Map old company to new schema with type safety
-        const newCompany: Omit<Company, keyof BaseEntity> = {
+        const newCompany: Omit<Company, 'id' | 'createdAt' | 'updatedAt' | 'companyId' | 'createdBy' | 'updatedBy'> = {
           name: hasStringProperty(company, 'name') ? company.name : 'Unnamed Company',
           address: hasStringProperty(company, 'address') ? company.address : '',
           phone: hasStringProperty(company, 'phone') ? company.phone : '',
@@ -247,7 +249,7 @@ class DatabaseMigrator {
         }
 
         // Map old vessel to new schema with type safety
-        const newVessel: Omit<Vessel, keyof BaseEntity> = {
+        const newVessel: Omit<Vessel, 'id' | 'createdAt' | 'updatedAt' | 'companyId' | 'createdBy' | 'updatedBy'> = {
           name: hasStringProperty(vessel, 'name') ? vessel.name : 'Unnamed Vessel',
           imoNumber: hasStringProperty(vessel, 'imoNumber') ? vessel.imoNumber : '',
           type: hasStringProperty(vessel, 'type') ? vessel.type : 'Other',
@@ -313,7 +315,7 @@ class DatabaseMigrator {
           ? oldSeafarer.financial
           : {};
 
-        const newSeafarer: Omit<Seafarer, keyof BaseEntity> = {
+        const newSeafarer: Omit<Seafarer, 'id' | 'createdAt' | 'updatedAt' | 'companyId' | 'createdBy' | 'updatedBy'> = {
           personalInfo: {
             firstName: hasStringProperty(personalInfo, 'firstName') ? personalInfo.firstName : '',
             lastName: hasStringProperty(personalInfo, 'lastName') ? personalInfo.lastName : '',
@@ -322,6 +324,7 @@ class DatabaseMigrator {
               : new Date().toISOString(),
             placeOfBirth: hasStringProperty(personalInfo, 'placeOfBirth') ? personalInfo.placeOfBirth : '',
             nationality: hasStringProperty(personalInfo, 'nationality') ? personalInfo.nationality : '',
+            gender: 'prefer_not_to_say',
             maritalStatus: hasStringProperty(personalInfo, 'maritalStatus') && 
               ['single', 'married', 'divorced', 'widowed'].includes(personalInfo.maritalStatus)
                 ? personalInfo.maritalStatus as 'single' | 'married' | 'divorced' | 'widowed'
@@ -348,8 +351,12 @@ class DatabaseMigrator {
             },
           },
           documents: [],
+          payrolls: [],
+          emergencyContacts: [],
           employment: {
             rank: hasStringProperty(employment, 'position') ? employment.position : '',
+            rankId: '',
+            employeeId: hasStringProperty(employment, 'employeeId') ? employment.employeeId : '',
             department: 'deck', // Default value
             status: this.mapSeafarerStatus(hasStringProperty(employment, 'status') ? employment.status : undefined),
             currentVesselId: hasStringProperty(employment, 'currentVessel') ? employment.currentVessel : undefined,
@@ -448,7 +455,7 @@ class DatabaseMigrator {
           }
         }
         
-        const newCrewChange: Omit<CrewChange, keyof BaseEntity> = {
+        const newCrewChange: Omit<CrewChange, 'id' | 'createdAt' | 'updatedAt' | 'companyId' | 'createdBy' | 'updatedBy'> = {
           vesselId,
           vesselName,
           port: hasStringProperty(assignment, 'port') ? assignment.port : '',
@@ -518,7 +525,7 @@ class DatabaseMigrator {
           continue;
         }
 
-        const newPayroll: Omit<Payroll, keyof BaseEntity> = {
+        const newPayroll: Omit<Payroll, 'id' | 'createdAt' | 'updatedAt' | 'companyId' | 'createdBy' | 'updatedBy'> = {
           seafarerId: oldPayroll.seafarerId,
           seafarerName: '',
           vesselId: oldPayroll.vesselId,
@@ -637,14 +644,14 @@ class DatabaseMigrator {
             seafarerName = `${firstName} ${lastName}`.trim();
           }
           
-          const newDocument: Omit<Document, keyof BaseEntity> = {
+          const newDocument: Omit<Document, 'id' | 'createdAt' | 'updatedAt' | 'companyId' | 'createdBy' | 'updatedBy'> = {
             type: 'certificate',
             name: String(cert.name),
             description: `Certificate number: ${cert.number}`,
             issueDate: issueDate,
             expiryDate: expiryDate,
             fileUrl: fileUrl,
-            fileType: 'application/pdf',
+            mimeType: 'application/pdf',
             fileSize: 0,
             relatedTo: {
               entityType: 'seafarer',
@@ -679,8 +686,20 @@ class DatabaseMigrator {
 
   private async migrateNotifications(): Promise<void> {
     try {
-      // In the old schema, notifications might not exist or be in a different format
-      // This is a placeholder for any notification migration logic
+      const oldNotifications = await oldDb.getAll('notifications');
+      for (const raw of oldNotifications) {
+        if (!isObject(raw)) continue;
+        const id = hasStringProperty(raw, 'id') ? raw.id : '';
+        const exists = await newDb.get(STORE_NAMES.NOTIFICATIONS, id);
+        if (exists) continue;
+        await newDb.createNotification({
+          type: hasStringProperty(raw, 'type') ? raw.type as 'info' | 'warning' | 'error' | 'success' : 'info',
+          title: hasStringProperty(raw, 'title') ? raw.title : 'Notification',
+          message: hasStringProperty(raw, 'message') ? raw.message : '',
+          read: Boolean(raw.read),
+          actionUrl: hasStringProperty(raw, 'actionUrl') ? raw.actionUrl : undefined,
+        });
+      }
     } catch (error) {
       console.error('Error migrating notifications:', error);
       // Don't throw for notifications as they're less critical
@@ -705,6 +724,13 @@ export const migrator = DatabaseMigrator.getInstance();
 let migrationInProgress = false;
 
 export async function runMigrationIfNeeded(): Promise<boolean> {
+  // Legacy browser IndexedDB migration is unnecessary when the Cloudflare
+  // Worker is the source of truth. Skipping here also prevents the infinite
+  // isInitialized() polling below in remote mode.
+  if (isRemoteEnabled()) {
+    return false;
+  }
+
   // Skip if already migrated or migration is in progress
   if (localStorage.getItem('databaseMigrationComplete') === 'true' || migrationInProgress) {
     return false;

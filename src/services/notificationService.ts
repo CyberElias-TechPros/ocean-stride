@@ -1,8 +1,34 @@
 import { db } from '@/lib/database2';
 import { STORE_NAMES } from '@/lib/schemas';
-import type { Notification } from '@/lib/schemas';
+import type { Notification as DbNotification } from '@/lib/schemas';
+import type { Notification as UiNotification } from '@/types/notification';
 
-export type NotificationType = 'info' | 'warning' | 'error' | 'success' | 'system';
+export type { NotificationType } from '@/types/notification';
+export type { Notification } from '@/types/notification';
+
+/** Convert a stored notification record into the UI model with a sortable timestamp. */
+function toUiNotification(n: DbNotification): UiNotification {
+  const timestamp = n.createdAt || n.updatedAt || new Date().toISOString();
+  const actionUrl = n.actionUrl;
+  const actionLabel = n.actionLabel;
+  return {
+    id: n.id,
+    type: n.type,
+    title: n.title,
+    message: n.message,
+    timestamp,
+    read: n.read,
+    action: actionUrl && actionLabel
+      ? {
+          label: actionLabel,
+          onClick: () => {
+            window.open(actionUrl, '_blank', 'noopener,noreferrer');
+          },
+        }
+      : undefined,
+    metadata: n.metadata,
+  };
+}
 
 // Using STORE_NAMES.NOTIFICATIONS from schemas
 
@@ -15,8 +41,8 @@ export const notificationService = {
   } = {}) {
     const { page = 1, limit = 50, includeRead = true } = options;
     
-    const all = await db.getAll<Notification>(STORE_NAMES.NOTIFICATIONS);
-    const filtered = all.filter((n: any) => {
+    const all = await db.getAll<DbNotification>(STORE_NAMES.NOTIFICATIONS);
+    const filtered = all.filter((n) => {
       const nCompanyId = n.companyId ?? n.metadata?.companyId;
       const readOk = includeRead ? true : !n.read;
       return nCompanyId === companyId && readOk;
@@ -25,7 +51,7 @@ export const notificationService = {
     const start = (page - 1) * limit;
     const paginated = filtered.slice(start, start + limit);
     return {
-      items: paginated,
+      items: paginated.map(toUiNotification),
       total: filtered.length,
       page,
       totalPages: Math.ceil(filtered.length / limit),
@@ -44,7 +70,7 @@ export const notificationService = {
 
   // Mark a notification as read
   async markAsRead(id: string): Promise<void> {
-    await db.update<Notification>(STORE_NAMES.NOTIFICATIONS, id, { read: true } as Partial<Notification>);
+    await db.update<DbNotification>(STORE_NAMES.NOTIFICATIONS, id, { read: true } as Partial<DbNotification>);
   },
 
   // Mark all notifications as read for a company
@@ -56,7 +82,7 @@ export const notificationService = {
     
     if (items.length === 0) return;
     
-    await Promise.all(items.map(n => db.update<Notification>(STORE_NAMES.NOTIFICATIONS, n.id, { read: true })));
+    await Promise.all(items.map(n => db.update<DbNotification>(STORE_NAMES.NOTIFICATIONS, n.id, { read: true })));
   },
 
   // Remove a notification
@@ -91,36 +117,5 @@ export const notificationService = {
     this.getUnreadCount(companyId).then(callback).catch(console.error);
 
     return () => clearInterval(interval);
-  },
-
-  // Generate mock notification for development
-  async generateMockNotification(type: NotificationType = 'info', companyId: string = 'default-company'): Promise<Notification> {
-    const mockTitles = {
-      info: 'New Update Available',
-      warning: 'Certificate Expiring Soon',
-      error: 'Action Required',
-      success: 'Operation Completed',
-      system: 'System Notification'
-    };
-
-    const mockMessages = {
-      info: 'A new version of the application is available. Please update to the latest version.',
-      warning: 'Your certificate will expire in 7 days. Please renew it soon.',
-      error: 'Action required: Your account needs attention.',
-      success: 'Your changes have been saved successfully!',
-      system: 'Scheduled maintenance is planned for tomorrow at 2 AM UTC.'
-    };
-
-    const notificationData = {
-      type,
-      title: mockTitles[type] || 'New Notification',
-      message: mockMessages[type] || 'You have a new notification',
-      read: false,
-      metadata: { source: 'system', priority: 'medium' },
-      companyId,
-    } as Omit<Notification, 'id' | 'createdAt' | 'updatedAt'>;
-
-    const created = await db.createNotification(notificationData as any);
-    return created;
   }
 };

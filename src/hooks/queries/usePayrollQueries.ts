@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { DatabaseServiceV2 } from '@/lib/database_v2';
-import { STORE_NAMES, QUERY_KEYS } from '@/lib/query-client';
+import { STORE_NAMES } from '@/lib/schemas_v2';
+import { QUERY_KEYS } from '@/lib/query-client';
 import { Payroll } from '@/types/payroll.types';
 import { PayrollCreateDto, PayrollUpdateDto } from '@/types/payroll.types';
 
@@ -63,7 +64,11 @@ export const useCreatePayroll = () => {
   return useMutation({
     mutationFn: async (data: PayrollCreateDto) => {
       await db.init();
-      return db.create<Payroll>(STORE_NAMES.PAYROLLS, data);
+      return db.create<Payroll>(STORE_NAMES.PAYROLLS, {
+        ...data,
+        status: data.status ?? 'draft',
+        documents: data.documents ?? [],
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['payrolls'] });

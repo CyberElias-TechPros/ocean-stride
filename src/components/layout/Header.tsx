@@ -78,7 +78,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 >
                   <div className="flex flex-col">
                     <span className="font-medium">{company.name}</span>
-                    <span className="text-xs text-muted-foreground">{company.code}</span>
+                    <span className="text-xs text-muted-foreground">{company.taxId || company.email || ''}</span>
                   </div>
                 </DropdownMenuItem>
               ))}

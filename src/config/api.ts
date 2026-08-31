@@ -1,4 +1,12 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+/**
+ * API configuration for the Cloudflare Worker backend.
+ *
+ * The Vercel frontend is served from its own origin, so `VITE_API_BASE_URL`
+ * must point at the deployed Worker (e.g. `https://ocean-stride-api.example.workers.dev`).
+ * In development the Vite server proxies `/api` to the local Worker, so `/api`
+ * remains a valid default and never needs an absolute cross-origin URL.
+ */
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) || '/api';
 
 export const API_ENDPOINTS = {
   AUTH: {
@@ -40,5 +48,7 @@ export const API_ENDPOINTS = {
 };
 
 export const getApiUrl = (path: string): string => {
-  return `${API_BASE_URL}${path}`;
+  const base = API_BASE_URL.replace(/\/+$/, '');
+  const suffix = path.startsWith('/') ? path : `/${path}`;
+  return `${base}${suffix}`;
 };

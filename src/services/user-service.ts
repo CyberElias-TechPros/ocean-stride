@@ -1,11 +1,11 @@
 import { BaseApi } from '@/lib/api/base-api';
 import { API_ENDPOINTS, getApiUrl } from '@/config/api';
-import { 
-  User, 
-  CreateUserDto, 
-  UpdateUserDto, 
+import {
+  User,
+  CreateUserDto,
+  UpdateUserDto,
   UserRole,
-  PaginatedResponse
+  PaginatedResponse,
 } from '@/types';
 
 export class UserService extends BaseApi {
@@ -17,17 +17,17 @@ export class UserService extends BaseApi {
     page: number = 1,
     limit: number = 10,
     search: string = '',
-    filters: Record<string, any> = {}
+    filters: Record<string, any> = {},
   ): Promise<PaginatedResponse<User>> {
     const params = new URLSearchParams({
       page: page.toString(),
       limit: limit.toString(),
       ...(search && { search }),
-      ...filters,
+      ...(filters.role && { role: String(filters.role) }),
     });
 
     return this.get<PaginatedResponse<User>>(
-      `${API_ENDPOINTS.USERS.BASE}?${params.toString()}`
+      `${API_ENDPOINTS.USERS.BASE}?${params.toString()}`,
     );
   }
 
@@ -48,25 +48,25 @@ export class UserService extends BaseApi {
   }
 
   async updateUserRole(id: string, role: UserRole): Promise<User> {
-    return this.patch<User>(API_ENDPOINTS.USERS.ROLES(id), { role });
+    return this.patch<User>(API_ENDPOINTS.USERS.BY_ID(id), { role });
   }
 
   async getCurrentUser(): Promise<User> {
     return this.get<User>(API_ENDPOINTS.AUTH.ME);
   }
 
-  async uploadProfileImage(userId: string, file: File): Promise<{ url: string }> {
+  async uploadProfileImage(_userId: string, file: File): Promise<{ url: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    
+
     return this.post<{ url: string }>(
-      `${API_ENDPOINTS.USERS.BY_ID(userId)}/upload`,
+      '/upload',
       formData,
       {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-      }
+      },
     );
   }
 }

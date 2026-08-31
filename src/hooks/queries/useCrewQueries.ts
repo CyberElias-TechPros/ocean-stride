@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useMutation, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
 import { crewService } from '@/services';
 import { QUERY_KEYS } from '@/lib/query-client';
 import { 
@@ -83,7 +83,7 @@ export const useCrewCertifications = (crewMemberId: string, page = 1, limit = 10
   return useQuery({
     queryKey: [...QUERY_KEYS.CREW.CERTIFICATIONS(crewMemberId), { page, limit }],
     queryFn: () => crewService.getCertifications(crewMemberId, page, limit),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     enabled: !!crewMemberId,
   });
 };

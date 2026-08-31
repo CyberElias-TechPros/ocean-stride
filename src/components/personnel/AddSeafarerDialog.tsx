@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Upload, X } from 'lucide-react';
 import { useRanks } from '@/hooks/queries/useRankQueries';
-import { useCompany } from '@/hooks/use-company';
+import { useCompany } from '@/context/CompanyContext';
 import type { Seafarer, SeafarerDocument, SeafarerTraining, SeafarerMedical } from '@/lib/schemas_v2';
 
 interface AddSeafarerDialogProps {
@@ -16,7 +16,7 @@ interface AddSeafarerDialogProps {
 }
 
 export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
-  const { company } = useCompany();
+  const { selectedCompany: company } = useCompany();
   const { data: ranks = [] } = useRanks({ companyId: company?.id });
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -29,6 +29,7 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
       dateOfBirth: '',
       placeOfBirth: '',
       maritalStatus: 'single' as 'single' | 'married' | 'divorced' | 'widowed',
+      gender: 'prefer_not_to_say' as 'male' | 'female' | 'other' | 'prefer_not_to_say',
       address: {
         street: '',
         city: '',
@@ -49,6 +50,7 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
       photoUrl: '',
     },
     employment: {
+      employeeId: '',
       rank: '',
       rankId: '',
       department: 'deck' as 'deck' | 'engine' | 'catering' | 'other',
@@ -108,6 +110,7 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
         dateOfBirth: '',
         placeOfBirth: '',
         maritalStatus: 'single',
+        gender: 'prefer_not_to_say',
         address: {
           street: '',
           city: '',
@@ -128,6 +131,7 @@ export function AddSeafarerDialog({ onAdd }: AddSeafarerDialogProps) {
         photoUrl: '',
       },
       employment: {
+        employeeId: '',
         rank: '',
         rankId: '',
         department: 'deck',

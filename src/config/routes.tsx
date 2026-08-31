@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/routing/ProtectedRoute';
 
 // Lazy load all page components
 const LoginPage = React.lazy(() => import('@/pages/auth/LoginPage'));
+const RegisterPage = React.lazy(() => import('@/pages/auth/RegisterPage'));
 const ForgotPasswordPage = React.lazy(() => import('@/pages/auth/ForgotPasswordPage'));
 const ResetPasswordPage = React.lazy(() => import('@/pages/auth/ResetPasswordPage'));
 const DashboardPage = React.lazy(() => import('@/pages/Dashboard'));
@@ -27,6 +28,7 @@ const SeafarerDetailPage = React.lazy(() => import('@/pages/personnel/SeafarerDe
 export const ROUTES = {
   // Auth routes
   LOGIN: '/login',
+  REGISTER: '/register',
   FORGOT_PASSWORD: '/forgot-password',
   RESET_PASSWORD: '/reset-password',
   
@@ -123,6 +125,14 @@ export const routes: RouteObject[] = [
     element: (
       <React.Suspense fallback={null}>
         <LoginPage />
+      </React.Suspense>
+    ),
+  },
+  {
+    path: ROUTES.REGISTER,
+    element: (
+      <React.Suspense fallback={null}>
+        <RegisterPage />
       </React.Suspense>
     ),
   },

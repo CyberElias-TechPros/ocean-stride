@@ -19,10 +19,10 @@ import {
 // Default settings values
 const getDefaultGeneralSettings = (): GeneralSettings => ({
   companyInfo: {
-    name: 'SeaManager Maritime Solutions',
-    email: 'contact@seamanager.com',
-    phone: '+1-555-0123',
-    address: '123 Harbor Street, Maritime City, MC 12345'
+    name: 'Ocean Stride',
+    email: 'ops@oceanstride.com',
+    phone: '',
+    address: ''
   },
   regional: {
     timezone: 'utc',
@@ -51,8 +51,8 @@ const getDefaultUserManagementSettings = (): UserManagementSettings => ({
         deleteSeafarerRecords: true,
         processPayroll: true,
         systemConfiguration: true,
-        userManagement: true
-      }
+        userManagement: true,
+      },
     },
     {
       name: 'manager',
@@ -62,63 +62,55 @@ const getDefaultUserManagementSettings = (): UserManagementSettings => ({
         deleteSeafarerRecords: false,
         processPayroll: true,
         systemConfiguration: false,
-        userManagement: false
-      }
+        userManagement: false,
+      },
     },
     {
-      name: 'viewer',
+      name: 'seafarer',
       permissions: {
         viewSeafarerProfiles: true,
         editSeafarerProfiles: false,
         deleteSeafarerRecords: false,
         processPayroll: false,
         systemConfiguration: false,
-        userManagement: false
-      }
-    }
+        userManagement: false,
+      },
+    },
+    {
+      name: 'captain',
+      permissions: {
+        viewSeafarerProfiles: true,
+        editSeafarerProfiles: true,
+        deleteSeafarerRecords: false,
+        processPayroll: false,
+        systemConfiguration: false,
+        userManagement: false,
+      },
+    },
+    {
+      name: 'officer',
+      permissions: {
+        viewSeafarerProfiles: true,
+        editSeafarerProfiles: false,
+        deleteSeafarerRecords: false,
+        processPayroll: false,
+        systemConfiguration: false,
+        userManagement: false,
+      },
+    },
+    {
+      name: 'crew',
+      permissions: {
+        viewSeafarerProfiles: true,
+        editSeafarerProfiles: false,
+        deleteSeafarerRecords: false,
+        processPayroll: false,
+        systemConfiguration: false,
+        userManagement: false,
+      },
+    },
   ],
-  notifications: [
-    {
-      id: '1',
-      name: 'Certificate Expiry',
-      description: 'Alerts when certificates are expiring within 60 days',
-      email: true,
-      sms: true,
-      push: true
-    },
-    {
-      id: '2',
-      name: 'Contract Endings',
-      description: 'Notifications for upcoming contract endings',
-      email: true,
-      sms: false,
-      push: true
-    },
-    {
-      id: '3',
-      name: 'Compliance Violations',
-      description: 'Immediate alerts for any compliance violations',
-      email: true,
-      sms: true,
-      push: true
-    },
-    {
-      id: '4',
-      name: 'Payroll Processing',
-      description: 'Updates on payroll processing status',
-      email: true,
-      sms: false,
-      push: false
-    },
-    {
-      id: '5',
-      name: 'System Maintenance',
-      description: 'Scheduled maintenance and downtime notifications',
-      email: true,
-      sms: false,
-      push: true
-    }
-  ]
+  notifications: [],
 });
 
 const getDefaultSecuritySettings = (): SecuritySettings => ({
@@ -137,74 +129,11 @@ const getDefaultSecuritySettings = (): SecuritySettings => ({
     requireForAdmins: true,
     allowForAllUsers: true
   },
-  apiKeys: [
-    {
-      id: '1',
-      name: 'Mobile App API',
-      key: 'sk_live_••••••••••••1234',
-      created: '2024-01-15',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Third-party Integration',
-      key: 'sk_live_••••••••••••5678',
-      created: '2024-01-10',
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'Webhook Endpoint',
-      key: 'sk_live_••••••••••••9012',
-      created: '2024-01-05',
-      status: 'inactive'
-    }
-  ]
+  apiKeys: [],
 });
 
 const getDefaultIntegrationSettings = (): IntegrationSettings => ({
-  integrations: [
-    {
-      name: 'Accounting System',
-      description: 'Sync payroll data with QuickBooks',
-      status: 'connected',
-      lastSync: '2024-01-20 14:30',
-      config: {}
-    },
-    {
-      name: 'Email Service',
-      description: 'SendGrid for notification delivery',
-      status: 'connected',
-      lastSync: '2024-01-20 15:45',
-      config: {}
-    },
-    {
-      name: 'SMS Provider',
-      description: 'Twilio for SMS notifications',
-      status: 'disconnected',
-      config: {}
-    },
-    {
-      name: 'Document Storage',
-      description: 'AWS S3 for certificate storage',
-      status: 'connected',
-      lastSync: '2024-01-20 16:15',
-      config: {}
-    },
-    {
-      name: 'Maritime Database',
-      description: 'IMO vessel information lookup',
-      status: 'connected',
-      lastSync: '2024-01-20 12:00',
-      config: {}
-    },
-    {
-      name: 'Training Provider',
-      description: 'Online training platform API',
-      status: 'disconnected',
-      config: {}
-    }
-  ]
+  integrations: [],
 });
 
 const getDefaultBackupSettings = (): BackupSettings => ({
@@ -214,14 +143,8 @@ const getDefaultBackupSettings = (): BackupSettings => ({
     retention: 30
   },
   manual: {
-    backups: [
-      { date: '2024-01-20 02:00', size: '2.4 GB', status: 'completed' },
-      { date: '2024-01-19 02:00', size: '2.3 GB', status: 'completed' },
-      { date: '2024-01-18 02:00', size: '2.3 GB', status: 'completed' },
-      { date: '2024-01-17 02:00', size: '2.2 GB', status: 'failed' },
-      { date: '2024-01-16 02:00', size: '2.2 GB', status: 'completed' }
-    ]
-  }
+    backups: [],
+  },
 });
 
 const getDefaultSettings = (companyId: string): Omit<SystemSettings, 'id' | 'createdAt' | 'updatedAt'> => ({

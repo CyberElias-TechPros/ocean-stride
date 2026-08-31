@@ -1,139 +1,109 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-// Removed useNavigate from here as it should be used in components
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import authService from '@/lib/api/authService';
+import { isRemoteEnabled } from '@/lib/database-service';
+import { validateEmail } from '@/lib/security';
 
-type User = {
+export interface AppUser {
   id: string;
   email: string;
-  role: 'admin' | 'manager' | 'seafarer';
+  role: 'admin' | 'manager' | 'seafarer' | 'captain' | 'officer' | 'crew';
   name: string;
-};
+  companyId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 type AuthContextType = {
-  user: User | null;
+  user: AppUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isRemote: boolean;
   login: (email: string, password: string) => Promise<void>;
-  loginWithGoogle: (credential: string) => Promise<void>;
-  logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
+  logout: () => Promise<void>;
+  updateUser: (userData: Partial<AppUser>) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Removed direct useNavigate from here
+  const remote = isRemoteEnabled();
 
-  // Check for existing session on mount
   useEffect(() => {
+    let cancelled = false;
     const checkAuth = async () => {
       try {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-          const user = JSON.parse(storedUser);
-          // Validate stored user data
-          if (user.id && user.email && user.role && user.name) {
-            setUser(user);
-          } else {
-            // Clear invalid stored data
-            localStorage.removeItem('user');
-          }
+        const hasToken = !!localStorage.getItem('authToken');
+
+        if (remote && hasToken) {
+          const current = await authService.getCurrentUser();
+          if (!cancelled) setUser(current as AppUser);
+        } else if (!remote) {
+          // In production the Cloudflare Worker is the source of truth for
+          // authentication.  Without it there is no valid local session.
+          if (!cancelled) setUser(null);
+        } else if (hasToken) {
+          // Token exists but backend was unavailable; clear it.
+          localStorage.removeItem('authToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          if (!cancelled) setUser(null);
+        } else {
+          if (!cancelled) setUser(null);
         }
-      } catch (error) {
-        console.error('Auth check failed', error);
-        localStorage.removeItem('user'); // Clear corrupted data
+      } catch {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        if (!cancelled) setUser(null);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
-
     checkAuth();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [remote]);
 
-  const login = async (email: string, password: string) => {
-    try {
-      setIsLoading(true);
-
-      // Validate credentials
-      if (!email || !password) {
-        throw new Error('Email and password are required');
+  const login = useCallback(
+    async (email: string, password: string) => {
+      if (!email || !password) throw new Error('Email and password are required');
+      if (!validateEmail(email)) throw new Error('Invalid email address');
+      if (!remote) {
+        throw new Error(
+          'Authentication backend is not configured. Set VITE_API_BASE_URL to your Cloudflare Worker URL.',
+        );
       }
+      const response = await authService.login({ email, password });
+      setUser(response.user as AppUser);
+    },
+    [remote],
+  );
 
-      // For now, accept any valid email/password combination
-      // In production, this would validate against a user database
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        throw new Error('Invalid email format');
+  const logout = useCallback(async () => {
+    if (remote) {
+      try {
+        await authService.logout();
+      } catch {
+        // Local cleanup below is authoritative.
       }
-
-      if (password.length < 3) {
-        throw new Error('Password must be at least 3 characters');
-      }
-
-      // Create user based on email domain logic
-      const user: User = {
-        id: btoa(email), // Use base64 encoded email as ID
-        email,
-        role: email.includes('admin') ? 'admin' : 'manager',
-        name: email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      };
-
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
     }
-  };
-
-  const loginWithGoogle = async (credential: string) => {
-    try {
-      setIsLoading(true);
-
-      // Decode the JWT credential to get user info
-      const payload = JSON.parse(atob(credential.split('.')[1]));
-
-      // Validate the credential structure
-      if (!payload.email || !payload.name) {
-        throw new Error('Invalid Google credential');
-      }
-
-      // Create user from Google profile
-      const user: User = {
-        id: payload.sub, // Use Google's unique user ID
-        email: payload.email,
-        role: payload.email.includes('admin') ? 'admin' : 'manager', // Same logic as regular login
-        name: payload.name,
-      };
-
-      setUser(user);
-      localStorage.setItem('user', JSON.stringify(user));
-
-    } catch (error) {
-      console.error('Google login failed:', error);
-      throw error;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const logout = () => {
     setUser(null);
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
-    // The actual navigation will be handled by the ProtectedRoute component
-  };
+  }, [remote]);
 
-  const updateUser = (userData: Partial<User>) => {
-    if (!user) return;
-    
-    const updatedUser = { ...user, ...userData };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-  };
+  const updateUser = useCallback((userData: Partial<AppUser>) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = { ...prev, ...userData };
+      localStorage.setItem('user', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -141,8 +111,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         isAuthenticated: !!user,
         isLoading,
+        isRemote: remote,
         login,
-        loginWithGoogle,
         logout,
         updateUser,
       }}
@@ -154,9 +124,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };
 

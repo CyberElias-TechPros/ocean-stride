@@ -1,4 +1,4 @@
-const AUTH_TOKEN_KEY = 'auth_token';
+const AUTH_TOKEN_KEY = 'authToken';
 
 export const getAuthToken = (): string | null => {
   if (typeof window === 'undefined') return null;

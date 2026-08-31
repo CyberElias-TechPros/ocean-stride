@@ -2,6 +2,7 @@ import * as React from "react";
 import { createRoot } from "react-dom/client";
 import { StrictMode, Suspense } from "react";
 import { db } from "./lib/database2";
+import { isRemoteEnabled as remoteDatabaseEnabled } from "./lib/database-service";
 import { runMigrationIfNeeded } from "./lib/migrate";
 import { initializeSecurity } from "./lib/security";
 import { setupCrashReporting } from "./lib/error-handler";
@@ -26,68 +27,54 @@ async function initializeApp(): Promise<boolean> {
 
   isInitializing = true;
 
-  initializationPromise = new Promise<boolean>(async (resolve) => {
-    try {
-      // Step 1: Initialize the database
-      await db.init();
-      
-      if (!db.isInitialized()) {
-        throw new Error('Database failed to initialize');
-      }
-
-      // Step 2: Run migrations if needed
+  initializationPromise = new Promise<boolean>((resolve) => {
+    void (async () => {
       try {
-        const migrationResult = await runMigrationIfNeeded();
-      } catch (migrationError) {
-        console.error('[App] Migration error:', migrationError);
-        // Don't fail the app for migration errors, but log them
-      }
-
-      // Step 3: Initialize security features
-      initializeSecurity();
-
-      // Step 4: Initialize accessibility features
-      initializeAccessibility();
-
-      // Step 5: Initialize performance optimizations
-      initializePerformanceOptimizations();
-
-      // Step 6: Register service worker for offline capabilities
-      if ('serviceWorker' in navigator && process.env.NODE_ENV === 'production') {
-        try {
-          const registration = await navigator.serviceWorker.register('/sw.js', {
-            scope: '/'
-          });
-
-          // Handle service worker updates
-          registration.addEventListener('updatefound', () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener('statechange', () => {
-                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                  // New content is available, notify user
-                }
-              });
-            }
-          });
-
-          // Listen for messages from service worker
-          navigator.serviceWorker.addEventListener('message', (event) => {
-            // Handle service worker messages if needed
-          });
-        } catch (error) {
-          console.error('[App] Service worker registration failed:', error);
+        // Step 1: Initialize the database. In production the Cloudflare Worker
+        // is the source of truth (isRemoteEnabled()), so IndexedDB is never
+        // opened and `isInitialized()` intentionally stays false.
+        await db.init();
+        if (!db.isInitialized() && !remoteDatabaseEnabled()) {
+          throw new Error('Database failed to initialize');
         }
-      }
 
-      // Step 7: Additional initialization can go here
-      resolve(true);
-    } catch (error) {
-      console.error('[App] Initialization failed:', error);
-      resolve(false);
-    } finally {
-      isInitializing = false;
-    }
+        // Step 2: Run migrations if needed
+        try {
+          await runMigrationIfNeeded();
+        } catch (migrationError) {
+          console.error('[App] Migration error:', migrationError);
+          // Don't fail the app for migration errors, but log them
+        }
+
+        // Step 3: Initialize security features
+        initializeSecurity();
+
+        // Step 4: Initialize accessibility features
+        initializeAccessibility();
+
+        // Step 5: Initialize performance optimizations
+        initializePerformanceOptimizations();
+
+        // Step 6: Register service worker for offline capabilities
+        if ('serviceWorker' in navigator && import.meta.env.PROD) {
+          try {
+            await navigator.serviceWorker.register('/sw.js', {
+              scope: '/',
+            });
+          } catch (error) {
+            console.error('[App] Service worker registration failed:', error);
+          }
+        }
+
+        // Step 7: Additional initialization can go here
+        resolve(true);
+      } catch (error) {
+        console.error('[App] Initialization failed:', error);
+        resolve(false);
+      } finally {
+        isInitializing = false;
+      }
+    })();
   });
 
   return initializationPromise;
@@ -142,13 +129,10 @@ function Root() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center gap-4 text-center">
-          <img
-            src="/cea.png"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
-            alt="Seafarer Management System"
-            className="w-64 h-64 rounded-md shadow"
-          />
-          <h1 className="text-xl font-bold">Seafarer Management System</h1>
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow">
+            OS
+          </div>
+          <h1 className="text-xl font-bold">Ocean Stride</h1>
         </div>
       </div>
     );
@@ -256,13 +240,10 @@ function Root() {
         fallback={
           <div className="flex items-center justify-center min-h-screen bg-background">
             <div className="flex flex-col items-center gap-4 text-center">
-              <img
-                src="/cea.png"
-                onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
-                alt="Seafarer Management System"
-                className="w-64 h-64 rounded-md shadow"
-              />
-              <h1 className="text-xl font-bold">Seafarer Management System</h1>
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow">
+                OS
+              </div>
+              <h1 className="text-xl font-bold">Ocean Stride</h1>
             </div>
           </div>
         }

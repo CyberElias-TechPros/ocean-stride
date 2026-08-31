@@ -6,12 +6,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
-type UserRole = 'admin' | 'manager' | 'seafarer';
+type UserRole = 'admin' | 'manager' | 'seafarer' | 'captain' | 'officer' | 'crew';
 
 const userFormSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
-  role: z.enum(['admin', 'manager', 'seafarer'] as const),
+  role: z.enum(['admin', 'manager', 'seafarer', 'captain', 'officer', 'crew'] as const),
   password: z.string().min(8, 'Password must be at least 8 characters').optional().or(z.literal('')),
 });
 
@@ -98,6 +98,9 @@ export function UserForm({ initialData, onSubmit, isLoading }: UserFormProps) {
                     <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="manager">Manager</SelectItem>
                     <SelectItem value="seafarer">Seafarer</SelectItem>
+                    <SelectItem value="captain">Captain</SelectItem>
+                    <SelectItem value="officer">Officer</SelectItem>
+                    <SelectItem value="crew">Crew</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />

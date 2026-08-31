@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { notificationService, Notification } from '@/services/notificationService';
+import { notificationService } from '@/services/notificationService';
+import type { Notification } from '@/types/notification';
 
 interface NotificationState {
   notifications: Notification[];

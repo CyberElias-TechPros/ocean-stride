@@ -14,18 +14,15 @@ export const queryClient = new QueryClient({
       },
       refetchOnWindowFocus: false,
       staleTime: 5 * 60 * 1000, // 5 minutes
-      onError: (error) => {
-        handleError(error);
-      },
     },
     mutations: {
-      onError: (error) => {
-        handleError(error);
-      },
       retry: false,
     },
   },
 });
+
+// Kept for services that still import it to surface handled errors.
+export { handleError };
 
 // Query keys
 export const QUERY_KEYS = {

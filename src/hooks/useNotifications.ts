@@ -12,27 +12,41 @@ export function useNotifications() {
   useEffect(() => {
     if (!selectedCompany) return;
 
+    let cancelled = false;
+
     const fetchNotifications = async () => {
       try {
         setLoading(true);
-        const data = await notificationService.getUnreadNotifications(selectedCompany.id);
+        const data = await notificationService.getNotifications(selectedCompany.id, {
+          includeRead: false,
+          limit: 100,
+        });
+        if (cancelled) return;
         setNotifications(data.items);
         setUnreadCount(data.total);
       } catch (err) {
-        setError(err as Error);
+        if (!cancelled) setError(err as Error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchNotifications();
-    
-    const unsubscribe = notificationService.subscribeToUpdates((newNotification: any) => {
-      setNotifications(prev => [newNotification, ...prev]);
-      setUnreadCount(prev => prev + 1);
+
+    const unsubscribe = notificationService.subscribe(selectedCompany.id, async (count) => {
+      if (cancelled) return;
+      setUnreadCount(count);
+      const data = await notificationService.getNotifications(selectedCompany.id, {
+        includeRead: false,
+        limit: 100,
+      });
+      if (!cancelled) setNotifications(data.items);
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, [selectedCompany?.id]);
 
   return { notifications, unreadCount, loading, error };

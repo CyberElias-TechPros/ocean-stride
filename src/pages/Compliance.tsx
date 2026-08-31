@@ -472,19 +472,29 @@ export default function Compliance() {
   const handleSaveAlertConfig = async () => {
     setIsSavingAlerts(true);
     try {
-      // Save alert configuration to database (mock implementation)
+      if (!selectedCompany) throw new Error('No company selected');
+
       const alertConfigData = {
         ...alertConfig,
-        companyId: selectedCompany?.id,
-        updatedAt: new Date().toISOString()
+        companyId: selectedCompany.id,
+        updatedAt: new Date().toISOString(),
       };
 
-      // In a real implementation, this would save to a settings store
-      localStorage.setItem(`alert_config_${selectedCompany?.id}`, JSON.stringify(alertConfigData));
+      // Persist as part of the company settings record (schema-backed, not localStorage).
+      const companySettings = await db.getCompanySettings(selectedCompany.id);
+      await db.update<typeof companySettings>(STORE_NAMES.COMPANY_SETTINGS, companySettings.id, {
+        complianceSettings: alertConfigData,
+        notificationSettings: {
+          ...companySettings.notificationSettings,
+          emailNotifications: alertConfigData.notificationMethods.includes('email'),
+          pushNotifications: alertConfigData.notificationMethods.includes('push'),
+          sendSMS: alertConfigData.notificationMethods.includes('sms'),
+        },
+      });
 
       toast({
         title: "Alert Configuration Saved",
-        description: "Compliance alert settings have been updated successfully"
+        description: "Compliance alert settings have been updated successfully",
       });
 
       setShowAlertDialog(false);
@@ -493,7 +503,7 @@ export default function Compliance() {
       toast({
         title: "Error",
         description: "Failed to save alert configuration. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     } finally {
       setIsSavingAlerts(false);

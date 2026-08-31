@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useRanks, useCreateRank, useUpdateRank, useDeleteRank, useInitializeDefaultRanks } from '@/hooks/queries/useRankQueries';
-import { useCompany } from '@/hooks/use-company';
+import { useCompany } from '@/context/CompanyContext';
 import { Rank } from '@/lib/schemas_v2';
 import { Plus, Edit, Trash2, Users, DollarSign, Clock, Award } from 'lucide-react';
 import { toast } from 'sonner';
@@ -55,7 +55,7 @@ const initialFormData: RankFormData = {
 };
 
 export function RankManagement() {
-  const { company } = useCompany();
+  const { selectedCompany: company } = useCompany();
   const [activeTab, setActiveTab] = useState('list');
   const [editingRank, setEditingRank] = useState<Rank | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);

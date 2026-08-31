@@ -62,7 +62,16 @@ export const useCreateAssignment = () => {
   return useMutation({
     mutationFn: async (data: AssignmentCreateDto) => {
       await db.init();
-      return db.create<CrewAssignment>(STORE_NAMES.CREW_ASSIGNMENTS, data);
+      return db.create<CrewAssignment>(STORE_NAMES.CREW_ASSIGNMENTS, {
+        ...data,
+        documents: data.documents ?? [],
+        status: data.status ?? 'draft',
+        isActive: data.isActive ?? false,
+        signedBySeafarer: false,
+        signedByCompany: false,
+        createdBy: '',
+        updatedBy: '',
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['assignments'] });

@@ -17,8 +17,8 @@ import {
   Clock
 } from 'lucide-react';
 import { db } from '@/lib/database2';
-import type { Vessel, Seafarer } from '@/lib/schemas';
-import { INDEX_NAMES } from '@/lib/schemas';
+import type { Vessel, Seafarer, CrewChange } from '@/lib/schemas';
+import { INDEX_NAMES, STORE_NAMES } from '@/lib/schemas';
 import { useCompany } from '@/context/CompanyContext';
 import { useToast } from '@/hooks/use-toast';
 
@@ -69,30 +69,41 @@ export default function Fleet() {
            );
            const requiredCrew = getRequiredCrewByType(vessel.type);
 
-           // Mock maintenance and voyage data
-           const lastMaintenance = new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString();
-           const nextMaintenance = new Date(Date.now() + Math.random() * 60 * 24 * 60 * 60 * 1000).toISOString();
-           const maintenanceStatus = new Date(nextMaintenance) < new Date() ? 'overdue' : 'scheduled';
+           // Compute from real records. If a field has no data yet it is
+           // left as an empty/unknown value instead of fabricated.
+           const allChanges = await db.getAll<CrewChange>(STORE_NAMES.CREW_CHANGES);
+           const vesselChanges = allChanges.filter((c) => c.vesselId === vessel.id);
+           const upcoming = vesselChanges
+             .filter((c) => c.scheduledDate && new Date(c.scheduledDate) >= new Date())
+             .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime());
+           const nextChange = upcoming[0];
+           const lastMaintenance = vessel.lastInspectionDate || '';
+           const nextMaintenance = vessel.nextInspectionDate || '';
+           const maintenanceStatus = nextMaintenance && new Date(nextMaintenance) < new Date()
+             ? 'overdue'
+             : nextMaintenance
+               ? 'scheduled'
+               : 'due';
 
            return {
              ...vessel,
              crewDetails: {
                current: onboardCrew.length,
                required: requiredCrew,
-               nextCrewChange: new Date(Date.now() + Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
-               upcomingChanges: Math.floor(Math.random() * 3),
+               nextCrewChange: nextChange?.scheduledDate || '',
+               upcomingChanges: upcoming.length,
              },
              maintenanceSchedule: {
                lastMaintenance,
                nextMaintenance,
-               status: maintenanceStatus as 'due' | 'overdue' | 'scheduled' | 'completed'
+               status: maintenanceStatus as 'due' | 'overdue' | 'scheduled' | 'completed',
              },
              voyageInfo: {
-               currentPort: ['Rotterdam', 'Singapore', 'Houston', 'Dubai'][Math.floor(Math.random() * 4)],
-               nextPort: ['London', 'Shanghai', 'New York', 'Abu Dhabi'][Math.floor(Math.random() * 4)],
-               eta: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-               cargo: ['Containers', 'Oil', 'Grain', 'Coal'][Math.floor(Math.random() * 4)]
-             }
+               currentPort: '',
+               nextPort: nextChange?.port || '',
+               eta: nextChange?.scheduledDate || '',
+               cargo: vessel.notes || '',
+             },
            };
          })
        );

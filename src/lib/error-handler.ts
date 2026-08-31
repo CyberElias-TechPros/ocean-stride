@@ -339,7 +339,7 @@ export const setupCrashReporting = (): void => {
 // Send error to external service (placeholder for Sentry, LogRocket, etc.)
 const sendErrorToService = (error: ErrorLog): void => {
   // Placeholder - integrate with actual error reporting service
-  if (process.env.NODE_ENV === 'production') {
+  if (import.meta.env.PROD) {
     // Example: send to Sentry, LogRocket, etc.
     console.log('Sending error to external service:', error);
   }
@@ -394,10 +394,11 @@ export const handleError = (error: unknown, context?: string): void => {
           variant: 'destructive',
         });
         break;
-      case 422:
+      case 422: {
         // Handle validation errors (returned by the server)
         const validationErrors = response?.errors || {};
         return validationErrors;
+      }
       default:
         // Handle other HTTP errors
         toast({

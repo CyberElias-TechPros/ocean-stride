@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '../ui/loading-spinner';
 
@@ -8,24 +8,16 @@ interface ProtectedRouteProps {
   requireAdmin?: boolean;
 }
 
+function isAdminUser(role?: string): boolean {
+  return role === 'admin' || role === 'superadmin';
+}
+
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children,
   requireAdmin = false,
 }) => {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      // Store the current location they were trying to go to
-      sessionStorage.setItem('redirectPath', location.pathname);
-      navigate('/login');
-    } else if (!isLoading && isAuthenticated && requireAdmin && !user?.isAdmin) {
-      // Redirect to dashboard if user is not an admin but admin access is required
-      navigate('/');
-    }
-  }, [isAuthenticated, isLoading, navigate, location, requireAdmin, user]);
 
   if (isLoading) {
     return (
@@ -36,11 +28,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   }
 
   if (!isAuthenticated) {
-    return null; // Will be redirected by the useEffect
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (requireAdmin && !user?.isAdmin) {
-    return null; // Will be redirected by the useEffect
+  if (requireAdmin && !isAdminUser(user?.role)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

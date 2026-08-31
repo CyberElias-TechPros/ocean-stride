@@ -383,10 +383,13 @@ export interface Document extends BaseEntity {
   fileUrl: string;
   fileSize?: number;
   mimeType?: string;
+  issueDate?: string;
   expiryDate?: string;
+  status?: 'valid' | 'expired' | 'expiring_soon' | 'renewal_in_progress';
   relatedTo: {
     entityType: 'seafarer' | 'vessel' | 'company' | 'assignment' | 'payroll';
     entityId: string;
+    entityName?: string;
   };
   tags?: string[];
   description?: string;
@@ -426,6 +429,7 @@ export interface Applicant extends BaseEntity {
 }
 
 export interface PayrollSettings extends BaseEntity {
+  companyId: string;
   overtimeRate: number;
   overtimeThreshold: number;
   bonusRates: Record<string, number>;
@@ -445,11 +449,18 @@ export interface PayrollSettings extends BaseEntity {
 }
 
 export interface CompanySettings extends BaseEntity {
+  companyId: string;
   currency: string;
   timezone: string;
   dateFormat: string;
   fiscalYearStart: string;
   workingHoursPerWeek: number;
+  defaultVesselRotationDays: number;
+  defaultLeaveDays: number;
+  documentSettings: {
+    requiredCertificates: string[];
+    documentExpiryWarningDays: number;
+  };
   leavePolicy: {
     annualLeaveDays: number;
     sickLeaveDays: number;
@@ -462,6 +473,16 @@ export interface CompanySettings extends BaseEntity {
     certificateExpiryWarnings: number; // days before expiry
     contractExpiry: number;
     sendSMS: boolean;
+  };
+  complianceSettings?: {
+    enableExpiryAlerts: boolean;
+    expiryThresholdDays: number;
+    enableThresholdAlerts: boolean;
+    complianceThreshold: number;
+    enableWorkHourAlerts: boolean;
+    maxWorkHoursPerWeek: number;
+    notificationMethods: string[];
+    alertRecipients: string[];
   };
 }
 

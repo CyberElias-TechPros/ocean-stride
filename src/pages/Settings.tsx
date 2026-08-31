@@ -13,6 +13,7 @@ import { useEffect } from 'react';
 import { RankManagement } from '@/components/settings/RankManagement';
 import { useSettings } from '@/hooks/useSettings';
 import { useCurrentCompany } from '@/context/CompanyContext';
+import { userService } from '@/services';
 import {
   Settings as SettingsIcon,
   Users,
@@ -36,7 +37,7 @@ interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'manager' | 'viewer';
+  role: 'admin' | 'manager' | 'seafarer' | 'captain' | 'officer' | 'crew';
   status: 'active' | 'inactive';
   lastLogin: string;
 }
@@ -50,72 +51,9 @@ interface NotificationSetting {
   push: boolean;
 }
 
-// Function to create initial system users if none exist
-const createInitialUsers = (): User[] => [
-  {
-    id: 'admin-1',
-    name: 'System Administrator',
-    email: 'admin@maritime.com',
-    role: 'admin',
-    status: 'active',
-    lastLogin: new Date().toISOString().split('T')[0]
-  },
-  {
-    id: 'manager-1',
-    name: 'Fleet Manager',
-    email: 'manager@maritime.com',
-    role: 'manager',
-    status: 'active',
-    lastLogin: new Date().toISOString().split('T')[0]
-  },
-];
-
-const notificationSettings: NotificationSetting[] = [
-  {
-    id: '1',
-    name: 'Certificate Expiry',
-    description: 'Alerts when certificates are expiring within 60 days',
-    email: true,
-    sms: true,
-    push: true
-  },
-  {
-    id: '2',
-    name: 'Contract Endings',
-    description: 'Notifications for upcoming contract endings',
-    email: true,
-    sms: false,
-    push: true
-  },
-  {
-    id: '3',
-    name: 'Compliance Violations',
-    description: 'Immediate alerts for any compliance violations',
-    email: true,
-    sms: true,
-    push: true
-  },
-  {
-    id: '4',
-    name: 'Payroll Processing',
-    description: 'Updates on payroll processing status',
-    email: true,
-    sms: false,
-    push: false
-  },
-  {
-    id: '5',
-    name: 'System Maintenance',
-    description: 'Scheduled maintenance and downtime notifications',
-    email: true,
-    sms: false,
-    push: true
-  }
-];
-
 export default function Settings() {
   const company = useCurrentCompany();
-  const companyId = company?.id || 'default-company'; // Fallback for demo
+  const companyId = company.id;
 
   const {
     settings,
@@ -134,50 +72,52 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Load users from localStorage on component mount
+  // Load users from the backend (Cloudflare Worker `users` table).
   useEffect(() => {
-    const loadUsers = () => {
+    let cancelled = false;
+    const loadUsers = async () => {
       try {
-        const storedUsers = localStorage.getItem('settings_users');
-        if (storedUsers) {
-          setUsers(JSON.parse(storedUsers));
-        } else {
-          // Initialize with default users if none exist
-          const initialUsers = createInitialUsers();
-          setUsers(initialUsers);
-          localStorage.setItem('settings_users', JSON.stringify(initialUsers));
-        }
+        const response = await userService.getUsers(1, 100);
+        const mapped: User[] = response.data.map((u) => ({
+          id: u.id,
+          name: u.name,
+          email: u.email,
+          role: u.role,
+          status: u.status === 'inactive' ? 'inactive' : 'active',
+          lastLogin: u.updatedAt || u.createdAt || '',
+        }));
+        if (!cancelled) setUsers(mapped);
       } catch (error) {
         console.error('Failed to load users:', error);
-        const initialUsers = createInitialUsers();
-        setUsers(initialUsers);
-        localStorage.setItem('settings_users', JSON.stringify(initialUsers));
+        if (!cancelled) setUsers([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     loadUsers();
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  // Save users to localStorage whenever users change
-  useEffect(() => {
-    if (users.length > 0) {
-      localStorage.setItem('settings_users', JSON.stringify(users));
-    }
-  }, [users]);
 
   const getRoleBadge = (role: string) => {
     const variants = {
       admin: 'destructive',
       manager: 'default',
-      viewer: 'secondary'
+      seafarer: 'secondary',
+      captain: 'default',
+      officer: 'secondary',
+      crew: 'secondary',
     } as const;
 
     const colors = {
       admin: 'bg-destructive/20 text-destructive-foreground',
       manager: 'bg-primary/20 text-primary-foreground',
-      viewer: 'bg-muted text-muted-foreground'
+      seafarer: 'bg-muted text-muted-foreground',
+      captain: 'bg-primary/20 text-primary-foreground',
+      officer: 'bg-secondary text-secondary-foreground',
+      crew: 'bg-muted text-muted-foreground',
     };
 
     return (
@@ -429,7 +369,7 @@ export default function Settings() {
                     <Input
                       id="company-name"
                       name="company-name"
-                      defaultValue={settings?.general.companyInfo.name || "SeaManager Maritime Solutions"}
+                      defaultValue={settings?.general.companyInfo.name || "Ocean Stride"}
                       disabled={settingsLoading}
                     />
                   </div>

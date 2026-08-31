@@ -137,7 +137,7 @@ export function RosterPlannerModal({ open, onOpenChange, selectedVessel }: Roste
         if (assignment.frequency === 'custom' && assignment.customFrequency) {
           const { daysOn, daysOff } = assignment.customFrequency;
           const cycleLength = daysOn + daysOff;
-          let currentDate = new Date(assignment.startDate);
+          const currentDate = new Date(assignment.startDate);
 
           // Generate rotation events for the next 6 months
           for (let i = 0; i < 12; i++) {

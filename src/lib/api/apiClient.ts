@@ -46,7 +46,7 @@ apiClient.interceptors.response.use(
       
       try {
         // Import authService here to avoid circular dependency
-        const { authService } = await import('./authService');
+        const { default: authService } = await import('./authService');
         const response = await authService.refreshToken();
         const { accessToken } = response;
         
@@ -68,8 +68,8 @@ apiClient.interceptors.response.use(
     
     // Handle other errors
     if (error.response) {
-      const errorMessage = error.response.data?.message || 'An error occurred';
-      const errorData = error.response.data as ApiError;
+      const errorData = error.response.data as ApiError | undefined;
+      const errorMessage = errorData?.message || 'An error occurred';
       
       // Show error toast for non-401 errors
       if (error.response.status !== 401) {

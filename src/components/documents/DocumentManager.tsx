@@ -41,7 +41,7 @@ export function DocumentManager() {
       // Enrich documents with related entity names
       const enrichedDocuments = await Promise.all(
         companyDocuments.map(async (doc) => {
-          let enrichedDoc: DocumentWithDetails = { ...doc };
+          const enrichedDoc: DocumentWithDetails = { ...doc };
           
           if (doc.relatedTo.entityType === 'seafarer') {
             const seafarer = await db.getSeafarer(doc.relatedTo.entityId);

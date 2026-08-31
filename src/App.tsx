@@ -1,7 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { QueryErrorResetBoundary } from '@tanstack/react-query';
-import { BrowserRouter, useRoutes, Navigate } from 'react-router-dom';
+import { BrowserRouter, useRoutes } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as Sonner } from '@/components/ui/sonner';
@@ -16,7 +16,11 @@ import { DatabaseProvider } from '@/context/DatabaseContext';
 import { I18nProvider } from './i18n/I18nProvider';
 
 // Lazy load pages
-const LoginPage = lazy(() => import('@/pages/Login'));
+const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
+const RegisterPage = lazy(() => import('@/pages/auth/RegisterPage'));
+const ForgotPasswordPage = lazy(() => import('@/pages/auth/ForgotPasswordPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/auth/ResetPasswordPage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFound'));
 // Layout wrapper hosting authenticated routes (renders <Outlet />)
 const LayoutPage = lazy(() => import('@/pages/Index'));
 
@@ -37,13 +41,10 @@ const RouteLoadingBoundary: React.FC<{ children: React.ReactNode }> = ({ childre
     <Suspense fallback={
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <img
-            src="/cea.png"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
-            alt="Seafarer Management System"
-            className="w-64 h-64 rounded-md shadow"
-          />
-          <h1 className="text-xl font-bold">Seafarer Management System</h1>
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow">
+            OS
+          </div>
+          <h1 className="text-xl font-bold">Ocean Stride</h1>
         </div>
       </div>
     }>
@@ -71,7 +72,31 @@ const AppRoutes = () => {
         </RouteLoadingBoundary>
       ),
     },
-    
+    {
+      path: ROUTES.REGISTER,
+      element: (
+        <RouteLoadingBoundary>
+          <RegisterPage />
+        </RouteLoadingBoundary>
+      ),
+    },
+    {
+      path: ROUTES.FORGOT_PASSWORD,
+      element: (
+        <RouteLoadingBoundary>
+          <ForgotPasswordPage />
+        </RouteLoadingBoundary>
+      ),
+    },
+    {
+      path: ROUTES.RESET_PASSWORD,
+      element: (
+        <RouteLoadingBoundary>
+          <ResetPasswordPage />
+        </RouteLoadingBoundary>
+      ),
+    },
+
     // Protected routes
     {
       element: (
@@ -103,7 +128,11 @@ const AppRoutes = () => {
     // 404 - Not Found route
     {
       path: '*',
-      element: <Navigate to="/" replace />,
+      element: (
+        <RouteLoadingBoundary>
+          <NotFoundPage />
+        </RouteLoadingBoundary>
+      ),
     },
   ]);
 
@@ -112,13 +141,10 @@ const AppRoutes = () => {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <img
-            src="/cea.png"
-            onError={(e) => { (e.currentTarget as HTMLImageElement).src = 'https://techpros.com.ng/wp-content/uploads/2025/08/CEA.png'; }}
-            alt="Seafarer Management System"
-            className="w-64 h-64 rounded-md shadow"
-          />
-          <h1 className="text-xl font-bold">Seafarer Management System</h1>
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary text-2xl font-bold text-primary-foreground shadow">
+            OS
+          </div>
+          <h1 className="text-xl font-bold">Ocean Stride</h1>
         </div>
       </div>
     );

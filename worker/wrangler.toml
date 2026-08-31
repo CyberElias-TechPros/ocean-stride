@@ -1,0 +1,30 @@
+name = "ocean-stride-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare D1 database
+[[d1_databases]]
+binding = "DB"
+database_name = "ocean-stride"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+# Cloudflare KV for rate limiting and cacheable configuration
+[[kv_namespaces]]
+binding = "KV"
+id = "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+
+# Cloudflare R2 for document / image storage
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "ocean-stride-assets"
+
+[vars]
+ENVIRONMENT = "production"
+# CORS origins allowed to call this API (comma separated)
+ALLOWED_ORIGINS = "https://ocean-stride.vercel.app"
+
+# Secrets must be set with `wrangler secret put`:
+# AUTH_SECRET   -> at least 32 random bytes, used to sign access tokens
+# RESET_SECRET  -> optional; falls back to AUTH_SECRET

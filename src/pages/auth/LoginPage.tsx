@@ -7,14 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Icons } from '@/components/ui/icons';
 import { useToast } from '@/components/ui/use-toast';
 import { ROUTES } from '@/config/routes';
-import { GOOGLE_OAUTH_CONFIG, GoogleCredentialResponse } from '@/config/oauth';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { login, loginWithGoogle, isAuthenticated } = useAuth();
+  const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -58,63 +56,6 @@ const LoginPage: React.FC = () => {
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    try {
-      setIsGoogleLoading(true);
-
-      // Check if Google Identity Services is loaded
-      if (!window.google?.accounts?.id) {
-        throw new Error('Google Identity Services not loaded');
-      }
-
-      // Initialize Google Sign-In
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_OAUTH_CONFIG.clientId,
-        callback: handleGoogleCallback,
-        auto_select: false,
-        cancel_on_tap_outside: true,
-      });
-
-      // Prompt the user to sign in
-      window.google.accounts.id.prompt();
-
-    } catch (error) {
-      console.error('Google sign-in initialization failed:', error);
-      toast({
-        title: 'Google Sign-In Error',
-        description: 'Failed to initialize Google sign-in. Please check your configuration.',
-        variant: 'destructive',
-      });
-      setIsGoogleLoading(false);
-    }
-  };
-
-  const handleGoogleCallback = async (response: GoogleCredentialResponse) => {
-    try {
-      if (!response.credential) {
-        throw new Error('No credential received from Google');
-      }
-
-      await loginWithGoogle(response.credential);
-
-      toast({
-        title: 'Success',
-        description: 'You have been logged in with Google successfully',
-      });
-
-      // Navigation will be handled by the useEffect above
-    } catch (error) {
-      console.error('Google login failed:', error);
-      toast({
-        title: 'Google Login Failed',
-        description: error instanceof Error ? error.message : 'Failed to authenticate with Google',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGoogleLoading(false);
     }
   };
 
@@ -199,34 +140,11 @@ const LoginPage: React.FC = () => {
                 </Button>
               </div>
             </form>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">
-                  Or continue with
-                </span>
-              </div>
-            </div>
-            <Button
-              variant="outline"
-              type="button"
-              disabled={isLoading || isGoogleLoading}
-              onClick={handleGoogleSignIn}
-            >
-              {isGoogleLoading ? (
-                <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Icons.google className="mr-2 h-4 w-4" />
-              )}{' '}
-              Google
-            </Button>
           </div>
           <p className="px-8 text-center text-sm text-muted-foreground">
             Don't have an account?{' '}
             <Link
-              to="/register"
+              to={ROUTES.REGISTER}
               className="underline underline-offset-4 hover:text-primary"
             >
               Sign up
