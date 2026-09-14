@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "ocean-stride-api",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "vars": {
+    "ENVIRONMENT": "development",
+    "APP_ORIGIN": "http://localhost:8080",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ocean-stride",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "worker/migrations",
+    },
+  ],
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["15 3 * * *"] },
+  "env": {
+    "production": {
+      "vars": {
+        "ENVIRONMENT": "production",
+        "APP_ORIGIN": "https://REPLACE-WITH-YOUR-VERCEL-DOMAIN",
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "ocean-stride-production",
+          "database_id": "REPLACE-WITH-D1-ID",
+          "migrations_dir": "worker/migrations",
+        },
+      ],
+    },
+  },
+}

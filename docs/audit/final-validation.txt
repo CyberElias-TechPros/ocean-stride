@@ -1,0 +1,71 @@
+
+> ocean-stride@2.0.0 type-check
+> tsc --noEmit
+
+
+> ocean-stride@2.0.0 lint
+> eslint src api shared worker tests
+
+
+> ocean-stride@2.0.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv5.0.0 [39m[90m/home/user/ocean-stride[39m
+
+ [32m✓[39m tests/gateway.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 31[2mms[22m[39m
+ [32m✓[39m tests/domain.test.ts [2m([22m[2m15 tests[22m[2m)[22m[32m 9[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m2 passed[39m[22m[90m (2)[39m
+[2m      Tests [22m [1m[32m20 passed[39m[22m[90m (20)[39m
+[2m   Start at [22m 16:11:30
+[2m   Duration [22m 397ms[2m (transform 57%, tests 20%, import 19%, worker 4%)[22m
+
+
+> ocean-stride@2.0.0 build
+> tsc --noEmit && vite build
+
+vite v6.4.3 building for production...
+transforming...
+✓ 1657 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                              1.20 kB │ gzip:  0.58 kB
+dist/assets/manrope-vietnamese-wght-normal-usUDDRr7.woff2    8.52 kB
+dist/assets/manrope-greek-wght-normal-DL7QRZyv.woff2         9.44 kB
+dist/assets/manrope-cyrillic-wght-normal-Dvxsihut.woff2     14.50 kB
+dist/assets/manrope-latin-ext-wght-normal-Ch3YOpNY.woff2    15.12 kB
+dist/assets/dm-sans-latin-ext-wght-normal-BOFOeGcA.woff2    18.23 kB
+dist/assets/manrope-latin-wght-normal-DHIcAJRg.woff2        24.84 kB
+dist/assets/dm-sans-latin-wght-normal-Xz1IZZA0.woff2        36.93 kB
+dist/assets/index-BC1CGre0.css                              36.34 kB │ gzip: 11.28 kB
+dist/assets/index-tUKlYSZ_.js                              325.10 kB │ gzip: 99.24 kB
+✓ built in 2.62s
+
+> ocean-stride@2.0.0 check:worker
+> wrangler deploy --dry-run --env production
+
+
+ ⛅️ wrangler 4.131.2
+────────────────────
+Total Upload: 141.51 KiB / gzip: 25.17 KiB
+Your Worker has access to the following bindings:
+Binding                                                          Resource                  
+env.DB (ocean-stride-production)                                 D1 Database               
+env.ENVIRONMENT ("production")                                   Environment Variable      
+env.APP_ORIGIN ("https://REPLACE-WITH-YOUR-VERCEL-DOMAIN")       Environment Variable      
+
+--dry-run: exiting now.
+
+> ocean-stride@2.0.0 db:local
+> wrangler d1 migrations apply ocean-stride --local
+
+
+ ⛅️ wrangler 4.131.2
+────────────────────
+Resource location: local 
+
+Use --remote if you want to access the remote instance.
+
+✅ No migrations to apply!
+found 0 vulnerabilities

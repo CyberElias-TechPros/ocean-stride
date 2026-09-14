@@ -1,201 +1,102 @@
-# Ocean Stride - Seafarer Management System
+# Ocean Stride
 
-A comprehensive web-based application for managing seafarer personnel, vessel operations, and maritime company administration. Built for shipping companies to efficiently manage their crew, vessels, payroll, and compliance requirements.
+**Every vessel. Every person. One horizon.**
 
-## Features
+A maritime operations workspace for small fleet operators: vessel management, crew records, current assignments, primary certificate expiry, and an auditable operations log. React + TypeScript on Vercel, with a Cloudflare Worker API and D1 relational storage.
 
-### 🏢 Multi-Company Support
-- Create and manage multiple shipping companies
-- Company-specific vessel and personnel management
-- Isolated data per company for security and organization
+## Release status
 
-### 👥 Personnel Management
-- Complete seafarer profiles with personal, employment, and certification details
-- Rank-based hierarchy management
-- Document and certificate tracking with expiry alerts
-- Medical record management
-- Skills and language proficiency tracking
+The core workflows are implemented and locally verified against real Workers/D1 emulation. This is a **production-oriented pilot foundation**, not a completed enterprise crewing suite or a compliance certification. Cloud deployment has not been performed. Payroll, recruitment, document storage, multi-user invitations, password recovery, and live tracking are **not implemented in this release**.
 
-### 🚢 Vessel Management
-- Vessel registration with detailed specifications
-- Company assignment and status tracking
-- Crew assignment and rotation management
-- Vessel-specific payroll calculations
+There was no active Supabase integration to migrate. The previous runtime used conflicting IndexedDB implementations and client-side fake authentication. It is preserved in `legacy/`, outside the deployed application. Original data is untouched; importing it requires the reviewed migration described below.
 
-### 💰 Payroll System
-- Comprehensive payroll calculations
-- Rank-based salary structures
-- Overtime and bonus calculations
-- Deductions management (taxes, pensions, company deductions)
-- Multi-currency support
-- Payroll history and reporting
+## What works
 
-### 📋 Crew Assignments
-- Flexible crew assignment scheduling (daily/weekly/monthly)
-- Vessel-specific crew requirements
-- Assignment tracking and history
-- Automated crew rotation management
+- A clearly labeled, read-only illustrative preview, available without credentials.
+- Create an owner account and an empty, tenant-isolated workspace; sign in and sign out.
+- Add, edit, search, filter, and delete vessels and crew.
+- Validate IMO checksums, capacity, email, rank, status, and dates on the server.
+- Assign/reassign/sign off crew with atomic capacity constraints and ownership checks.
+- Monitor primary certificates due within 30 days, using UTC calendar dates.
+- Export fleet and crew CSV reports with formula-injection protection.
+- Audit successful mutations; failed writes do not produce success events.
+- Optimistic version checks and idempotent create retries.
+- Responsive navigation, keyboard dialogs, reduced-motion support, and local fonts/assets.
 
-### 📊 Analytics & Reporting
-- Dashboard with key metrics
-- Personnel analytics
-- Payroll reports
-- Compliance tracking
-- Certificate expiry monitoring
+## Local development
 
-### 🔐 Security & Compliance
-- Role-based access control
-- Data encryption for sensitive information
-- Audit logging
-- GDPR-compliant data handling
-- Secure offline-capable PWA
+Use Node.js **22** and npm. No Cloudflare login is required for local development.
 
-## Technology Stack
-
-- **Frontend**: React 18, TypeScript, Vite
-- **UI Framework**: ShadCN/UI, Tailwind CSS
-- **State Management**: Zustand, React Query
-- **Database**: IndexedDB (client-side)
-- **Forms**: React Hook Form, Zod validation
-- **Internationalization**: i18next
-- **Charts**: Recharts
-- **Build Tool**: Vite
-- **Deployment**: Docker, Nginx
-
-## Quick Start
-
-### Prerequisites
-- Node.js 18+ and npm
-- Modern web browser with IndexedDB support
-
-### Installation
-
-```bash
-# Clone the repository
-git clone <repository-url>
-cd ocean-stride
-
-# Install dependencies
-npm install
-
-# Start development server
+```sh
+npm ci
+npm run db:local
+# Terminal 1
+npm run dev:api
+# Terminal 2
 npm run dev
 ```
 
-### Build for Production
+Open `http://localhost:8080`. Explore the preview, or click **Create workspace** and register with a unique email and a password of at least 12 characters. There are no default passwords or production demo accounts. In embedded previews, authentication opens a new tab so first-party session cookies work without weakening browser protections. Local data is stored by Wrangler in ignored `.wrangler/state/`.
 
-```bash
-# Build the application
-npm run build
+The browser uses relative `/api` requests. Vite proxies them to the local Worker; do not put localhost service URLs into browser code. Development servers bind to `0.0.0.0`, including Arena preview support.
 
-# Preview production build
-npm run preview
+## Verification
+
+```sh
+npm run type-check
+npm run lint
+npm run test             # domain and gateway unit tests
+npm run build           # strict TypeScript + production Vite build
+npm run check:worker     # production Worker dry-run; no cloud resources modified
+npx playwright install --with-deps chromium
+npm run test:e2e         # starts local services if needed
+npm audit
 ```
 
-## Project Structure
+Browser tests create isolated local test workspaces. Never point them at production. An optional `npm run test:e2e:bundled` command extracts and uses npm-distributed Chromium and support libraries on restricted Linux environments; standard Playwright Chromium is preferred in CI. See the report for the exact sandbox verification and limitations.
 
-```
-src/
-├── components/          # Reusable UI components
-│   ├── ui/             # Core ShadCN/UI components
-│   ├── forms/          # Form components
-│   └── ...
-├── pages/              # Page components
-├── lib/                # Utilities and services
-│   ├── database/       # Database operations
-│   ├── security/       # Security utilities
-│   ├── validation/     # Data validation
-│   └── ...
-├── hooks/              # Custom React hooks
-├── contexts/           # React contexts
-├── types/              # TypeScript type definitions
-└── schemas/            # Data schemas
+## Architecture
+
+```text
+Browser
+  └─ Vercel static React frontend
+       └─ /api/* → Vercel edge gateway (no business logic or storage)
+            └─ Cloudflare Worker (authentication, authorization, validation)
+                 └─ D1 (organizations, users, sessions, vessels, crew,
+                        audit events, rate limits, idempotency keys)
+                 └─ Cron (expired session/rate-limit/idempotency cleanup)
 ```
 
-## Environment Configuration
+Only Workers, D1, and Cron are used. R2, KV, Queues, and Durable Objects are not justified by the supported workflows. R2 should be added when authenticated document uploads are actually implemented, not represented by a mock upload button.
 
-The application uses the following environment variables:
+## Project structure
 
-- `VITE_API_BASE_URL`: API base URL (defaults to '/api' for client-side operation)
+| Path                 | Purpose                                                                            |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| `src/`               | Active React workspace, visual system, forms, API client, explicit preview fixture |
+| `shared/domain.ts`   | Runtime validation and domain contracts shared with the Worker                     |
+| `worker/index.ts`    | Cloudflare API, sessions, tenant authorization, business rules                     |
+| `worker/migrations/` | Append-only D1 migrations                                                          |
+| `api/proxy.ts`       | Allowlisted, same-origin Vercel-to-Worker gateway                                  |
+| `tests/`             | Unit, real local API, browser, and automated accessibility tests                   |
+| `docs/`              | Deployment, data migration, architecture decisions, and verification report        |
+| `legacy/`            | Unsafe historical source, retained for reference, not built or supported           |
 
-## Deployment
+## Security and operational boundaries
 
-### Docker Deployment
+- Random opaque sessions stored only as SHA-256 hashes in D1; HttpOnly, SameSite=Lax cookies, with Secure in production; seven-day absolute expiry and logout invalidation.
+- Passwords use unique salts and Web Crypto PBKDF2-SHA256, 100,000 iterations (Workers Web Crypto iteration ceiling); authentication attempts are rate-limited. This is not an independently audited identity platform.
+- Every data query is tenant-scoped; the client cannot grant roles or choose an organization ID. Only workspace-owner access exists today.
+- Production Workers require a shared gateway secret and an exact permitted browser origin. No wildcard production CORS.
+- Mutations are bounded to 16 KiB; prepared SQL, constraints, transactions, version checks, and create idempotency protect integrity.
+- No service worker caches private data. Fonts and imagery are self-hosted. CSV exports contain personal information and must be protected by the operator.
+- Metadata is intentionally `noindex`: this is a private operations application, not a public content directory. No invented canonical, prices, ratings, or sitemap entries.
 
-```bash
-# Build Docker image
-docker build -t ocean-stride .
+## Deploy and migrate
 
-# Run with Docker Compose
-docker-compose up -d
-```
+- [Deployment and operations](docs/DEPLOYMENT.md)
+- [Data preservation and legacy migration](docs/MIGRATION.md)
+- [API contract](docs/API.md)
+- [Product reconstruction, decision ledger, and exact verification](docs/RECONSTRUCTION_REPORT.md)
 
-### Manual Deployment
-
-1. Build the application: `npm run build`
-2. Serve the `dist/` folder with a static server
-3. Configure your web server (Nginx/Apache) to serve the static files
-
-### Nginx Configuration Example
-
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    root /path/to/ocean-stride/dist;
-    index index.html;
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-}
-```
-
-## Development
-
-### Available Scripts
-
-- `npm run dev` - Start development server
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run lint` - Run ESLint
-- `npm run type-check` - Run TypeScript type checking
-- `npm run format` - Format code with Prettier
-- `npm run test` - Run tests
-- `npm run test:coverage` - Run tests with coverage
-
-### Code Quality
-
-- **Linting**: ESLint with TypeScript support
-- **Formatting**: Prettier
-- **Type Checking**: TypeScript strict mode
-- **Testing**: Vitest with React Testing Library
-
-## Browser Support
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit changes: `git commit -am 'Add your feature'`
-4. Push to branch: `git push origin feature/your-feature`
-5. Submit a pull request
-
-## License
-
-This project is proprietary software. All rights reserved.
-
-## Support
-
-For support and questions, please contact the development team or create an issue in the repository.
+No deployment credentials are stored in this repository. The generated hero illustration is AI-created maritime imagery; the route chart and demo vessels are illustrative, not AIS telemetry or navigation aids.
