@@ -1,371 +1,124 @@
-# Ocean Stride Deployment Guide
+# Deployment and operations
 
-This guide provides comprehensive instructions for deploying the Ocean Stride Seafarer Management System to production environments.
+## Status and prerequisites
 
-## Prerequisites
+The frontend builds and the production Worker bundles successfully in a dry-run. **Remote D1, Vercel routing, production cookies, custom domains, and cloud availability have not been exercised.** Local Wrangler tests are not a substitute for a staging release.
 
-- Node.js 18+ and npm
-- Docker and Docker Compose (recommended)
-- Nginx or Apache web server
-- SSL certificate (recommended for production)
+Required: Node 22, a Vercel project, a Cloudflare Workers account with D1, and permission to configure their environment variables. Keep separate projects/databases/secrets for preview and production. Do not deploy the `legacy/` application.
 
-## Quick Deployment Options
+## 1. Create a production D1 database
 
-### Option 1: Docker Compose (Recommended)
-
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd ocean-stride
-   ```
-
-2. **Build and run with Docker Compose**
-   ```bash
-   docker-compose up -d --build
-   ```
-
-3. **Access the application**
-   - Open http://localhost:8080 in your browser
-   - The application will be available at your configured domain
-
-### Option 2: Manual Deployment
-
-1. **Build the application**
-   ```bash
-   npm install
-   npm run build
-   ```
-
-2. **Serve static files**
-   ```bash
-   # Using a simple HTTP server
-   npx serve -s dist -l 3000
-
-   # Or using nginx (recommended for production)
-   ```
-
-## Production Configuration
-
-### Environment Variables
-
-Create a `.env.production` file in the root directory:
-
-```env
-# API Configuration
-VITE_API_BASE_URL=/api
-
-# Application Settings
-VITE_APP_NAME=Ocean Stride
-VITE_APP_VERSION=1.0.0
-
-# Feature Flags
-VITE_ENABLE_ANALYTICS=true
-VITE_ENABLE_ERROR_REPORTING=true
+```sh
+npm ci
+npx wrangler login
+npx wrangler d1 create ocean-stride-production
 ```
 
-### Nginx Configuration
+Copy the returned database ID into `env.production.d1_databases[0].database_id` in `wrangler.jsonc`. The committed value is deliberately a placeholder. Set `env.production.vars.APP_ORIGIN` to the exact frontend origin (for example, `https://your-actual-domain.example`, with no trailing slash). Do not use a wildcard.
 
-Create `/etc/nginx/sites-available/ocean-stride`:
+Production and local bindings are separate. The zero ID at the top level is a local-emulation placeholder, not a production database.
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$server_name$request_uri;
-}
+## 2. Create a shared gateway secret
 
-server {
-    listen 443 ssl http2;
-    server_name your-domain.com;
+Generate a long random secret in your password/secrets manager (at least 32 random bytes). Set the same value in:
 
-    # SSL Configuration
-    ssl_certificate /path/to/ssl/cert.pem;
-    ssl_certificate_key /path/to/ssl/private.key;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384;
-
-    # Security headers
-    add_header X-Frame-Options DENY;
-    add_header X-Content-Type-Options nosniff;
-    add_header X-XSS-Protection "1; mode=block";
-    add_header Referrer-Policy "strict-origin-when-cross-origin";
-    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';";
-
-    # Root directory
-    root /var/www/ocean-stride/dist;
-    index index.html;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # Handle client-side routing
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-
-    # API proxy (if you have a backend)
-    location /api/ {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-
-    # Cache static assets
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-        access_log off;
-    }
-
-    # Service worker
-    location /sw.js {
-        add_header Cache-Control "no-cache";
-        expires off;
-    }
-
-    # Security: Don't serve dotfiles
-    location ~ /\. {
-        deny all;
-    }
-}
+```sh
+npx wrangler secret put INTERNAL_PROXY_SECRET --env production
 ```
 
-Enable the site:
-```bash
-sudo ln -s /etc/nginx/sites-available/ocean-stride /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl reload nginx
+and Vercel's **server-side** environment variable `INTERNAL_PROXY_SECRET`. Never prefix it with `VITE_`, paste it into chat, or commit it. The browser never receives this secret. The Worker rejects direct production API requests without it.
+
+## 3. Apply migrations and deploy the Worker
+
+For an existing D1 database, export a backup first (see recovery below).
+
+```sh
+npx wrangler d1 migrations apply ocean-stride-production --remote --env production
+npm run check:worker
+npm run deploy:api
 ```
 
-### Apache Configuration
+Record the deployed HTTPS Worker origin. Add it to the Vercel server-side environment variable `API_WORKER_ORIGIN`, e.g. `https://your-worker.your-account.workers.dev`. Use only an origin, with no path, query, credentials, or fragment. Database migrations are **not** applied automatically by deploying the Worker.
 
-Create `/etc/apache2/sites-available/ocean-stride.conf`:
+`npm run deploy:api` always selects the production environment. Local work uses `npm run dev:api`. The Worker refuses incomplete production configuration; a successful dry-run does not imply a database ID or domain was verified.
 
-```apache
-<VirtualHost *:80>
-    ServerName your-domain.com
-    Redirect permanent / https://your-domain.com/
-</VirtualHost>
+## 4. Deploy Vercel
 
-<VirtualHost *:443>
-    ServerName your-domain.com
+Import this repository into Vercel, using the repository root:
 
-    # SSL Configuration
-    SSLEngine on
-    SSLCertificateFile /path/to/ssl/cert.pem
-    SSLCertificateKeyFile /path/to/ssl/private.key
+- Framework: Vite
+- Node version: 22
+- Install command: `npm ci`
+- Build command: `npm run build`
+- Output: `dist`
+- Server environment: `API_WORKER_ORIGIN` and `INTERNAL_PROXY_SECRET`
 
-    # Security headers
-    Header always set X-Frame-Options DENY
-    Header always set X-Content-Type-Options nosniff
-    Header always set X-XSS-Protection "1; mode=block"
-    Header always set Referrer-Policy "strict-origin-when-cross-origin"
-    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; base-uri 'self'; form-action 'self';"
+The committed `vercel.json` routes `/api/*` to `api/proxy.ts` before the SPA fallback. This gateway only forwards allowlisted API paths and headers, enforces an HTTPS upstream, rejects redirects, forwards cookies, and forces `no-store`. All business logic remains in the Worker.
 
-    DocumentRoot /var/www/ocean-stride/dist
+Security headers disallow embedding in production. This is intentional; Arena's development preview uses a separate Vite configuration without production frame restrictions. The production CSP permits self-hosted scripts, fonts, images, styles, and connections only; inline styles are needed for React/Radix dynamic presentation.
 
-    # Enable rewrite engine for SPA routing
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule . /index.html [L]
+Vercel's trusted `x-vercel-forwarded-for` ingress value is forwarded with the gateway secret for per-client authentication throttling. Confirm real distinct client IPs at staging; if the hosting layer supplies no trusted IP, throttling conservatively groups those requests rather than trusting a spoofable client header.
 
-    # Cache static assets
-    <LocationMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
-        ExpiresActive On
-        ExpiresDefault "access plus 1 year"
-        Header append Cache-Control "public, immutable"
-    </LocationMatch>
+## 5. Staging and preview isolation
 
-    # API proxy (if you have a backend)
-    ProxyPass /api http://localhost:3001
-    ProxyPassReverse /api http://localhost:3001
+Use a **separate Cloudflare Worker, D1 database, and gateway secret** for staging. Add an explicit `env.staging` block modeled on `env.production`, retaining `ENVIRONMENT: production` for Secure cookies and strict gateway/origin validation. Give it its own stable Vercel preview-domain alias and exact `APP_ORIGIN`. Use Vercel Preview environment variables for the staging Worker and secret.
 
-    # Security: Don't serve dotfiles
-    RedirectMatch 404 /\..*$
-</VirtualHost>
+Do not enable arbitrary preview origins against production. Per-branch ephemeral previews need matching isolated backend configuration; this is not automated in this release.
+
+## 6. Release acceptance checks (must run on the deployed domains)
+
+1. `GET https://YOUR-FRONTEND/api/health` returns JSON with `status: ok`, not HTML.
+2. Direct calls to the Worker without the gateway secret return 403.
+3. Register a dedicated staging owner, then log out and log in.
+4. Verify the browser cookie is HttpOnly, Secure, SameSite=Lax, and host-only.
+5. Add a vessel and a crew member, assign them, and refresh the page.
+6. Test a second organization: no cross-tenant records appear; direct ID mutations fail.
+7. Attempt a duplicate IMO, stale version, full-vessel assignment, and foreign-origin mutation.
+8. Open every nested route directly and refresh it; verify the SPA fallback.
+9. Export CSV, confirm the data, and delete the staging records safely.
+10. Confirm D1 backups, Cron invocation, error logs/request IDs, and quota alerts.
+11. Verify email ownership/recovery and business requirements before a broad self-service launch; those capabilities are not supplied here.
+
+## Configuration and failure behavior
+
+- Missing Vercel configuration → safe JSON 503, not a fake success.
+- Incorrect gateway secret → Worker 403.
+- Incorrect `APP_ORIGIN` → mutations 403 (reads still require sessions).
+- Missing migrations → safe API error with request ID; inspect Worker logs and migration status.
+- A timed-out create can be retried from the same form with the same idempotency key for seven days. Changing the payload after a successful attempt requires reopening the form.
+- An update/delete with stale `version` → 409; refresh, reopen, and review the current record.
+- Expired cookies → sign-in required. No offline writes or cached private records.
+
+## Monitoring and scheduled cleanup
+
+Workers observability is enabled. Responses carry `X-Request-Id`; internal server-error logs include the request ID and endpoint without request bodies, credentials, or personal data. Successful mutations write tenant-scoped audit events atomically in D1. The UI shows the most recent 100 events; earlier events remain in D1.
+
+The daily Cron at **03:15 UTC** removes expired sessions, throttle buckets, and idempotency keys. It does not delete people, vessels, or audit history. Verify the production trigger after deployment. Locally:
+
+```sh
+curl http://localhost:8787/cdn-cgi/local/scheduled
 ```
 
-Enable the site and required modules:
-```bash
-sudo a2ensite ocean-stride
-sudo a2enmod rewrite proxy proxy_http ssl headers
-sudo systemctl reload apache2
+Monitor 5xx/429 rates, D1 reads/writes/storage, Worker CPU usage (especially password derivation), and latency. Load thresholds and alert delivery have not been established in a live cloud account.
+
+## Backup, rollback, and recovery
+
+Before migrations:
+
+```sh
+npx wrangler d1 export ocean-stride-production --remote --env production --output /SECURE-EXTERNAL-PATH/ocean-stride-backup.sql
 ```
 
-## Docker Configuration
+Store backups encrypted outside this checkout, with a retention/access policy appropriate for personal data. CSV exports are operational reports, **not** database backups (they omit identities, sessions, and complete audit history).
 
-### Dockerfile
+- Prefer forward-only corrective migrations. Do not edit an already-applied migration.
+- Roll back frontend and Worker releases together only after verifying schema compatibility.
+- Test D1 restore/time-travel procedures in staging before relying on them in production. No live restore drill was performed here.
+- If a record was deleted, use a reviewed backup restore into an isolated database, then reconcile carefully. Do not overwrite current production records blindly.
+- Rotate the gateway secret on both platforms in a coordinated maintenance window. Revoke compromised user sessions with an authorized D1 operation; never edit role fields client-side.
 
-```dockerfile
-FROM node:18-alpine AS builder
+## Known launch limitations
 
-WORKDIR /app
+This release has no password recovery/rotation UI, verified-email flow, MFA, multi-user invitations, organization switching, subscription controls, storage quotas, full regulatory document model, or automated legacy importer. Public registration can create isolated owner workspaces but does not prove company or email ownership. Restrict initial rollout to a controlled pilot; add a reviewed identity/recovery and abuse-management flow before broad adoption.
 
-# Copy package files
-COPY package*.json ./
-RUN npm ci --only=production
-
-# Copy source code
-COPY . .
-
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM nginx:alpine
-
-# Copy built application
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
-
-# Expose port
-EXPOSE 80
-
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
-```
-
-### docker-compose.yml
-
-```yaml
-version: '3.8'
-
-services:
-  ocean-stride:
-    build: .
-    ports:
-      - "8080:80"
-    environment:
-      - NODE_ENV=production
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Optional: Backend API service
-  # api:
-  #   image: your-api-image
-  #   ports:
-  #     - "3001:3001"
-  #   environment:
-  #     - NODE_ENV=production
-  #   restart: unless-stopped
-```
-
-## Performance Optimization
-
-### Build Optimization
-
-The application is already optimized with:
-- Code splitting and lazy loading
-- Minification and compression
-- Tree shaking
-- Asset optimization
-
-### Runtime Optimization
-
-1. **Service Worker**: Enables offline functionality and caching
-2. **Memory Management**: Automatic cleanup of unused resources
-3. **Image Optimization**: Lazy loading and responsive images
-4. **Database Optimization**: IndexedDB with efficient queries
-
-## Monitoring and Maintenance
-
-### Health Checks
-
-The application includes built-in health monitoring:
-- Network connectivity checks
-- Storage availability
-- Memory usage monitoring
-- Performance metrics
-
-### Logs
-
-Monitor application logs:
-```bash
-# Docker logs
-docker-compose logs -f ocean-stride
-
-# Nginx access logs
-tail -f /var/log/nginx/access.log
-
-# Nginx error logs
-tail -f /var/log/nginx/error.log
-```
-
-### Backups
-
-Regular backups of user data:
-```bash
-# The application stores data locally in IndexedDB
-# Implement automated export/import features for data backup
-```
-
-## Security Considerations
-
-1. **HTTPS Only**: Always use SSL/TLS in production
-2. **Content Security Policy**: Configured to prevent XSS attacks
-3. **Data Encryption**: Sensitive data is encrypted at rest
-4. **Access Control**: Implement proper authentication and authorization
-5. **Regular Updates**: Keep dependencies updated for security patches
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Blank page after deployment**
-   - Check that all assets are served correctly
-   - Verify that client-side routing is configured properly
-   - Check browser console for JavaScript errors
-
-2. **Service worker issues**
-   - Clear browser cache and service worker
-   - Check that service worker is registered correctly
-
-3. **Database issues**
-   - Clear IndexedDB data if corrupted
-   - Check for migration errors in console
-
-### Performance Issues
-
-1. **Slow loading**
-   - Enable gzip compression
-   - Configure proper caching headers
-   - Optimize bundle size
-
-2. **Memory issues**
-   - Monitor memory usage
-   - Implement proper cleanup routines
-   - Consider data pagination for large datasets
-
-## Support
-
-For deployment issues or questions:
-1. Check the application logs
-2. Review nginx/apache error logs
-3. Verify configuration files
-4. Contact the development team
-
-## Version History
-
-- v1.0.0: Initial production release
-  - Multi-company support
-  - Complete personnel management
-  - Payroll system
-  - Vessel management
-  - Certificate tracking
-  - PWA capabilities
+Workspace data is fetched as a snapshot and paginated in the client. Large-fleet server pagination and load testing remain necessary before making scalability claims. Financial/payroll logic from the old implementation has not been approved or ported.

@@ -1,0 +1,445 @@
+
+> ocean-stride@1.0.0 type-check
+> tsc --noEmit
+
+src/app/dashboard/assignments/page.tsx(4,27): error TS2307: Cannot find module 'next/navigation' or its corresponding type declarations.
+src/app/dashboard/assignments/page.tsx(10,30): error TS2307: Cannot find module '@/hooks/queries/useSeafarerQueries' or its corresponding type declarations.
+src/app/dashboard/assignments/page.tsx(16,9): error TS6133: 'router' is declared but its value is never read.
+src/app/dashboard/assignments/page.tsx(51,41): error TS7006: Parameter 's' implicitly has an 'any' type.
+src/app/dashboard/assignments/page.tsx(59,32): error TS2339: Property 'find' does not exist on type 'never[] | NoInfer<TQueryFnData>'.
+  Property 'find' does not exist on type 'NoInfer<TQueryFnData>'.
+src/app/dashboard/assignments/page.tsx(59,37): error TS7006: Parameter 'v' implicitly has an 'any' type.
+src/app/dashboard/assignments/page.tsx(119,45): error TS18046: 'row' is of type 'unknown'.
+src/app/dashboard/assignments/page.tsx(120,9): error TS2322: Type '{ columns: { accessorKey: string; header: string; cell: ({ row }: any) => any; }[]; data: CrewAssignment[]; isLoading: boolean; onRowClick: (row: unknown) => void; searchPlaceholder: string; }' is not assignable to type 'IntrinsicAttributes & DataTableProps<unknown, unknown>'.
+  Property 'searchPlaceholder' does not exist on type 'IntrinsicAttributes & DataTableProps<unknown, unknown>'.
+src/app/dashboard/assignments/page.tsx(133,13): error TS2322: Type 'never[] | NoInfer<TQueryFnData>' is not assignable to type 'Vessel[]'.
+  Type 'NoInfer<TQueryFnData>' is not assignable to type 'Vessel[]'.
+    Type 'TQueryFnData' is not assignable to type 'Vessel[]'.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(3,20): error TS6133: 'useEffect' is declared but its value is never read.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(4,38): error TS2307: Cannot find module 'next/navigation' or its corresponding type declarations.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(5,26): error TS6133: 'Upload' is declared but its value is never read.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(5,34): error TS6133: 'FileText' is declared but its value is never read.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(5,44): error TS6133: 'AlertCircle' is declared but its value is never read.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(8,29): error TS2307: Cannot find module '@/hooks/queries/useSeafarerQueries' or its corresponding type declarations.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(10,1): error TS6133: 'Certificate' is declared but its value is never read.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(16,1): error TS6192: All imports in import declaration are unused.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(24,9): error TS6133: 'router' is declared but its value is never read.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(40,89): error TS2345: Argument of type 'string' is not assignable to parameter of type 'CertificateListFilters'.
+src/app/dashboard/seafarers/[id]/certificates/page.tsx(80,43): error TS2345: Argument of type '{ fileUrl: string; type: string; number: string; issueDate: Date; expiryDate: Date; issuedBy: string; notes: string; seafarerId: string; }' is not assignable to parameter of type 'CertificateCreateDto'.
+  Type '{ fileUrl: string; type: string; number: string; issueDate: Date; expiryDate: Date; issuedBy: string; notes: string; seafarerId: string; }' is missing the following properties from type 'CertificateCreateDto': name, issuingAuthority
+src/components/analytics/AnalyticsCharts.tsx(2,1): error TS6133: 'Badge' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(3,1): error TS6133: 'Progress' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(4,21): error TS6133: 'PieChart' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(4,31): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(6,95): error TS6133: 'LineChart' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(6,106): error TS6133: 'Line' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(6,112): error TS6133: 'AreaChart' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(6,123): error TS6133: 'Area' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(6,129): error TS6133: 'ResponsiveContainer' is declared but its value is never read.
+src/components/analytics/AnalyticsCharts.tsx(85,37): error TS6133: 'entry' is declared but its value is never read.
+src/components/analytics/AnalyticsOverview.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/analytics/AnalyticsOverview.tsx(6,10): error TS6133: 'TrendingUp' is declared but its value is never read.
+src/components/analytics/AnalyticsOverview.tsx(6,47): error TS6133: 'Calendar' is declared but its value is never read.
+src/components/analytics/AnalyticsOverview.tsx(381,64): error TS6133: 'entry' is declared but its value is never read.
+src/components/assignment/AssignmentForm.tsx(1,20): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/assignment/AssignmentForm.tsx(16,30): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(17,15): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(18,13): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(19,11): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(20,14): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(23,12): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(24,11): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(25,11): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(26,13): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(27,17): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(28,17): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(29,14): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(30,10): error TS2304: Cannot find name 'z'.
+src/components/assignment/AssignmentForm.tsx(33,29): error TS2503: Cannot find namespace 'z'.
+src/components/assignment/AssignmentForm.tsx(54,3): error TS6133: 'isSubmitting' is declared but its value is never read.
+src/components/assignment/AssignmentForm.tsx(65,5): error TS6133: 'reset' is declared but its value is never read.
+src/components/auth/LoginForm.tsx(7,16): error TS6133: 'TabsContent' is declared but its value is never read.
+src/components/certificate/CertificateForm.tsx(6,34): error TS6133: 'Upload' is declared but its value is never read.
+src/components/certificate/CertificateForm.tsx(65,3): error TS6133: 'seafarerId' is declared but its value is never read.
+src/components/certificate/CertificateForm.tsx(68,3): error TS6133: 'isSubmitting' is declared but its value is never read.
+src/components/certificate/CertificateForm.tsx(80,5): error TS6133: 'reset' is declared but its value is never read.
+src/components/companies/CompanyForm.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/components/dashboard/DashboardStats.tsx(3,1): error TS6133: 'Progress' is declared but its value is never read.
+src/components/data-display/DataTable.tsx(13,8): error TS2307: Cannot find module '@tanstack/react-table' or its corresponding type declarations.
+src/components/data-display/DataTable.tsx(148,24): error TS7006: Parameter 'column' implicitly has an 'any' type.
+src/components/data-display/DataTable.tsx(149,21): error TS7006: Parameter 'column' implicitly has an 'any' type.
+src/components/data-display/DataTable.tsx(170,43): error TS7006: Parameter 'headerGroup' implicitly has an 'any' type.
+src/components/data-display/DataTable.tsx(172,43): error TS7006: Parameter 'header' implicitly has an 'any' type.
+src/components/data-display/DataTable.tsx(198,45): error TS7006: Parameter 'row' implicitly has an 'any' type.
+src/components/data-display/DataTable.tsx(205,47): error TS7006: Parameter 'cell' implicitly has an 'any' type.
+src/components/documents/DocumentManager.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/components/documents/DocumentManager.tsx(2,29): error TS6133: 'CardDescription' is declared but its value is never read.
+src/components/documents/DocumentManager.tsx(2,46): error TS6133: 'CardHeader' is declared but its value is never read.
+src/components/documents/DocumentManager.tsx(2,58): error TS6133: 'CardTitle' is declared but its value is never read.
+src/components/documents/DocumentManager.tsx(11,25): error TS6196: 'Seafarer' is declared but never used.
+src/components/documents/DocumentManager.tsx(11,35): error TS6196: 'Vessel' is declared but never used.
+src/components/fleet/VesselDetailsDialog.tsx(7,41): error TS6133: 'AlertTriangle' is declared but its value is never read.
+src/components/help/HelpSystem.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/layout/Header.tsx(26,5): error TS6133: 'notifications' is declared but its value is never read.
+src/components/layout/Header.tsx(30,17): error TS6133: 'closeNotificationPanel' is declared but its value is never read.
+src/components/layout/Header.tsx(81,78): error TS2339: Property 'code' does not exist on type 'Company'.
+src/components/notifications/NotificationPanel.tsx(1,10): error TS6133: 'Bell' is declared but its value is never read.
+src/components/notifications/NotificationPanel.tsx(1,23): error TS6133: 'Trash2' is declared but its value is never read.
+src/components/notifications/NotificationPanel.tsx(90,5): error TS6133: 'markAsRead' is declared but its value is never read.
+src/components/notifications/NotificationPanel.tsx(92,5): error TS6133: 'removeNotification' is declared but its value is never read.
+src/components/notifications/NotificationPanel.tsx(109,9): error TS6133: 'getIcon' is declared but its value is never read.
+src/components/notifications/index.tsx(127,33): error TS7053: Element implicitly has an 'any' type because expression of type 'ToastVariant' can't be used to index type '{ success: string; warning: string; error: string; info: string; default: string; }'.
+  Property 'destructive' does not exist on type '{ success: string; warning: string; error: string; info: string; default: string; }'.
+src/components/notifications/index.tsx(128,49): error TS7053: Element implicitly has an 'any' type because expression of type 'ToastVariant' can't be used to index type '{ success: string; warning: string; error: string; info: string; default: string; }'.
+  Property 'destructive' does not exist on type '{ success: string; warning: string; error: string; info: string; default: string; }'.
+src/components/payroll/PayrollForm.tsx(13,19): error TS6133: 'PayrollItem' is declared but its value is never read.
+src/components/payroll/PayrollForm.tsx(61,3): error TS6133: 'isSubmitting' is declared but its value is never read.
+src/components/payroll/PayrollForm.tsx(75,5): error TS2322: Type '{ periodStart: Date; periodEnd: Date; paymentDate: Date; items: PayrollItem[]; seafarerId: string; vesselId: string; assignmentId?: string; status: "draft" | "pending_approval" | "approved" | "paid" | "cancelled" | "failed"; ... 16 more ...; companyId?: string; }' is not assignable to type 'AsyncDefaultValues<{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; seafarerId: string; vesselId: string; periodStart: Date; periodEnd: Date; paymentDate: Date; paymentMethod: "bank_transfer" | ... 1 more ... | "check"; items: { ...; }[]; notes?: string | undefined; }> | { ...; } | undefined'.
+  Types of property 'items' are incompatible.
+    Type 'PayrollItem[]' is not assignable to type '({ type?: "overtime" | "bonus" | "allowance" | "deduction" | "tax" | "regular" | "pension" | undefined; description?: string | undefined; amount?: number | undefined; quantity?: number | undefined; taxable?: boolean | undefined; rate?: number | undefined; } | undefined)[]'.
+      Type 'PayrollItem' is not assignable to type '{ type?: "overtime" | "bonus" | "allowance" | "deduction" | "tax" | "regular" | "pension" | undefined; description?: string | undefined; amount?: number | undefined; quantity?: number | undefined; taxable?: boolean | undefined; rate?: number | undefined; }'.
+        Types of property 'type' are incompatible.
+          Type '"other" | "salary" | "overtime" | "bonus" | "allowance" | "deduction" | "reimbursement" | "tax"' is not assignable to type '"overtime" | "bonus" | "allowance" | "deduction" | "tax" | "regular" | "pension" | undefined'.
+            Type '"other"' is not assignable to type '"overtime" | "bonus" | "allowance" | "deduction" | "tax" | "regular" | "pension" | undefined'.
+src/components/payroll/PayrollForm.tsx(137,34): error TS2345: Argument of type '(data: PayrollFormValues) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; seafarerId: string; vesselId: string; periodStart: Date; periodEnd: Date; paymentDate: Date; paymentMethod: "bank_transfer" | ... 1 more ... | "check"; items: { ...; }[]; notes?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; seafarerId: string; vesselId: string; periodStart: Date; periodEnd: Date; paymentDate: Date; paymentMethod: "bank_transfer" | ... 1 more ... | "check"; items: { ...; }[]; notes?: string | undefined; }': status, seafarerId, vesselId, periodStart, and 4 more.
+src/components/personnel/AddSeafarerDialog.tsx(9,16): error TS6133: 'Upload' is declared but its value is never read.
+src/components/personnel/AddSeafarerDialog.tsx(89,7): error TS2741: Property 'gender' is missing in type '{ firstName: string; lastName: string; email: string; phone: string; nationality: string; dateOfBirth: string; placeOfBirth: string; maritalStatus: "single" | "married" | "divorced" | "widowed"; address: { ...; }; contact: { ...; }; photoUrl: string; }' but required in type 'SeafarerPersonalInfo'.
+src/components/personnel/AddSeafarerDialog.tsx(95,7): error TS2741: Property 'employeeId' is missing in type '{ rank: string; rankId: string; department: "deck" | "engine" | "catering" | "other"; status: "onboard" | "on_leave" | "on_training" | "inactive"; currentVesselId: string; currentVesselName: string; ... 9 more ...; notes: string; }' but required in type 'SeafarerEmployment'.
+src/components/roster/RosterPlannerModal.tsx(8,1): error TS6133: 'Calendar' is declared but its value is never read.
+src/components/roster/RosterPlannerModal.tsx(10,1): error TS6133: 'Separator' is declared but its value is never read.
+src/components/roster/RosterPlannerModal.tsx(25,1): error TS6133: 'INDEX_NAMES' is declared but its value is never read.
+src/components/roster/RosterPlannerModal.tsx(46,10): error TS6133: 'seafarers' is declared but its value is never read.
+src/components/roster/RosterPlannerModal.tsx(50,10): error TS6133: 'loading' is declared but its value is never read.
+src/components/roster/RosterPlannerModal.tsx(406,11): error TS6133: 'startDate' is declared but its value is never read.
+src/components/routing/ProtectedRoute.tsx(2,10): error TS6133: 'Navigate' is declared but its value is never read.
+src/components/routing/ProtectedRoute.tsx(24,72): error TS2339: Property 'isAdmin' does not exist on type 'User'.
+src/components/routing/ProtectedRoute.tsx(42,30): error TS2339: Property 'isAdmin' does not exist on type 'User'.
+src/components/routing/RouteLoadingBoundary.tsx(2,31): error TS2307: Cannot find module 'react-error-boundary' or its corresponding type declarations.
+src/components/seafarer/SeafarerForm.tsx(219,7): error TS6133: 'useFileUpload' is declared but its value is never read.
+src/components/settings/RankManagement.tsx(14,49): error TS6133: 'Clock' is declared but its value is never read.
+src/components/theme-provider.tsx(20,36): error TS7053: Element implicitly has an 'any' type because expression of type '"ThemeContext"' can't be used to index type '(props: ThemeProviderProps) => string | number | boolean | Element | Iterable<ReactNode>'.
+  Property 'ThemeContext' does not exist on type '(props: ThemeProviderProps) => string | number | boolean | Element | Iterable<ReactNode>'.
+src/components/ui/calendar.tsx(45,20): error TS6133: '_props' is declared but its value is never read.
+src/components/ui/calendar.tsx(46,21): error TS6133: '_props' is declared but its value is never read.
+src/components/ui/data-table.tsx(2,42): error TS6133: 'Filter' is declared but its value is never read.
+src/components/ui/data-table.tsx(2,50): error TS6133: 'MoreHorizontal' is declared but its value is never read.
+src/components/ui/data-table.tsx(21,1): error TS6133: 'Button' is declared but its value is never read.
+src/components/ui/data-table.tsx(23,1): error TS6133: 'Badge' is declared but its value is never read.
+src/components/ui/error-states.tsx(4,34): error TS6133: 'Wifi' is declared but its value is never read.
+src/components/users/UserList.tsx(3,24): error TS6133: 'MoreHorizontal' is declared but its value is never read.
+src/components/users/UserList.tsx(12,7): error TS2739: Type '{ admin: "destructive"; manager: "secondary"; seafarer: "default"; }' is missing the following properties from type 'Record<UserRole, "default" | "destructive" | "secondary">': captain, officer, crew
+src/components/users/UserList.tsx(18,7): error TS2739: Type '{ admin: string; manager: string; seafarer: string; }' is missing the following properties from type 'Record<UserRole, string>': captain, officer, crew
+src/context/DatabaseContext.tsx(3,1): error TS6133: 'Applicant' is declared but its value is never read.
+src/contexts/DatabaseContext.tsx(42,39): error TS2344: Type '{ id: string; }' does not satisfy the constraint 'BaseEntity'.
+  Type '{ id: string; }' is missing the following properties from type 'BaseEntity': createdAt, updatedAt
+src/contexts/ErrorBoundary.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/contexts/ErrorBoundary.tsx(2,1): error TS6133: 'useNavigate' is declared but its value is never read.
+src/hooks/queries/useAssignmentQueries.ts(65,70): error TS2345: Argument of type 'AssignmentCreateDto' is not assignable to parameter of type 'Omit<CrewAssignment, "id" | "createdAt" | "updatedAt">'.
+  Type 'AssignmentCreateDto' is missing the following properties from type 'Omit<CrewAssignment, "id" | "createdAt" | "updatedAt">': signedBySeafarer, signedByCompany, createdBy, updatedBy
+src/hooks/queries/useCrewQueries.ts(6,3): error TS6133: 'CreateCrewMemberDto' is declared but its value is never read.
+src/hooks/queries/useCrewQueries.ts(7,3): error TS6133: 'UpdateCrewMemberDto' is declared but its value is never read.
+src/hooks/queries/useCrewQueries.ts(86,5): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, (string | { page: number; limit: number; })[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, (string | { page: number; limit: number; })[]>'.
+  Overload 2 of 3, '(options: UndefinedInitialDataOptions<PaginatedResponse<Certification>, Error, PaginatedResponse<Certification>, (string | { ...; })[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UndefinedInitialDataOptions<PaginatedResponse<Certification>, Error, PaginatedResponse<Certification>, (string | { ...; })[]>'.
+  Overload 3 of 3, '(options: UseQueryOptions<PaginatedResponse<Certification>, Error, PaginatedResponse<Certification>, (string | { ...; })[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UseQueryOptions<PaginatedResponse<Certification>, Error, PaginatedResponse<Certification>, (string | { ...; })[]>'.
+src/hooks/queries/usePayrollQueries.ts(3,10): error TS2305: Module '"@/lib/query-client"' has no exported member 'STORE_NAMES'.
+src/hooks/queries/usePayrollQueries.ts(3,23): error TS6133: 'QUERY_KEYS' is declared but its value is never read.
+src/hooks/queries/usePayrollQueries.ts(66,55): error TS2345: Argument of type 'PayrollCreateDto' is not assignable to parameter of type 'Omit<Payroll, "id" | "createdAt" | "updatedAt">'.
+  Types of property 'status' are incompatible.
+    Type 'PayrollStatus | undefined' is not assignable to type 'PayrollStatus'.
+      Type 'undefined' is not assignable to type 'PayrollStatus'.
+src/hooks/queries/useUserQueries.ts(6,20): error TS6133: 'CreateUserDto' is declared but its value is never read.
+src/hooks/queries/useUserQueries.ts(7,20): error TS6133: 'UpdateUserDto' is declared but its value is never read.
+src/hooks/queries/useVesselQueries.ts(22,5): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataOptions<PaginatedResponse<Vessel>, Error, PaginatedResponse<Vessel>, readonly unknown[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'DefinedInitialDataOptions<PaginatedResponse<Vessel>, Error, PaginatedResponse<Vessel>, readonly unknown[]>'.
+  Overload 2 of 3, '(options: UndefinedInitialDataOptions<PaginatedResponse<Vessel>, Error, PaginatedResponse<Vessel>, readonly unknown[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UndefinedInitialDataOptions<PaginatedResponse<Vessel>, Error, PaginatedResponse<Vessel>, readonly unknown[]>'.
+  Overload 3 of 3, '(options: UseQueryOptions<PaginatedResponse<Vessel>, Error, PaginatedResponse<Vessel>, readonly unknown[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UseQueryOptions<PaginatedResponse<Vessel>, Error, PaginatedResponse<Vessel>, readonly unknown[]>'.
+src/hooks/queries/useVesselQueries.ts(80,5): error TS2769: No overload matches this call.
+  Overload 1 of 3, '(options: DefinedInitialDataOptions<unknown, Error, unknown, (string | { page: number; limit: number; })[]>, queryClient?: QueryClient | undefined): DefinedUseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'DefinedInitialDataOptions<unknown, Error, unknown, (string | { page: number; limit: number; })[]>'.
+  Overload 2 of 3, '(options: UndefinedInitialDataOptions<PaginatedResponse<any>, Error, PaginatedResponse<any>, (string | { page: number; limit: number; })[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UndefinedInitialDataOptions<PaginatedResponse<any>, Error, PaginatedResponse<any>, (string | { page: number; limit: number; })[]>'.
+  Overload 3 of 3, '(options: UseQueryOptions<PaginatedResponse<any>, Error, PaginatedResponse<any>, (string | { page: number; limit: number; })[]>, queryClient?: QueryClient | undefined): UseQueryResult<...>', gave the following error.
+    Object literal may only specify known properties, and 'keepPreviousData' does not exist in type 'UseQueryOptions<PaginatedResponse<any>, Error, PaginatedResponse<any>, (string | { page: number; limit: number; })[]>'.
+src/hooks/useNotifications.ts(18,48): error TS2551: Property 'getUnreadNotifications' does not exist on type '{ getNotifications(companyId: string, options?: { page?: number | undefined; limit?: number | undefined; includeRead?: boolean | undefined; }): Promise<{ items: Notification[]; total: number; page: number; totalPages: number; hasMore: boolean; }>; ... 6 more ...; generateMockNotification(type?: NotificationType, com...'. Did you mean 'getNotifications'?
+src/hooks/useNotifications.ts(30,45): error TS2339: Property 'subscribeToUpdates' does not exist on type '{ getNotifications(companyId: string, options?: { page?: number | undefined; limit?: number | undefined; includeRead?: boolean | undefined; }): Promise<{ items: Notification[]; total: number; page: number; totalPages: number; hasMore: boolean; }>; ... 6 more ...; generateMockNotification(type?: NotificationType, com...'.
+src/hooks/usePersonnelManagement.ts(72,16): error TS2345: Argument of type '(prev: PersonnelState) => { seafarers: Seafarer[]; vessels: (Vessel & BaseEntity)[]; ranks: { name: string; id: string; companyId: string; createdAt: string; ... 9 more ...; description?: string | undefined; }[]; ... 7 more ...; selectedPayroll: Payroll | null; }' is not assignable to parameter of type 'SetStateAction<PersonnelState>'.
+  Type '(prev: PersonnelState) => { seafarers: Seafarer[]; vessels: (Vessel & BaseEntity)[]; ranks: { name: string; id: string; companyId: string; createdAt: string; ... 9 more ...; description?: string | undefined; }[]; ... 7 more ...; selectedPayroll: Payroll | null; }' is not assignable to type '(prevState: PersonnelState) => PersonnelState'.
+    Call signature return types '{ seafarers: Seafarer[]; vessels: (Vessel & BaseEntity)[]; ranks: { name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | ... 3 more ... | "electrical"; ... 7 more ...; description?: string | undefined; }[]; ... 7 more ...; selectedPayroll: Payroll | null; }' and 'PersonnelState' are incompatible.
+      The types of 'ranks' are incompatible between these types.
+        Type '{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }[]' is not assignable to type 'Rank[]'.
+          Type '{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }' is missing the following properties from type 'Rank': code, overtimeRates, allowances, certificateRequirements
+src/i18n/I18nProvider.tsx(1,28): error TS6133: 'useEffect' is declared but its value is never read.
+src/i18n/I18nProvider.tsx(4,1): error TS6133: 'useTheme' is declared but its value is never read.
+src/i18n/index.ts(1,24): error TS6133: 'I18n' is declared but its value is never read.
+src/i18n/index.ts(142,3): error TS6133: 'components' is declared but its value is never read.
+src/i18n/new-i18n.ts(1,24): error TS6133: 'I18n' is declared but its value is never read.
+src/i18n/new-i18n.ts(45,7): error TS6133: 'rtlLanguages' is declared but its value is never read.
+src/i18n/new-i18n.ts(134,3): error TS6133: 'components' is declared but its value is never read.
+src/lib/api/apiClient.ts(49,17): error TS2339: Property 'authService' does not exist on type 'typeof import("/home/user/ocean-stride/src/lib/api/authService")'.
+src/lib/api/apiClient.ts(85,9): error TS2783: 'message' is specified more than once, so this usage will be overwritten.
+src/lib/api/base-api.ts(1,52): error TS6133: 'AxiosResponse' is declared but its value is never read.
+src/lib/api/base-api.ts(92,7): error TS2322: Type '((progressEvent: ProgressEvent<EventTarget>) => void) | undefined' is not assignable to type '((progressEvent: AxiosProgressEvent) => void) | undefined'.
+  Type '(progressEvent: ProgressEvent<EventTarget>) => void' is not assignable to type '(progressEvent: AxiosProgressEvent) => void'.
+    Types of parameters 'progressEvent' and 'progressEvent' are incompatible.
+      Type 'AxiosProgressEvent' is missing the following properties from type 'ProgressEvent<EventTarget>': target, bubbles, cancelBubble, cancelable, and 18 more.
+src/lib/api/base-api.ts(95,5): error TS2719: Type 'T' is not assignable to type 'T'. Two different types with this name exist, but they are unrelated.
+  'T' could be instantiated with an arbitrary type which could be unrelated to 'T'.
+src/lib/api/fleetService.ts(13,33): error TS2339: Property 'apiClient' does not exist on type 'FleetService'.
+src/lib/api/fleetService.ts(21,33): error TS2339: Property 'apiClient' does not exist on type 'FleetService'.
+src/lib/api/fleetService.ts(29,33): error TS2339: Property 'apiClient' does not exist on type 'FleetService'.
+src/lib/api/fleetService.ts(37,33): error TS2339: Property 'apiClient' does not exist on type 'FleetService'.
+src/lib/api/fleetService.ts(52,33): error TS2339: Property 'apiClient' does not exist on type 'FleetService'.
+src/lib/api/index.ts(8,15): error TS2614: Module '"./authService"' has no exported member 'LoginCredentials'. Did you mean to use 'import LoginCredentials from "./authService"' instead?
+src/lib/api/index.ts(8,33): error TS2614: Module '"./authService"' has no exported member 'AuthResponse'. Did you mean to use 'import AuthResponse from "./authService"' instead?
+src/lib/api/index.ts(8,47): error TS2614: Module '"./authService"' has no exported member 'RefreshTokenResponse'. Did you mean to use 'import RefreshTokenResponse from "./authService"' instead?
+src/lib/api/personnel.api.ts(29,18): error TS2345: Argument of type 'ZodObject<{ id: ZodString; companyId: ZodString; createdAt: ZodString; updatedAt: ZodString; createdBy: ZodString; updatedBy: ZodString; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }> | ZodObject<...> | ZodObject<...>' is not assignable to parameter of type 'ZodType<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, ZodTypeDef, { ...; }>'.
+  Type 'ZodObject<{ id: ZodString; companyId: ZodString; createdAt: ZodString; updatedAt: ZodString; createdBy: ZodString; updatedBy: ZodString; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }>' is not assignable to type 'ZodType<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, ZodTypeDef, { ...; }>'.
+    Types of property '_type' are incompatible.
+      Type '{ id: string; status: "active" | "draft" | "pending_approval" | "approved" | "cancelled" | "completed" | "terminated"; documents: string[]; salary: number; companyId: string; createdAt: string; ... 15 more ...; customFrequency?: { ...; } | undefined; }' is missing the following properties from type '{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }': name, department, level, baseSalary, and 2 more.
+src/lib/api/personnel.api.ts(42,29): error TS2339: Property 'get' does not exist on type 'DatabaseService'.
+src/lib/api/personnel.api.ts(43,23): error TS2345: Argument of type 'ZodObject<{ id: ZodString; companyId: ZodString; createdAt: ZodString; updatedAt: ZodString; createdBy: ZodString; updatedBy: ZodString; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }> | ZodObject<...> | ZodObject<...>' is not assignable to parameter of type 'ZodType<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, ZodTypeDef, { ...; }>'.
+  Type 'ZodObject<{ id: ZodString; companyId: ZodString; createdAt: ZodString; updatedAt: ZodString; createdBy: ZodString; updatedBy: ZodString; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }>' is not assignable to type 'ZodType<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, ZodTypeDef, { ...; }>'.
+    Types of property '_type' are incompatible.
+      Type '{ id: string; status: "active" | "draft" | "pending_approval" | "approved" | "cancelled" | "completed" | "terminated"; documents: string[]; salary: number; companyId: string; createdAt: string; ... 15 more ...; customFrequency?: { ...; } | undefined; }' is missing the following properties from type '{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }': name, department, level, baseSalary, and 2 more.
+src/lib/api/personnel.api.ts(43,56): error TS2322: Type '{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }' is not assignable to type 'EntityType<T>'.
+src/lib/api/personnel.api.ts(150,43): error TS2345: Argument of type 'Omit<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, "id" | ... 3 more ... | "updatedBy">' is not assignable to parameter of type 'Omit<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, ("description" | requiredKeys<...>) & { ...; }>'.
+  Type 'Omit<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, "id" | ... 3 more ... | "updatedBy">' is missing the following properties from type 'Omit<{ name: string; id: string; companyId: string; createdAt: string; updatedAt: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; createdBy: string; ... 5 more ...; description?: string | undefined; }, ("description" | requiredKeys<...>) & { ...; }>': id, createdAt, updatedAt, createdBy, updatedBy
+src/lib/api/personnel.api.ts(174,21): error TS2551: Property 'CREW_ASSIGNMENTS_BY_SEAFARER' does not exist on type '{ readonly COMPANY_BY_NAME: "by_name"; readonly VESSEL_BY_NAME: "by_name"; readonly VESSEL_BY_IMO: "by_imo"; readonly VESSEL_BY_STATUS: "by_status"; readonly VESSEL_BY_COMPANY: "by_company"; ... 32 more ...; readonly COMPANY_SETTINGS_BY_COMPANY: "by_company"; }'. Did you mean 'CREW_ASSIGNMENT_BY_SEAFARER'?
+src/lib/api/personnel.api.ts(190,54): error TS2345: Argument of type 'Omit<{ id: string; status: "active" | "draft" | "pending_approval" | "approved" | "cancelled" | "completed" | "terminated"; documents: string[]; salary: number; companyId: string; createdAt: string; ... 15 more ...; customFrequency?: { ...; } | undefined; }, "id" | ... 3 more ... | "updatedBy">' is not assignable to parameter of type 'Omit<{ id: string; status: "active" | "draft" | "pending_approval" | "approved" | "cancelled" | "completed" | "terminated"; documents: string[]; salary: number; companyId: string; createdAt: string; ... 15 more ...; customFrequency?: { ...; } | undefined; }, (requiredKeys<...> | optionalKeys<...>) & { ...; }>'.
+  Type 'Omit<{ id: string; status: "active" | "draft" | "pending_approval" | "approved" | "cancelled" | "completed" | "terminated"; documents: string[]; salary: number; companyId: string; createdAt: string; ... 15 more ...; customFrequency?: { ...; } | undefined; }, "id" | ... 3 more ... | "updatedBy">' is missing the following properties from type 'Omit<{ id: string; status: "active" | "draft" | "pending_approval" | "approved" | "cancelled" | "completed" | "terminated"; documents: string[]; salary: number; companyId: string; createdAt: string; ... 15 more ...; customFrequency?: { ...; } | undefined; }, (requiredKeys<...> | optionalKeys<...>) & { ...; }>': id, createdAt, updatedAt, createdBy, updatedBy
+src/lib/api/personnel.api.ts(218,21): error TS2551: Property 'PAYROLLS_BY_SEAFARER' does not exist on type '{ readonly COMPANY_BY_NAME: "by_name"; readonly VESSEL_BY_NAME: "by_name"; readonly VESSEL_BY_IMO: "by_imo"; readonly VESSEL_BY_STATUS: "by_status"; readonly VESSEL_BY_COMPANY: "by_company"; ... 32 more ...; readonly COMPANY_SETTINGS_BY_COMPANY: "by_company"; }'. Did you mean 'PAYROLL_BY_SEAFARER'?
+src/lib/api/personnel.api.ts(234,46): error TS2345: Argument of type 'Omit<{ id: string; status: "draft" | "pending_approval" | "approved" | "paid" | "cancelled" | "failed"; documents: string[]; companyId: string; createdAt: string; updatedAt: string; seafarerId: string; ... 15 more ...; paymentReference?: string | undefined; }, "id" | ... 3 more ... | "updatedBy">' is not assignable to parameter of type 'Omit<{ id: string; status: "draft" | "pending_approval" | "approved" | "paid" | "cancelled" | "failed"; documents: string[]; companyId: string; createdAt: string; updatedAt: string; seafarerId: string; ... 15 more ...; paymentReference?: string | undefined; }, (requiredKeys<...> | optionalKeys<...>) & { ...; }>'.
+  Type 'Omit<{ id: string; status: "draft" | "pending_approval" | "approved" | "paid" | "cancelled" | "failed"; documents: string[]; companyId: string; createdAt: string; updatedAt: string; seafarerId: string; ... 15 more ...; paymentReference?: string | undefined; }, "id" | ... 3 more ... | "updatedBy">' is missing the following properties from type 'Omit<{ id: string; status: "draft" | "pending_approval" | "approved" | "paid" | "cancelled" | "failed"; documents: string[]; companyId: string; createdAt: string; updatedAt: string; seafarerId: string; ... 15 more ...; paymentReference?: string | undefined; }, (requiredKeys<...> | optionalKeys<...>) & { ...; }>': id, createdAt, updatedAt, createdBy, updatedBy
+src/lib/api/personnel.api.ts(251,5): error TS6133: 'assignmentId' is declared but its value is never read.
+src/lib/api/personnel.api.ts(252,5): error TS6133: 'periodStart' is declared but its value is never read.
+src/lib/api/personnel.api.ts(253,5): error TS6133: 'periodEnd' is declared but its value is never read.
+src/lib/api/userService.ts(13,33): error TS2339: Property 'apiClient' does not exist on type 'UserService'.
+src/lib/api/userService.ts(21,16): error TS2339: Property 'apiClient' does not exist on type 'UserService'.
+src/lib/api/userService.ts(34,33): error TS2339: Property 'apiClient' does not exist on type 'UserService'.
+src/lib/api/userService.ts(51,33): error TS2339: Property 'apiClient' does not exist on type 'UserService'.
+src/lib/cache.ts(382,39): error TS6133: 'companyId' is declared but its value is never read.
+src/lib/database.ts(14,8): error TS6133: 'Certificate' is declared but its value is never read.
+src/lib/database.ts(15,8): error TS6133: 'Rank' is declared but its value is never read.
+src/lib/database.ts(16,8): error TS6133: 'PayrollSettings' is declared but its value is never read.
+src/lib/database.ts(17,8): error TS6133: 'CompanySettings' is declared but its value is never read.
+src/lib/database2.ts(7,8): error TS6133: 'CrewAssignment' is declared but its value is never read.
+src/lib/database2.ts(18,8): error TS6133: 'JobPosting' is declared but its value is never read.
+src/lib/database2.ts(77,43): error TS6133: 'reject' is declared but its value is never read.
+src/lib/database2.ts(112,26): error TS6133: 'event' is declared but its value is never read.
+src/lib/database2_fixed.ts(44,34): error TS6133: 'event' is declared but its value is never read.
+src/lib/database2_fixed.ts(136,5): error TS6133: 'options' is declared but its value is never read.
+src/lib/database_unified.ts(14,8): error TS6133: 'Certificate' is declared but its value is never read.
+src/lib/database_unified.ts(15,8): error TS6133: 'Rank' is declared but its value is never read.
+src/lib/database_unified.ts(16,8): error TS6133: 'PayrollSettings' is declared but its value is never read.
+src/lib/database_unified.ts(17,8): error TS6133: 'CompanySettings' is declared but its value is never read.
+src/lib/database_v2.ts(585,7): error TS2353: Object literal may only specify known properties, and 'defaultVesselRotationDays' does not exist in type 'Omit<CompanySettings, "id" | "createdAt" | "updatedAt">'.
+src/lib/db.ts(1,48): error TS2307: Cannot find module 'idb' or its corresponding type declarations.
+src/lib/db.ts(3,37): error TS2305: Module '"./schemas_v2"' has no exported member 'Assignment'.
+src/lib/db.ts(76,17): error TS7006: Parameter 'db' implicitly has an 'any' type.
+src/lib/migrate.ts(18,10): error TS6133: 'isPayroll' is declared but its value is never read.
+src/lib/migrate.ts(122,15): error TS6133: 'companies' is declared but its value is never read.
+src/lib/migrate.ts(380,36): error TS2345: Argument of type 'Omit<import("/home/user/ocean-stride/src/lib/schemas").Seafarer, keyof import("/home/user/ocean-stride/src/lib/schemas").BaseEntity>' is not assignable to parameter of type 'Omit<import("/home/user/ocean-stride/src/lib/schemas_v2").Seafarer, keyof import("/home/user/ocean-stride/src/lib/schemas_v2").BaseEntity>'.
+  Type 'Omit<Seafarer, keyof BaseEntity>' is missing the following properties from type 'Omit<Seafarer, keyof BaseEntity>': payrolls, emergencyContacts
+src/lib/migrate.ts(610,15): error TS6133: 'seafarerId' is declared but its value is never read.
+src/lib/migrate.ts(613,15): error TS6133: 'seafarerName' is declared but its value is never read.
+src/lib/multiCompanyService.ts(86,11): error TS2783: 'currency' is specified more than once, so this usage will be overwritten.
+src/lib/multiCompanyService.ts(87,11): error TS2783: 'dateFormat' is specified more than once, so this usage will be overwritten.
+src/lib/multiCompanyService.ts(88,11): error TS2783: 'timezone' is specified more than once, so this usage will be overwritten.
+src/lib/performance.ts(8,13): error TS6133: 'startTime' is declared but its value is never read.
+src/lib/performance.ts(10,13): error TS6133: 'endTime' is declared but its value is never read.
+src/lib/performance.ts(120,16): error TS6133: 'callback' is declared but its value is never read.
+src/lib/performance.ts(128,16): error TS6133: 'callback' is declared but its value is never read.
+src/lib/performance.ts(135,16): error TS6133: 'callback' is declared but its value is never read.
+src/lib/performance.ts(142,16): error TS6133: 'callback' is declared but its value is never read.
+src/lib/performance.ts(149,17): error TS6133: 'callback' is declared but its value is never read.
+src/lib/query-client.ts(17,7): error TS2353: Object literal may only specify known properties, and 'onError' does not exist in type 'OmitKeyof<QueryObserverOptions<unknown, Error, unknown, unknown, readonly unknown[], never>, "queryKey" | "suspense", "strictly">'.
+src/lib/query-client.ts(17,17): error TS7006: Parameter 'error' implicitly has an 'any' type.
+src/lib/security.ts(20,9): error TS6133: 'allowedAttributes' is declared but its value is never read.
+src/lib/security.ts(31,62): error TS6133: 'hrefMatch' is declared but its value is never read.
+src/lib/table-utils.tsx(3,6): error TS6196: 'ColumnConfig' is declared but never used.
+src/lib/validation/dataValidation.ts(3,3): error TS6133: 'assignmentSchema' is declared but its value is never read.
+src/lib/validation/dataValidation.ts(4,3): error TS6133: 'payrollSchema' is declared but its value is never read.
+src/lib/validation/dataValidation.ts(5,3): error TS6133: 'rankSchema' is declared but its value is never read.
+src/lib/validation/dataValidation.ts(9,3): error TS6133: 'AssignmentStatus' is declared but its value is never read.
+src/lib/validation/dataValidation.ts(10,3): error TS6133: 'PayrollStatus' is declared but its value is never read.
+src/lib/validation/typeGuards.ts(88,39): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly ranks: ZodObject<{ id: ZodString; companyId: ZodString; createdAt: ZodString; updatedAt: ZodString; createdBy: ZodString; updatedBy: ZodString; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }>; readonly crewAssignments: ZodObject<...>; readonly payrolls: ZodObject<...>; }'.
+src/lib/validation/typeGuards.ts(88,52): error TS2304: Cannot find name 'STORE_NAMES'.
+src/lib/validation/typeGuards.ts(90,3): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly ranks: ZodObject<{ id: ZodString; companyId: ZodString; createdAt: ZodString; updatedAt: ZodString; createdBy: ZodString; updatedBy: ZodString; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }>; readonly crewAssignments: ZodObject<...>; readonly payrolls: ZodObject<...>; }'.
+src/lib/validation/typeGuards.ts(90,16): error TS2304: Cannot find name 'STORE_NAMES'.
+src/lib/validation/typeGuards.ts(92,42): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type '{ readonly ranks: ZodObject<{ id: ZodString; companyId: ZodString; createdAt: ZodString; updatedAt: ZodString; createdBy: ZodString; updatedBy: ZodString; } & { ...; }, "strip", ZodTypeAny, { ...; }, { ...; }>; readonly crewAssignments: ZodObject<...>; readonly payrolls: ZodObject<...>; }'.
+src/lib/validation/typeGuards.ts(92,55): error TS2304: Cannot find name 'STORE_NAMES'.
+src/main.tsx(7,1): error TS6133: 'setupCrashReporting' is declared but its value is never read.
+src/main.tsx(40,15): error TS6133: 'migrationResult' is declared but its value is never read.
+src/main.tsx(75,64): error TS6133: 'event' is declared but its value is never read.
+src/main.tsx(102,10): error TS6133: 'initializationStatus' is declared but its value is never read.
+src/pages/Analytics.tsx(12,15): error TS6196: 'Seafarer' is declared but never used.
+src/pages/Analytics.tsx(12,25): error TS6196: 'Vessel' is declared but never used.
+src/pages/Analytics.tsx(26,1): error TS6133: 'exportToCSV' is declared but its value is never read.
+src/pages/Analytics.tsx(51,10): error TS6133: 'loading' is declared but its value is never read.
+src/pages/Analytics.tsx(75,27): error TS6133: 'vessels' is declared but its value is never read.
+src/pages/Analytics.tsx(476,42): error TS6133: 'entry' is declared but its value is never read.
+src/pages/Analytics.tsx(538,49): error TS6133: 'entry' is declared but its value is never read.
+src/pages/Analytics.tsx(682,42): error TS6133: 'entry' is declared but its value is never read.
+src/pages/Companies.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/pages/Companies.tsx(113,9): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/Compliance.tsx(505,9): error TS6133: 'getStatusIcon' is declared but its value is never read.
+src/pages/Fleet.tsx(13,3): error TS6133: 'MapPin' is declared but its value is never read.
+src/pages/Fleet.tsx(17,3): error TS6133: 'Clock' is declared but its value is never read.
+src/pages/Personnel.tsx(3,29): error TS6133: 'CardHeader' is declared but its value is never read.
+src/pages/Personnel.tsx(3,41): error TS6133: 'CardTitle' is declared but its value is never read.
+src/pages/Personnel.tsx(14,3): error TS6133: 'Users' is declared but its value is never read.
+src/pages/Personnel.tsx(204,13): error TS6133: 'now' is declared but its value is never read.
+src/pages/Personnel.tsx(336,19): error TS6133: 'notification' is declared but its value is never read.
+src/pages/Personnel.tsx(359,19): error TS6133: 'notification' is declared but its value is never read.
+src/pages/Personnel.tsx(379,19): error TS6133: 'notification' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(1,31): error TS6133: 'useMemo' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(10,29): error TS6133: 'CardDescription' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(11,1): error TS6192: All imports in import declaration are unused.
+src/pages/PersonnelV2.tsx(14,63): error TS6133: 'DropdownMenuLabel' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(25,3): error TS6133: 'ArrowUpDown' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(43,1): error TS6133: 'usePersonnel' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(44,1): error TS6133: 'useNotifications' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(48,23): error TS6133: 'INDEX_NAMES' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(67,3): error TS6133: 'assignmentStatusOptions' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(68,3): error TS6133: 'payrollStatusOptions' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(71,3): error TS6133: 'formatDateTime' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(74,3): error TS6133: 'assignmentFormSchema' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(75,3): error TS6133: 'payrollFormSchema' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(76,3): error TS6133: 'prepareAssignmentForSubmission' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(77,3): error TS6133: 'preparePayrollForSubmission' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(78,3): error TS6133: 'defaultAssignmentFormData' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(79,3): error TS6133: 'defaultPayrollFormData' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(88,1): error TS6133: 'CertificateForm' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(91,6): error TS6196: 'PersonnelV2Props' is declared but never used.
+src/pages/PersonnelV2.tsx(95,6): error TS6196: 'PersonnelV2State' is declared but never used.
+src/pages/PersonnelV2.tsx(199,6): error TS6196: 'CreateEntity' is declared but never used.
+src/pages/PersonnelV2.tsx(213,9): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(225,10): error TS6133: 'assignments' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(226,10): error TS6133: 'payrolls' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(233,10): error TS6133: 'showCertificateDialog' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(237,10): error TS6133: 'selectedCertificate' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(240,10): error TS6133: 'certificateFormData' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(537,17): error TS2353: Object literal may only specify known properties, and 'currentAssignment' does not exist in type 'Seafarer'.
+src/pages/PersonnelV2.tsx(577,9): error TS6133: 'handleEditAssignment' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(577,85): error TS2304: Cannot find name 'CrewAssignment'.
+src/pages/PersonnelV2.tsx(582,49): error TS2304: Cannot find name 'CrewAssignment'.
+src/pages/PersonnelV2.tsx(642,9): error TS6133: 'handleUpdatePayroll' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(700,45): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/pages/PersonnelV2.tsx(729,9): error TS6133: 'handleDeletePayroll' is declared but its value is never read.
+src/pages/PersonnelV2.tsx(745,48): error TS7006: Parameter 'p' implicitly has an 'any' type.
+src/pages/PersonnelV2.tsx(789,86): error TS2352: Conversion of type '{ seafarerId: string; companyId: string; status: "draft"; totalEarnings: number; totalDeductions: number; netPay: number; items: { amount: number; taxable: boolean; id?: string; type: "salary" | "overtime" | "bonus" | "allowance" | "deduction" | "reimbursement" | "other" | "tax"; ... 4 more ...; notes?: string; }[];...' to type 'Payroll & BaseEntity' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Property 'id' is missing in type '{ seafarerId: string; companyId: string; status: "draft"; totalEarnings: number; totalDeductions: number; netPay: number; items: { amount: number; taxable: boolean; id?: string; type: "salary" | "overtime" | "bonus" | "allowance" | "deduction" | "reimbursement" | "other" | "tax"; ... 4 more ...; notes?: string; }[];...' but required in type 'Payroll'.
+src/pages/PersonnelV2.tsx(1126,35): error TS2339: Property 'assignments' does not exist on type 'Seafarer'.
+src/pages/PersonnelV2.tsx(1127,36): error TS2339: Property 'assignments' does not exist on type 'Seafarer'.
+src/pages/PersonnelV2.tsx(1127,53): error TS7006: Parameter 'assignment' implicitly has an 'any' type.
+src/pages/PersonnelV2.tsx(1210,35): error TS2339: Property 'certificates' does not exist on type 'Seafarer'.
+src/pages/PersonnelV2.tsx(1211,36): error TS2339: Property 'certificates' does not exist on type 'Seafarer'.
+src/pages/PersonnelV2.tsx(1211,54): error TS7006: Parameter 'certificate' implicitly has an 'any' type.
+src/pages/PersonnelV2.tsx(1302,50): error TS7006: Parameter 'payroll' implicitly has an 'any' type.
+src/pages/PersonnelV2.tsx(1540,15): error TS2322: Type '(Vessel & BaseEntity)[]' is not assignable to type 'Vessel[]'.
+  Type 'Vessel & BaseEntity' is missing the following properties from type 'Vessel': deadweight, callSign, mmsi
+src/pages/PersonnelV2.tsx(1542,15): error TS2322: Type 'Partial<CrewAssignment> | null' is not assignable to type 'CrewAssignment | undefined'.
+  Type 'null' is not assignable to type 'CrewAssignment | undefined'.
+src/pages/PersonnelV2.tsx(1543,15): error TS2322: Type 'Seafarer | null' is not assignable to type 'Seafarer | undefined'.
+  Type 'null' is not assignable to type 'Seafarer | undefined'.
+src/pages/PersonnelV2.tsx(1571,15): error TS2322: Type '(payrollData: Omit<Payroll, "id" | "createdAt" | "updatedAt" | "companyId" | "status">) => Promise<void>' is not assignable to type '(data: { status: "draft" | "approved" | "paid" | "cancelled" | "pending"; seafarerId: string; vesselId: string; periodStart: Date; periodEnd: Date; paymentDate: Date; paymentMethod: "bank_transfer" | ... 1 more ... | "check"; items: { ...; }[]; notes?: string | undefined; }) => void'.
+  Types of parameters 'payrollData' and 'data' are incompatible.
+    Type '{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; seafarerId: string; vesselId: string; periodStart: Date; periodEnd: Date; paymentDate: Date; paymentMethod: "bank_transfer" | ... 1 more ... | "check"; items: { ...; }[]; notes?: string | undefined; }' is missing the following properties from type 'Omit<Payroll, "id" | "status" | "companyId" | "createdAt" | "updatedAt">': documents, basicSalary, currency, netPay, and 2 more.
+src/pages/PersonnelV2.tsx(1577,15): error TS2322: Type '(Vessel & BaseEntity)[]' is not assignable to type 'Vessel[]'.
+  Type 'Vessel & BaseEntity' is missing the following properties from type 'Vessel': deadweight, callSign, mmsi
+src/pages/PersonnelV2.tsx(1578,15): error TS2322: Type 'Partial<Payroll> | null' is not assignable to type 'Payroll | undefined'.
+  Type 'null' is not assignable to type 'Payroll | undefined'.
+src/pages/PersonnelV2.tsx(1579,15): error TS2322: Type 'Seafarer | null' is not assignable to type 'Seafarer | undefined'.
+  Type 'null' is not assignable to type 'Seafarer | undefined'.
+src/pages/Recruitment.tsx(5,26): error TS6196: 'Seafarer' is declared but never used.
+src/pages/Recruitment.tsx(14,1): error TS6192: All imports in import declaration are unused.
+src/pages/Recruitment.tsx(20,3): error TS6133: 'Search' is declared but its value is never read.
+src/pages/Recruitment.tsx(505,9): error TS6133: 'getStatusIcon' is declared but its value is never read.
+src/pages/SeafarerManagement.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/pages/SeafarerManagement.tsx(2,24): error TS6133: 'Filter' is declared but its value is never read.
+src/pages/Settings.tsx(18,3): error TS6133: 'Users' is declared but its value is never read.
+src/pages/Settings.tsx(22,3): error TS6133: 'Mail' is declared but its value is never read.
+src/pages/Settings.tsx(73,7): error TS6133: 'notificationSettings' is declared but its value is never read.
+src/pages/Settings.tsx(129,5): error TS6133: 'updateAllSettings' is declared but its value is never read.
+src/pages/Settings.tsx(134,10): error TS6133: 'loading' is declared but its value is never read.
+src/pages/admin/Companies.tsx(10,33): error TS6133: 'createCompany' is declared but its value is never read.
+src/pages/admin/Companies.tsx(35,13): error TS6133: 'companyData' is declared but its value is never read.
+src/pages/companies/CompanyDetailPage.tsx(15,9): error TS6133: 'updateCompany' is declared but its value is never read.
+src/pages/personnel/SeafarerDetailPage.tsx(8,70): error TS6133: 'DollarSign' is declared but its value is never read.
+src/pages/personnel/SeafarerDetailPage.tsx(16,9): error TS6133: 'updateSeafarer' is declared but its value is never read.
+src/pages/personnel/SeafarerDetailPage.tsx(26,18): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(to: To, options?: NavigateOptions | undefined): void', gave the following error.
+    Argument of type '{ readonly LIST: "/personnel"; readonly DETAILS: (id: string) => string; }' is not assignable to parameter of type 'To'.
+  Overload 2 of 2, '(delta: number): void', gave the following error.
+    Argument of type '{ readonly LIST: "/personnel"; readonly DETAILS: (id: string) => string; }' is not assignable to parameter of type 'number'.
+src/pages/personnel/SeafarerDetailPage.tsx(59,37): error TS2769: No overload matches this call.
+  Overload 1 of 2, '(to: To, options?: NavigateOptions | undefined): void', gave the following error.
+    Argument of type '{ readonly LIST: "/personnel"; readonly DETAILS: (id: string) => string; }' is not assignable to parameter of type 'To'.
+  Overload 2 of 2, '(delta: number): void', gave the following error.
+    Argument of type '{ readonly LIST: "/personnel"; readonly DETAILS: (id: string) => string; }' is not assignable to parameter of type 'number'.
+src/pages/users/UserDetailPage.tsx(16,9): error TS6133: 'updateUser' is declared but its value is never read.
+src/pages/users/UserDetailPage.tsx(72,55): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+  Type 'undefined' is not assignable to type 'string'.
+src/providers/AuthProvider.tsx(12,11): error TS6133: 'isAuthenticated' is declared but its value is never read.
+src/schemas/index.ts(5,1): error TS2308: Module './user.schema' has already exported a member named 'LoginInput'. Consider explicitly re-exporting to resolve the ambiguity.
+src/schemas/index.ts(5,1): error TS2308: Module './user.schema' has already exported a member named 'ResetPasswordInput'. Consider explicitly re-exporting to resolve the ambiguity.
+src/schemas/index.ts(5,1): error TS2308: Module './user.schema' has already exported a member named 'loginSchema'. Consider explicitly re-exporting to resolve the ambiguity.
+src/schemas/index.ts(5,1): error TS2308: Module './user.schema' has already exported a member named 'resetPasswordSchema'. Consider explicitly re-exporting to resolve the ambiguity.
+src/services/crew.service.ts(33,14): error TS2339: Property 'add' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(43,31): error TS2339: Property 'get' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(63,12): error TS2352: Conversion of type 'Promise<BaseEntity[]>' to type 'Promise<{ status: "active" | "cancelled" | "completed" | "scheduled"; salary: number; companyId: string; seafarerId: string; vesselId: string; startDate: string; currency: string; rankId: string; ... 5 more ...; notes?: string | undefined; }[]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'BaseEntity[]' is not comparable to type '{ status: "active" | "cancelled" | "completed" | "scheduled"; salary: number; companyId: string; seafarerId: string; vesselId: string; startDate: string; currency: string; rankId: string; ... 5 more ...; notes?: string | undefined; }[]'.
+    Type 'BaseEntity' is missing the following properties from type '{ status: "active" | "cancelled" | "completed" | "scheduled"; salary: number; companyId: string; seafarerId: string; vesselId: string; startDate: string; currency: string; rankId: string; ... 5 more ...; notes?: string | undefined; }': status, salary, seafarerId, vesselId, and 6 more.
+src/services/crew.service.ts(73,12): error TS2352: Conversion of type 'Promise<BaseEntity[]>' to type 'Promise<{ status: "active" | "cancelled" | "completed" | "scheduled"; salary: number; companyId: string; seafarerId: string; vesselId: string; startDate: string; currency: string; rankId: string; ... 5 more ...; notes?: string | undefined; }[]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'BaseEntity[]' is not comparable to type '{ status: "active" | "cancelled" | "completed" | "scheduled"; salary: number; companyId: string; seafarerId: string; vesselId: string; startDate: string; currency: string; rankId: string; ... 5 more ...; notes?: string | undefined; }[]'.
+    Type 'BaseEntity' is missing the following properties from type '{ status: "active" | "cancelled" | "completed" | "scheduled"; salary: number; companyId: string; seafarerId: string; vesselId: string; startDate: string; currency: string; rankId: string; ... 5 more ...; notes?: string | undefined; }': status, salary, seafarerId, vesselId, and 6 more.
+src/services/crew.service.ts(103,14): error TS2339: Property 'add' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(111,31): error TS2339: Property 'get' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(128,51): error TS2559: Type '{ number: string; type: string; status: "valid" | "expired" | "expiring_soon" | "missing"; expiryDate: string; issueDate: string; issuedBy: string; requiredForRanks: string[]; id?: string | undefined; notes?: string | undefined; fileUrl?: string | undefined; }' has no properties in common with type 'Partial<Omit<BaseEntity, "id" | "createdAt" | "updatedAt">>'.
+src/services/crew.service.ts(135,12): error TS2352: Conversion of type 'Promise<BaseEntity[]>' to type 'Promise<{ number: string; type: string; status: "valid" | "expired" | "expiring_soon" | "missing"; expiryDate: string; issueDate: string; issuedBy: string; requiredForRanks: string[]; id?: string | undefined; notes?: string | undefined; fileUrl?: string | undefined; }[]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'BaseEntity[]' is not comparable to type '{ number: string; type: string; status: "valid" | "expired" | "expiring_soon" | "missing"; expiryDate: string; issueDate: string; issuedBy: string; requiredForRanks: string[]; id?: string | undefined; notes?: string | undefined; fileUrl?: string | undefined; }[]'.
+    Type 'BaseEntity' is missing the following properties from type '{ number: string; type: string; status: "valid" | "expired" | "expiring_soon" | "missing"; expiryDate: string; issueDate: string; issuedBy: string; requiredForRanks: string[]; id?: string | undefined; notes?: string | undefined; fileUrl?: string | undefined; }': number, type, status, expiryDate, and 3 more.
+src/services/crew.service.ts(144,38): error TS2344: Type '{ number: string; type: string; status: "valid" | "expired" | "expiring_soon" | "missing"; expiryDate: string; issueDate: string; issuedBy: string; requiredForRanks: string[]; id?: string | undefined; notes?: string | undefined; fileUrl?: string | undefined; }' does not satisfy the constraint 'BaseEntity'.
+  Type '{ number: string; type: string; status: "valid" | "expired" | "expiring_soon" | "missing"; expiryDate: string; issueDate: string; issuedBy: string; requiredForRanks: string[]; id?: string | undefined; notes?: string | undefined; fileUrl?: string | undefined; }' is missing the following properties from type 'BaseEntity': createdAt, updatedAt
+src/services/crew.service.ts(156,30): error TS6133: 'issueDate' is declared but its value is never read.
+src/services/crew.service.ts(178,14): error TS2339: Property 'add' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(186,31): error TS2339: Property 'get' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(201,12): error TS2352: Conversion of type 'Promise<BaseEntity[]>' to type 'Promise<{ name: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; level: number; baseSalary: number; isOfficer: boolean; requiredCertificates: string[]; id?: string | undefined; description?: string | undefined; companyId?: string | undefined; }[]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'BaseEntity[]' is not comparable to type '{ name: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; level: number; baseSalary: number; isOfficer: boolean; requiredCertificates: string[]; id?: string | undefined; description?: string | undefined; companyId?: string | undefined; }[]'.
+    Type 'BaseEntity' is missing the following properties from type '{ name: string; department: "other" | "deck" | "engine" | "catering" | "electrical"; currency: string; level: number; baseSalary: number; isOfficer: boolean; requiredCertificates: string[]; id?: string | undefined; description?: string | undefined; companyId?: string | undefined; }': name, department, currency, level, and 3 more.
+src/services/crew.service.ts(212,42): error TS2344: Type '{ companyId: string; overtimeRate: number; overtimeThreshold: number; bonusRates: Record<string, number>; deductionRates: Record<string, number>; taxSettings: { taxRate: number; taxFreeAllowance: number; socialSecurityRate: number; }; pensionSettings: { ...; }; paymentSchedule: "weekly" | ... 1 more ... | "bi_weekly...' does not satisfy the constraint 'BaseEntity'.
+  Type '{ companyId: string; overtimeRate: number; overtimeThreshold: number; bonusRates: Record<string, number>; deductionRates: Record<string, number>; taxSettings: { taxRate: number; taxFreeAllowance: number; socialSecurityRate: number; }; pensionSettings: { ...; }; paymentSchedule: "weekly" | ... 1 more ... | "bi_weekly...' is missing the following properties from type 'BaseEntity': createdAt, updatedAt
+src/services/crew.service.ts(243,14): error TS2339: Property 'add' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(264,31): error TS2339: Property 'get' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(318,14): error TS2339: Property 'add' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(323,3): error TS1042: 'private' modifier cannot be used here.
+src/services/crew.service.ts(323,3): error TS1184: Modifiers cannot appear here.
+src/services/crew.service.ts(324,5): error TS6133: 'seafarer' is declared but its value is never read.
+src/services/crew.service.ts(327,5): error TS6133: 'periodStart' is declared but its value is never read.
+src/services/crew.service.ts(328,5): error TS6133: 'periodEnd' is declared but its value is never read.
+src/services/crew.service.ts(407,12): error TS2352: Conversion of type 'Promise<BaseEntity[]>' to type 'Promise<{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; companyId: string; seafarerId: string; periodStart: string; periodEnd: string; paymentMethod: "bank_transfer" | "cash" | "check"; ... 5 more ...; paymentDate?: string | undefined; }[]>' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type 'BaseEntity[]' is not comparable to type '{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; companyId: string; seafarerId: string; periodStart: string; periodEnd: string; paymentMethod: "bank_transfer" | "cash" | "check"; ... 5 more ...; paymentDate?: string | undefined; }[]'.
+    Type 'BaseEntity' is missing the following properties from type '{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; companyId: string; seafarerId: string; periodStart: string; periodEnd: string; paymentMethod: "bank_transfer" | "cash" | "check"; ... 5 more ...; paymentDate?: string | undefined; }': status, seafarerId, periodStart, periodEnd, and 2 more.
+src/services/crew.service.ts(416,40): error TS2344: Type '{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; companyId: string; seafarerId: string; periodStart: string; periodEnd: string; paymentMethod: "bank_transfer" | "cash" | "check"; ... 5 more ...; paymentDate?: string | undefined; }' does not satisfy the constraint 'BaseEntity'.
+  Type '{ status: "draft" | "approved" | "paid" | "cancelled" | "pending"; companyId: string; seafarerId: string; periodStart: string; periodEnd: string; paymentMethod: "bank_transfer" | "cash" | "check"; ... 5 more ...; paymentDate?: string | undefined; }' is missing the following properties from type 'BaseEntity': createdAt, updatedAt
+src/services/crew.service.ts(432,30): error TS2339: Property 'get' does not exist on type 'DatabaseService'.
+src/services/crew.service.ts(446,30): error TS2339: Property 'get' does not exist on type 'DatabaseService'.
+src/services/user-service.ts(5,3): error TS2305: Module '"@/types"' has no exported member 'CreateUserDto'.
+src/services/user-service.ts(6,3): error TS2305: Module '"@/types"' has no exported member 'UpdateUserDto'.
+src/stores/notificationStore.ts(2,31): error TS2724: '"@/services/notificationService"' has no exported member named 'Notification'. Did you mean 'NotificationType'?
+src/stores/notificationStore.ts(19,62): error TS6133: 'get' is declared but its value is never read.
+src/types/index.ts(4,1): error TS2308: Module './assignment.types' has already exported a member named 'CrewAssignment'. Consider explicitly re-exporting to resolve the ambiguity.
+src/types/index.ts(4,1): error TS2308: Module './payroll.types' has already exported a member named 'Payroll'. Consider explicitly re-exporting to resolve the ambiguity.
+src/types/index.ts(4,1): error TS2308: Module './payroll.types' has already exported a member named 'PayrollItem'. Consider explicitly re-exporting to resolve the ambiguity.
+src/types/index.ts(8,11): error TS2304: Cannot find name 'ReactI18NextChildren'.
+src/types/index.ts(8,43): error TS2304: Cannot find name 'ReactI18NextChildren'.

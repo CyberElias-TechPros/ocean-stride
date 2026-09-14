@@ -1,6 +1,11 @@
-// This file exists only to satisfy TypeScript project references.
-// Vite uses vite.config.js for runtime configuration.
-// Do not import external modules here to avoid type resolution issues.
-
-// eslint-disable-next-line import/no-anonymous-default-export
-export default {};
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    host: "0.0.0.0",
+    port: 8080,
+    allowedHosts: [".e2b.app"],
+    proxy: { "/api": { target: "http://127.0.0.1:8787" } },
+  },
+});

@@ -1,0 +1,22 @@
+
+> ocean-stride@2.0.0 test:e2e:bundled
+> node scripts/test-bundled.mjs
+
+
+> ocean-stride@2.0.0 test:e2e
+> playwright test
+
+
+Running 9 tests using 1 worker
+
+  ✓  1 tests/e2e/accessibility.spec.ts:3:1 › all workspace pages and the registration dialog meet automated WCAG checks (9.9s)
+  ✓  2 tests/e2e/api.spec.ts:47:1 › authentication, tenant isolation, CRUD, optimistic concurrency, capacity and audit integrity (514ms)
+  ✓  3 tests/e2e/api.spec.ts:147:1 › rejects unauthorized requests, forged origins, malformed and oversized input (60ms)
+  ✓  4 tests/e2e/api.spec.ts:177:1 › create retries are idempotent and concurrent assignments cannot overfill a vessel (176ms)
+  ✓  5 tests/e2e/api.spec.ts:217:1 › authentication rate limit is enforced (368ms)
+  ✓  6 tests/e2e/journeys.spec.ts:3:1 › preview navigation, filters, details, export, help and honest not-found (9.4s)
+  ✓  7 tests/e2e/journeys.spec.ts:52:1 › owner registers, creates vessel and crew, assigns, persists after refresh, edits, signs off and deletes (22.8s)
+  ✓  8 tests/e2e/journeys.spec.ts:134:1 › keyboard, reduced motion, mobile layout and WCAG automated checks (14.1s)
+  ✓  9 tests/e2e/journeys.spec.ts:174:1 › embedded preview sends registration to a secure top-level workspace (7.5s)
+
+  9 passed (1.1m)
