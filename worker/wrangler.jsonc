@@ -1,0 +1,31 @@
+{
+  // OceanStride API - canonical deployment (Pain account ba3a0c06…).
+  // D1: ocean-stride-db (ed2768bc-9410-4dd3-b965-7820a8a5bfdc)
+  // KV: OCEAN_FILES -> edbdc8d3f3ef4658b194a51e3e62a765 (file blobs; Pain has no R2)
+  // Secrets: JWT_SECRET, REFRESH_SECRET (wrangler secret put)
+  "name": "ocean-stride-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-08-01",
+  "account_id": "ba3a0c06ca86c6e61d2c6b0350abb80b",
+  "workers_dev": true,
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_id": "ed2768bc-9410-4dd3-b965-7820a8a5bfdc",
+      "database_name": "ocean-stride-db"
+    }
+  ],
+  "kv_namespaces": [
+    {
+      "binding": "OCEAN_FILES",
+      "id": "edbdc8d3f3ef4658b194a51e3e62a765"
+    }
+  ],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://ocean-stride.vercel.app,https://ocean-stride-api.painpointsolutions.workers.dev,http://localhost:4173,http://localhost:5173",
+    "CLIENT_URL": "https://ocean-stride.vercel.app"
+  },
+  "observability": {
+    "enabled": true
+  }
+}
